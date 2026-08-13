@@ -1,0 +1,41 @@
+# Evidence
+
+Structured logs and richer signals from real discovery and replay runs. All text
+is redacted (no secrets/PII); screenshots are treated as sensitive evidence.
+
+## Discovery (GENUINE live LLM run via the Anthropic API)
+- `discovery-member_savings_lookup-anthropic-live/` — member + balance lookup
+  (recorded_by: anthropic):
+  `run.jsonl`, `transcript.json` (redacted), `step00..07.png`, `summary.json`,
+  and `bridge_trace/` (the exact per-step model decision requests/responses).
+- `discovery-open_subaccount-anthropic-live/` — sub-account creation via the live
+  API (incl. the irreversible confirm step).
+
+## Replay (deterministic, no LLM) — the result contract
+- `replay-01-success/` — SUCCESS with typed outputs (`savings_balance` in cents).
+- `replay-02-not-found/` — BUSINESS_OUTCOME `MEMBER_NOT_FOUND`.
+- `replay-03-permission-denied/` — BUSINESS_OUTCOME `PERMISSION_DENIED`.
+- `replay-04-interstitial-recovered/` — RECOVERABLE: interstitial auto-dismissed;
+  run still SUCCEEDS (see `summary.json.recoveries`).
+- `replay-05-session-timeout/` — HARD_FAILURE `SESSION_TIMEOUT` w/ screenshot + DOM.
+
+## Escalation & handoff
+- `escalation-06-handoff/` — replay of the irreversible sub-account flow pauses,
+  a human operator takes control of the SAME live session over CDP, performs the
+  confirm, hands back; replay resumes to SUCCESS.
+- `handoffs/…step9.json` — the resolved intervention (human_actions + control token).
+
+## Cross-tenant reuse (same artifact, second tenant)
+- `replay-07-crosstenant-summit-override/` — the member-lookup artifact recorded on
+  tenant `demo-cu` replayed against tenant `summit-cu` (rebranded labels) using a
+  ~4-line string override: clean SUCCESS, zero drift.
+- `replay-08-crosstenant-summit-nomap/` — the SAME artifact against Summit with NO
+  override: still SUCCEEDS via structural locator fallbacks, emitting drift signals
+  at the label/role-based steps (graceful degradation, see `summary.json.drifts`).
+
+## Confidence
+- `replay-09-stability/` — the capability replayed N times; pass rate reported
+  (flakiness signal; feeds the draft→approved gate).
+
+Regenerate everything: `python scripts/gen_evidence.py` (starts its own tenants).
+Regenerate discovery: `bash scripts/run_discovery.sh`.

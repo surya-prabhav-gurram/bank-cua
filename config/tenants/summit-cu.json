@@ -1,0 +1,11 @@
+{
+  "tenant_id": "summit-cu",
+  "base_url": "http://127.0.0.1:5059",
+  "version": "3.4",
+  "label_map": {
+    "User ID": "Username",
+    "Member ID": "Member Number",
+    "Sign On": "Log In",
+    "Search": "Find"
+  }
+}

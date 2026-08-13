@@ -1,0 +1,23 @@
+{
+  "status": "failure",
+  "capability_id": "corebank.member_savings_lookup",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": null,
+  "failure": {
+    "code": "SESSION_TIMEOUT",
+    "step_index": 2,
+    "expected": "flow to proceed",
+    "observed": "Session timed out; re-authentication required (surfaced to caller).",
+    "evidence": {
+      "screenshot": "evidence/replay-05-session-timeout/hard_SESSION_TIMEOUT.png",
+      "dom": "evidence/replay-05-session-timeout/hard_SESSION_TIMEOUT.dom.html"
+    }
+  },
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 3,
+  "duration_s": 0.27
+}

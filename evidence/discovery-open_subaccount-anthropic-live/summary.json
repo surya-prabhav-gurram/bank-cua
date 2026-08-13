@@ -1,0 +1,10 @@
+{
+  "status": "success",
+  "reason": "All steps completed: signed in, created Money Market sub-account for member 12345 with $500.00 deposit, reviewed, confirmed, and extracted confirmation number SA-12345-8104. Confirmation screen is now displayed.",
+  "outputs": {
+    "confirmation_number": "SA-12345-8104"
+  },
+  "intervention_id": null,
+  "num_steps": 12,
+  "artifact_path": "capabilities/corebank.open_subaccount.json"
+}

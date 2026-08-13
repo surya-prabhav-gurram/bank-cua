@@ -1,0 +1,43 @@
+{
+  "capability_id": "corebank.open_subaccount",
+  "name": "Open a new sub-account and reach the confirmation screen",
+  "description": "Sign on, open the sub-account form for a member, enter the account type and initial deposit, review, and confirm creation (irreversible) to reach the confirmation screen.",
+  "goal": "Sign on with the provided credentials, open a new sub-account for member {member_id} of type {acct_type} with an initial deposit of {deposit}, review it, and reach the confirmation screen.",
+  "app_id": "corebank-servicing",
+  "surface_type": "web",
+  "base_url": "http://127.0.0.1:5057",
+  "entry_path": "/login",
+  "tenant_id": "demo-cu",
+  "vendor_product": "Corebank",
+  "version": "7.2.1",
+  "inputs": [
+    {"name": "username", "type": "string", "required": true, "sensitive": true,
+     "description": "Operator sign-on user id."},
+    {"name": "password", "type": "string", "required": true, "sensitive": true,
+     "description": "Operator sign-on password."},
+    {"name": "member_id", "type": "string", "required": true, "sensitive": false,
+     "description": "The member number.", "example": "12345"},
+    {"name": "acct_type", "type": "string", "required": true, "sensitive": false,
+     "description": "Account type label to select (Savings/Money Market/Certificate of Deposit).",
+     "example": "Money Market"},
+    {"name": "deposit", "type": "string", "required": true, "sensitive": false,
+     "description": "Initial deposit amount.", "example": "500.00"}
+  ],
+  "outputs": [
+    {"name": "confirmation_number", "type": "string",
+     "description": "The new sub-account confirmation number."}
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "Sub-Account Created",
+    "description": "The confirmation screen was reached."
+  },
+  "max_steps": 16,
+  "param_values": {
+    "username": "operator",
+    "password": "password123",
+    "member_id": "12345",
+    "acct_type": "Money Market",
+    "deposit": "500.00"
+  }
+}

@@ -1,0 +1,12 @@
+{"ts": 1786650428.647, "event": "run_started", "kind": "replay", "run_dir": "evidence/service/corebank.member_savings_lookup-***CARD***"}
+{"ts": 1786650429.23, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "12345"}}
+{"ts": 1786650429.265, "event": "replay_navigated_entry", "entry": "/login"}
+{"ts": 1786650429.34, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided ***REDACTED*** credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1786650429.401, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1786650429.507, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1786650429.58, "event": "step_executed", "index": 3, "action": "fill", "intent": "Enter the member ID 12345 into the search field to search for the member's account", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1786650429.683, "event": "step_executed", "index": 4, "action": "click", "intent": "Submit the member search form to retrieve member 12345's account information", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1786650429.798, "event": "step_executed", "index": 5, "action": "extract", "intent": "Extract the member's name as required by the goal", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1786650429.89, "event": "step_executed", "index": 6, "action": "extract", "intent": "Extract the savings balance as required by the goal. The balance is $4,213.55 which needs to be normalized to integer cents (421355).", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1786650429.958, "event": "replay_finished", "status": "success", "outputs": {"member_name": "Jane A. Doe", "savings_balance": 421355}}
+{"ts": 1786650429.958, "event": "run_finished", "summary_path": "evidence/service/corebank.member_savings_lookup-***CARD***/summary.json"}

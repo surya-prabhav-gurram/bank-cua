@@ -1,0 +1,11 @@
+{
+  "status": "success",
+  "reason": "Successfully signed on, searched for member 12345, and extracted member_name='Jane A. Doe' and savings_balance=421355 cents as required by the goal.",
+  "outputs": {
+    "member_name": "Jane A. Doe",
+    "savings_balance": "$4,213.55"
+  },
+  "intervention_id": null,
+  "num_steps": 7,
+  "artifact_path": "capabilities/corebank.member_savings_lookup.json"
+}

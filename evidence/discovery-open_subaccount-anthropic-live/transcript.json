@@ -1,0 +1,685 @@
+[
+  {
+    "index": 0,
+    "intent": "Fill in the User ID field with the provided username credential",
+    "action_kind": "fill",
+    "url": "http://127.0.0.1:5057/login",
+    "url_template": null,
+    "element": {
+      "ref": 0,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "text",
+      "label": "",
+      "placeholder": "",
+      "near_label": "User ID",
+      "text": "",
+      "css": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: textbox",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"User ID\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-proximity: the input in the row labelled 'User ID'. Survives markup/theming churn far better than an absolute path."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "***REDACTED***",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "filled textbox: textbox",
+    "candidate_index": 0
+  },
+  {
+    "index": 1,
+    "intent": "Fill in the password field with the provided password credential",
+    "action_kind": "fill",
+    "url": "http://127.0.0.1:5057/login",
+    "url_template": null,
+    "element": {
+      "ref": 1,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "password",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Password",
+      "text": "",
+      "css": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: textbox",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Password\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-proximity: the input in the row labelled 'Password'. Survives markup/theming churn far better than an absolute path."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "***REDACTED***",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "filled textbox: textbox",
+    "candidate_index": 0
+  },
+  {
+    "index": 2,
+    "intent": "Click the Sign On button to authenticate with the credentials that have already been filled in.",
+    "action_kind": "click",
+    "url": "http://127.0.0.1:5057/login",
+    "url_template": null,
+    "element": {
+      "ref": 2,
+      "frame_path": [],
+      "tag": "input",
+      "role": "button",
+      "name": "Sign On",
+      "type_attr": "submit",
+      "label": "",
+      "placeholder": "",
+      "near_label": "",
+      "text": "",
+      "css": "table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[3]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "button: Sign On",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "role",
+          "value": "Sign On",
+          "role": "button",
+          "exact": false,
+          "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[3]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "clicked button: Sign On",
+    "candidate_index": 0
+  },
+  {
+    "index": 3,
+    "intent": "Fill in the Member ID field with the provided member_id parameter to search for member 12345",
+    "action_kind": "fill",
+    "url": "http://127.0.0.1:5057/home",
+    "url_template": null,
+    "element": {
+      "ref": 0,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "text",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Member ID",
+      "text": "",
+      "css": "table > tbody > tr > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: textbox",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Member ID\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-proximity: the input in the row labelled 'Member ID'. Survives markup/theming churn far better than an absolute path."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "12345",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "filled textbox: textbox",
+    "candidate_index": 0
+  },
+  {
+    "index": 4,
+    "intent": "Click the Search button to search for member 12345 whose ID has already been filled in from the previous step.",
+    "action_kind": "click",
+    "url": "http://127.0.0.1:5057/home",
+    "url_template": null,
+    "element": {
+      "ref": 1,
+      "frame_path": [],
+      "tag": "input",
+      "role": "button",
+      "name": "Search",
+      "type_attr": "submit",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Member ID",
+      "text": "",
+      "css": "table > tbody > tr > td:nth-of-type(3) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[3]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "button: Search",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "role",
+          "value": "Search",
+          "role": "button",
+          "exact": false,
+          "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr > td:nth-of-type(3) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[3]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "clicked button: Search",
+    "candidate_index": 0
+  },
+  {
+    "index": 5,
+    "intent": "Click the \"Open New Sub-Account\" link to begin creating a new Money Market sub-account for member 12345.",
+    "action_kind": "click",
+    "url": "http://127.0.0.1:5057/member?mid=12345",
+    "url_template": null,
+    "element": {
+      "ref": 0,
+      "frame_path": [],
+      "tag": "a",
+      "role": "link",
+      "name": "Open New Sub-Account",
+      "type_attr": "",
+      "label": "",
+      "placeholder": "",
+      "near_label": "",
+      "text": "Open New Sub-Account",
+      "css": "tbody > tr:nth-of-type(2) > td > p:nth-of-type(2) > a",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/p[2]/a[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "link: Open New Sub-Account",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "role",
+          "value": "Open New Sub-Account",
+          "role": "link",
+          "exact": false,
+          "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+        },
+        {
+          "kind": "text",
+          "value": "Open New Sub-Account",
+          "role": null,
+          "exact": false,
+          "reasoning": "Visible link text."
+        },
+        {
+          "kind": "css",
+          "value": "tbody > tr:nth-of-type(2) > td > p:nth-of-type(2) > a",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/p[2]/a[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "clicked link: Open New Sub-Account",
+    "candidate_index": 0
+  },
+  {
+    "index": 6,
+    "intent": "Select 'Money Market' as the account type from the dropdown menu using the provided acct_type parameter.",
+    "action_kind": "select",
+    "url": "http://127.0.0.1:5057/subaccount/new?mid=12345",
+    "url_template": null,
+    "element": {
+      "ref": 0,
+      "frame_path": [],
+      "tag": "select",
+      "role": "combobox",
+      "name": "",
+      "type_attr": "",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Account Type",
+      "text": "selected: -- select --",
+      "css": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > select",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/select[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "combobox: selected: -- select --",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Account Type\"]]//select",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-proximity: the select in the row labelled 'Account Type'. Survives markup/theming churn far better than an absolute path."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > select",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/select[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "Money Market",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "selected Money Market",
+    "candidate_index": 0
+  },
+  {
+    "index": 7,
+    "intent": "Fill in the Initial Deposit field with the provided deposit amount of 500.00",
+    "action_kind": "fill",
+    "url": "http://127.0.0.1:5057/subaccount/new?mid=12345",
+    "url_template": null,
+    "element": {
+      "ref": 1,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "text",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Initial Deposit",
+      "text": "",
+      "css": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: textbox",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Initial Deposit\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-proximity: the input in the row labelled 'Initial Deposit'. Survives markup/theming churn far better than an absolute path."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "500.00",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "filled textbox: textbox",
+    "candidate_index": 0
+  },
+  {
+    "index": 8,
+    "intent": "Click the Review button to proceed to the review screen for the new sub-account with the already-filled details (Money Market account type and 500.00 initial deposit).",
+    "action_kind": "click",
+    "url": "http://127.0.0.1:5057/subaccount/new?mid=12345",
+    "url_template": null,
+    "element": {
+      "ref": 2,
+      "frame_path": [],
+      "tag": "input",
+      "role": "button",
+      "name": "Review",
+      "type_attr": "submit",
+      "label": "",
+      "placeholder": "",
+      "near_label": "",
+      "text": "",
+      "css": "table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[3]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "button: Review",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "role",
+          "value": "Review",
+          "role": "button",
+          "exact": false,
+          "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[3]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "clicked button: Review",
+    "candidate_index": 0
+  },
+  {
+    "index": 9,
+    "intent": "Click the 'Confirm and Create' button to complete the sub-account creation and reach the confirmation screen as required by the goal.",
+    "action_kind": "click",
+    "url": "http://127.0.0.1:5057/subaccount/review",
+    "url_template": null,
+    "element": {
+      "ref": 0,
+      "frame_path": [],
+      "tag": "input",
+      "role": "button",
+      "name": "Confirm and Create",
+      "type_attr": "submit",
+      "label": "",
+      "placeholder": "",
+      "near_label": "",
+      "text": "",
+      "css": "tbody > tr:nth-of-type(2) > td > form > input:nth-of-type(4)",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/input[4]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "button: Confirm and Create",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "role",
+          "value": "Confirm and Create",
+          "role": "button",
+          "exact": false,
+          "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+        },
+        {
+          "kind": "css",
+          "value": "tbody > tr:nth-of-type(2) > td > form > input:nth-of-type(4)",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/input[4]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "risky",
+    "ok": true,
+    "message": "clicked button: Confirm and Create",
+    "candidate_index": 0
+  },
+  {
+    "index": 10,
+    "intent": "Extract the confirmation number SA-12345-8104 as required by the goal.",
+    "action_kind": "extract",
+    "url": "http://127.0.0.1:5057/subaccount/confirm",
+    "url_template": null,
+    "element": null,
+    "locator": {
+      "description": "value for Confirmation",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Confirmation\"]]/td[last()]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-relative XPath: finds the value cell by its adjacent label; robust to table reflow."
+        },
+        {
+          "kind": "css",
+          "value": "tr:nth-of-type(2) > td > table > tbody > tr:nth-of-type(1) > td:nth-of-type(2)",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS of the value cell; fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": "confirmation_number",
+    "attribute": "value",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": false,
+    "message": "read failed: Locator.input_value: Error: Node is not an <input>, <textarea> or <select> element\nCall log:\n  - waiting for locator(\"//tr[td[normalize-space(.)=\\\"Confirmation\\\"]]/td[last()]\").first\n",
+    "candidate_index": 0
+  },
+  {
+    "index": 11,
+    "intent": "Extract the confirmation number SA-12345-8104 from the confirmation field as required by the goal.",
+    "action_kind": "extract",
+    "url": "http://127.0.0.1:5057/subaccount/confirm",
+    "url_template": null,
+    "element": null,
+    "locator": {
+      "description": "value for Confirmation",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Confirmation\"]]/td[last()]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-relative XPath: finds the value cell by its adjacent label; robust to table reflow."
+        },
+        {
+          "kind": "css",
+          "value": "tr:nth-of-type(2) > td > table > tbody > tr:nth-of-type(1) > td:nth-of-type(2)",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS of the value cell; fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": "confirmation_number",
+    "attribute": "text",
+    "extracted_value": "SA-12345-8104",
+    "risk": "safe",
+    "ok": true,
+    "message": "",
+    "candidate_index": 0
+  }
+]

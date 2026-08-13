@@ -1,0 +1,31 @@
+# Global safety policy (guardrails). Enforced on every action in both
+# discovery and replay. A run may narrow this further via the artifact's own
+# target.allowed_url_patterns (a URL must satisfy BOTH).
+
+# Allowlist of URL substrings / glob patterns the agent may touch.
+# Keep this tight. Anything not matching is blocked (fail closed).
+allowed_url_patterns:
+  - "http://127.0.0.1:*"
+  - "http://localhost:*"
+
+# Explicit denylist (checked first, wins over the allowlist).
+blocked_url_patterns:
+  - "*/logout*"          # example: never let automation sign the operator out
+  - "*/_control/*"       # test-only control plane is off limits to the agent
+
+# Action types the agent may perform at all.
+allowed_action_types:
+  - navigate
+  - click
+  - fill
+  - select_option
+  - press_key
+  - wait_for
+  - extract
+  - assert_checkpoint
+
+# Irreversible ("risky") steps are blocked unless a run is explicitly approved
+# with --allow-risky. Steps flagged requires_confirmation are instead gated
+# behind a human confirmation (an escalation when unattended).
+allow_risky: false
+require_confirmation_for_risky: true

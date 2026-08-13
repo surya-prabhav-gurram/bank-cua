@@ -1,0 +1,38 @@
+{
+  "capability_id": "corebank.member_savings_lookup",
+  "name": "Look up a member and read their savings balance",
+  "description": "Sign on to the Corebank servicing console, search for a member by ID, and read the member's name and current savings balance from the account summary.",
+  "goal": "Sign on with the provided operator credentials, search for member {member_id}, and read that member's name and current savings balance.",
+  "app_id": "corebank-servicing",
+  "surface_type": "web",
+  "base_url": "http://127.0.0.1:5057",
+  "entry_path": "/login",
+  "tenant_id": "demo-cu",
+  "vendor_product": "Corebank",
+  "version": "7.2.1",
+  "inputs": [
+    {"name": "username", "type": "string", "required": true, "sensitive": true,
+     "description": "Operator sign-on user id."},
+    {"name": "password", "type": "string", "required": true, "sensitive": true,
+     "description": "Operator sign-on password."},
+    {"name": "member_id", "type": "string", "required": true, "sensitive": false,
+     "description": "The member number to look up.", "example": "12345"}
+  ],
+  "outputs": [
+    {"name": "member_name", "type": "string", "description": "The member's full name."},
+    {"name": "savings_balance", "type": "money",
+     "description": "Current savings balance, normalised to integer cents."}
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "Savings",
+    "frame_path": ["balancepane"],
+    "description": "The savings balance pane rendered for a valid member."
+  },
+  "max_steps": 14,
+  "param_values": {
+    "username": "operator",
+    "password": "password123",
+    "member_id": "12345"
+  }
+}

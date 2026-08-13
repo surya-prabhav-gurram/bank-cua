@@ -1,0 +1,35 @@
+{"ts": 1786646133.508, "event": "run_started", "kind": "discovery", "run_dir": "evidence/discovery-corebank.member_savings_lookup-***CARD***"}
+{"ts": 1786646137.018, "event": "discovery_started", "goal": "Sign on with the provided ***REDACTED*** credentials, search for member 12345, and read that member's name and current savings balance.", "provider": "anthropic", "entry": "/login"}
+{"ts": 1786646137.336, "event": "evidence_captured", "label": "step00", "screenshot": "evidence/discovery-corebank.member_savings_lookup-***CARD***/step00.png"}
+{"ts": 1786646137.336, "event": "observation", "step": 0, "url": "http://127.0.0.1:5057/login", "status": 200, "num_elements": 3}
+{"ts": 1786646139.431, "event": "model_decided", "step": 0, "action": "fill", "intent": "Fill in the username field with the provided ***REDACTED*** credentials", "ref": 0, "value": "{username}"}
+{"ts": 1786646139.491, "event": "action_executed", "step": 0, "kind": "fill", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1786646139.639, "event": "evidence_captured", "label": "step01", "screenshot": "evidence/discovery-corebank.member_savings_lookup-***CARD***/step01.png"}
+{"ts": 1786646139.639, "event": "observation", "step": 1, "url": "http://127.0.0.1:5057/login", "status": 200, "num_elements": 3}
+{"ts": 1786646142.133, "event": "model_decided", "step": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ref": 1, "value": "{password}"}
+{"ts": 1786646142.16, "event": "action_executed", "step": 1, "kind": "fill", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1786646142.236, "event": "evidence_captured", "label": "step02", "screenshot": "evidence/discovery-corebank.member_savings_lookup-***CARD***/step02.png"}
+{"ts": 1786646142.237, "event": "observation", "step": 2, "url": "http://127.0.0.1:5057/login", "status": 200, "num_elements": 3}
+{"ts": 1786646144.393, "event": "model_decided", "step": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ref": 2, "value": null}
+{"ts": 1786646144.491, "event": "action_executed", "step": 2, "kind": "click", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1786646144.609, "event": "evidence_captured", "label": "step03", "screenshot": "evidence/discovery-corebank.member_savings_lookup-***CARD***/step03.png"}
+{"ts": 1786646144.609, "event": "observation", "step": 3, "url": "http://127.0.0.1:5057/home", "status": 200, "num_elements": 2}
+{"ts": 1786646147.272, "event": "model_decided", "step": 3, "action": "fill", "intent": "Enter the member ID 12345 into the search field to search for the member's account", "ref": 0, "value": "{member_id}"}
+{"ts": 1786646147.295, "event": "action_executed", "step": 3, "kind": "fill", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1786646147.379, "event": "evidence_captured", "label": "step04", "screenshot": "evidence/discovery-corebank.member_savings_lookup-***CARD***/step04.png"}
+{"ts": 1786646147.379, "event": "observation", "step": 4, "url": "http://127.0.0.1:5057/home", "status": 200, "num_elements": 2}
+{"ts": 1786646149.615, "event": "model_decided", "step": 4, "action": "click", "intent": "Submit the member search form to retrieve member 12345's account information", "ref": 1, "value": null}
+{"ts": 1786646149.677, "event": "action_executed", "step": 4, "kind": "click", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1786646149.845, "event": "evidence_captured", "label": "step05", "screenshot": "evidence/discovery-corebank.member_savings_lookup-***CARD***/step05.png"}
+{"ts": 1786646149.845, "event": "observation", "step": 5, "url": "http://127.0.0.1:5057/member?mid=12345", "status": 200, "num_elements": 1}
+{"ts": 1786646153.263, "event": "model_decided", "step": 5, "action": "extract", "intent": "Extract the member's name as required by the goal", "ref": 2, "value": null}
+{"ts": 1786646153.275, "event": "action_executed", "step": 5, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1786646153.374, "event": "evidence_captured", "label": "step06", "screenshot": "evidence/discovery-corebank.member_savings_lookup-***CARD***/step06.png"}
+{"ts": 1786646153.375, "event": "observation", "step": 6, "url": "http://127.0.0.1:5057/member?mid=12345", "status": 200, "num_elements": 1}
+{"ts": 1786646156.807, "event": "model_decided", "step": 6, "action": "extract", "intent": "Extract the savings balance as required by the goal. The balance is $4,213.55 which needs to be normalized to integer cents (421355).", "ref": 4, "value": null}
+{"ts": 1786646156.837, "event": "action_executed", "step": 6, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1786646156.938, "event": "evidence_captured", "label": "step07", "screenshot": "evidence/discovery-corebank.member_savings_lookup-***CARD***/step07.png"}
+{"ts": 1786646156.938, "event": "observation", "step": 7, "url": "http://127.0.0.1:5057/member?mid=12345", "status": 200, "num_elements": 1}
+{"ts": 1786646160.794, "event": "model_decided", "step": 7, "action": "finish", "intent": "The goal has been accomplished. The recent history shows that both required extractions have been completed: member_name (Jane A. Doe) and savings_balance ($4,213.55 = 421355 cents). The member 12345 was successfully searched and the required data was extracted.", "ref": null, "value": null}
+{"ts": 1786646160.801, "event": "finish_requested", "success_checkpoint": true, "model_success": true}
+{"ts": 1786646160.805, "event": "run_finished", "summary_path": "evidence/discovery-corebank.member_savings_lookup-***CARD***/summary.json"}

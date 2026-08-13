@@ -1,0 +1,32 @@
+{
+  "id": "replay-corebank.open_subaccount-step9",
+  "kind": "risky_confirmation",
+  "reason": "irreversible step 'Click the 'Confirm and Create' button to complete the sub-account creation and reach the confirmation screen as required by the goal.' needs human confirmation",
+  "capability_id": "corebank.open_subaccount",
+  "goal": null,
+  "current_step_index": 9,
+  "state_url": "http://127.0.0.1:5057/subaccount/review",
+  "screenshot_path": "evidence/escalation-06-handoff/confirm_step09.png",
+  "dom_path": "evidence/escalation-06-handoff/confirm_step09.dom.html",
+  "cdp_endpoint": "http://127.0.0.1:9222",
+  "controller": "agent",
+  "status": "resolved",
+  "created_at": 1786647325.3723147,
+  "resolved_at": 1786647326.7238812,
+  "resolution_note": "performed manually by operator",
+  "resume": true,
+  "human_actions": [
+    {
+      "op": "note",
+      "detail": "reviewed irreversible sub-account creation; approving",
+      "value": null,
+      "ts": 1786647326.1807027
+    },
+    {
+      "op": "click_selector",
+      "detail": "input[type=submit]",
+      "value": null,
+      "ts": 1786647326.3222373
+    }
+  ]
+}

@@ -1,0 +1,380 @@
+[
+  {
+    "index": 0,
+    "intent": "Fill in the username field with the provided ***REDACTED*** credentials",
+    "action_kind": "fill",
+    "url": "http://127.0.0.1:5057/login",
+    "url_template": null,
+    "element": {
+      "ref": 0,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "text",
+      "label": "",
+      "placeholder": "",
+      "near_label": "User ID",
+      "text": "",
+      "css": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: textbox",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"User ID\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-proximity: the input in the row labelled 'User ID'. Survives markup/theming churn far better than an absolute path."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "***REDACTED***",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "filled textbox: textbox",
+    "candidate_index": 0
+  },
+  {
+    "index": 1,
+    "intent": "Fill in the password field to complete the login credentials",
+    "action_kind": "fill",
+    "url": "http://127.0.0.1:5057/login",
+    "url_template": null,
+    "element": {
+      "ref": 1,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "password",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Password",
+      "text": "",
+      "css": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: textbox",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Password\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-proximity: the input in the row labelled 'Password'. Survives markup/theming churn far better than an absolute path."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "***REDACTED***",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "filled textbox: textbox",
+    "candidate_index": 0
+  },
+  {
+    "index": 2,
+    "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in",
+    "action_kind": "click",
+    "url": "http://127.0.0.1:5057/login",
+    "url_template": null,
+    "element": {
+      "ref": 2,
+      "frame_path": [],
+      "tag": "input",
+      "role": "button",
+      "name": "Sign On",
+      "type_attr": "submit",
+      "label": "",
+      "placeholder": "",
+      "near_label": "",
+      "text": "",
+      "css": "table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[3]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "button: Sign On",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "role",
+          "value": "Sign On",
+          "role": "button",
+          "exact": false,
+          "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[3]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "clicked button: Sign On",
+    "candidate_index": 0
+  },
+  {
+    "index": 3,
+    "intent": "Enter the member ID 12345 into the search field to search for the member's account",
+    "action_kind": "fill",
+    "url": "http://127.0.0.1:5057/home",
+    "url_template": null,
+    "element": {
+      "ref": 0,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "text",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Member ID",
+      "text": "",
+      "css": "table > tbody > tr > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: textbox",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Member ID\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-proximity: the input in the row labelled 'Member ID'. Survives markup/theming churn far better than an absolute path."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "12345",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "filled textbox: textbox",
+    "candidate_index": 0
+  },
+  {
+    "index": 4,
+    "intent": "Submit the member search form to retrieve member 12345's account information",
+    "action_kind": "click",
+    "url": "http://127.0.0.1:5057/home",
+    "url_template": null,
+    "element": {
+      "ref": 1,
+      "frame_path": [],
+      "tag": "input",
+      "role": "button",
+      "name": "Search",
+      "type_attr": "submit",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Member ID",
+      "text": "",
+      "css": "table > tbody > tr > td:nth-of-type(3) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[3]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "button: Search",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "role",
+          "value": "Search",
+          "role": "button",
+          "exact": false,
+          "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr > td:nth-of-type(3) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[3]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "ok": true,
+    "message": "clicked button: Search",
+    "candidate_index": 0
+  },
+  {
+    "index": 5,
+    "intent": "Extract the member's name as required by the goal",
+    "action_kind": "extract",
+    "url": "http://127.0.0.1:5057/member?mid=12345",
+    "url_template": null,
+    "element": null,
+    "locator": {
+      "description": "value for Name",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Name\"]]/td[last()]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-relative XPath: finds the value cell by its adjacent label; robust to table reflow."
+        },
+        {
+          "kind": "css",
+          "value": "tr:nth-of-type(2) > td > table > tbody > tr:nth-of-type(2) > td:nth-of-type(2)",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS of the value cell; fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": "member_name",
+    "attribute": "text",
+    "extracted_value": "Jane A. Doe",
+    "risk": "safe",
+    "ok": true,
+    "message": "",
+    "candidate_index": 0
+  },
+  {
+    "index": 6,
+    "intent": "Extract the savings balance as required by the goal. The balance is $4,213.55 which needs to be normalized to integer cents (421355).",
+    "action_kind": "extract",
+    "url": "http://127.0.0.1:5057/member?mid=12345",
+    "url_template": null,
+    "element": null,
+    "locator": {
+      "description": "value for Savings",
+      "frame_path": [
+        "balancepane"
+      ],
+      "candidates": [
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Savings\"]]/td[last()]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-relative XPath: finds the value cell by its adjacent label; robust to table reflow."
+        },
+        {
+          "kind": "css",
+          "value": "html > body > table > tbody > tr:nth-of-type(2) > td:nth-of-type(2)",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS of the value cell; fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": "savings_balance",
+    "attribute": "text",
+    "extracted_value": "$4,213.55",
+    "risk": "safe",
+    "ok": true,
+    "message": "",
+    "candidate_index": 0
+  }
+]

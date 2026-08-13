@@ -1,0 +1,489 @@
+{
+  "schema_version": 1,
+  "id": "corebank.member_savings_lookup",
+  "name": "Look up a member and read their savings balance",
+  "description": "Sign on to the Corebank servicing console, search for a member by ID, and read the member's name and current savings balance from the account summary.",
+  "version": "1.0.0",
+  "target": {
+    "app_id": "corebank-servicing",
+    "surface_type": "web",
+    "base_url": "http://127.0.0.1:5057",
+    "entry_path": "/login",
+    "tenant_id": "demo-cu",
+    "vendor_product": "Corebank",
+    "version": "7.2.1",
+    "allowed_url_patterns": [
+      "http://127.0.0.1:5057/*",
+      "http://127.0.0.1:5057"
+    ]
+  },
+  "inputs": [
+    {
+      "name": "username",
+      "type": "string",
+      "required": true,
+      "description": "Operator sign-on user id.",
+      "example": null,
+      "sensitive": true
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "description": "Operator sign-on password.",
+      "example": null,
+      "sensitive": true
+    },
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "description": "The member number to look up.",
+      "example": "12345",
+      "sensitive": false
+    }
+  ],
+  "outputs": [
+    {
+      "name": "member_name",
+      "type": "string",
+      "description": "The member's full name."
+    },
+    {
+      "name": "savings_balance",
+      "type": "money",
+      "description": "Current savings balance, normalised to integer cents."
+    }
+  ],
+  "steps": [
+    {
+      "index": 0,
+      "intent": "Fill in the username field with the provided operator credentials",
+      "action": "fill",
+      "target": {
+        "description": "textbox: textbox",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"User ID\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Label-proximity: the input in the row labelled 'User ID'. Survives markup/theming churn far better than an absolute path."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "secret_param",
+        "literal": null,
+        "param": "username"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 1,
+      "intent": "Fill in the password field to complete the login credentials",
+      "action": "fill",
+      "target": {
+        "description": "textbox: textbox",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Password\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Label-proximity: the input in the row labelled 'Password'. Survives markup/theming churn far better than an absolute path."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "secret_param",
+        "literal": null,
+        "param": "password"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 2,
+      "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in",
+      "action": "click",
+      "target": {
+        "description": "button: Sign On",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Sign On",
+            "role": "button",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[3]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/home",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 3,
+      "intent": "Enter the member ID 12345 into the search field to search for the member's account",
+      "action": "fill",
+      "target": {
+        "description": "textbox: textbox",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Member ID\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Label-proximity: the input in the row labelled 'Member ID'. Survives markup/theming churn far better than an absolute path."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "param",
+        "literal": null,
+        "param": "member_id"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 4,
+      "intent": "Submit the member search form to retrieve member 12345's account information",
+      "action": "click",
+      "target": {
+        "description": "button: Search",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Search",
+            "role": "button",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr > td:nth-of-type(3) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[3]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/member?mid={member_id}",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 5,
+      "intent": "Extract the member's name as required by the goal",
+      "action": "extract",
+      "target": null,
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": {
+        "output": "member_name",
+        "locator": {
+          "description": "value for Name",
+          "frame_path": [],
+          "candidates": [
+            {
+              "kind": "xpath",
+              "value": "//tr[td[normalize-space(.)=\"Name\"]]/td[last()]",
+              "role": null,
+              "exact": false,
+              "reasoning": "Label-relative XPath: finds the value cell by its adjacent label; robust to table reflow."
+            },
+            {
+              "kind": "css",
+              "value": "tr:nth-of-type(2) > td > table > tbody > tr:nth-of-type(2) > td:nth-of-type(2)",
+              "role": null,
+              "exact": false,
+              "reasoning": "Structural CSS of the value cell; fallback."
+            }
+          ]
+        },
+        "attribute": "text",
+        "transform": "strip"
+      },
+      "wait": null,
+      "checkpoint": null,
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 6,
+      "intent": "Extract the savings balance as required by the goal. The balance is $4,213.55 which needs to be normalized to integer cents (421355).",
+      "action": "extract",
+      "target": null,
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": {
+        "output": "savings_balance",
+        "locator": {
+          "description": "value for Savings",
+          "frame_path": [
+            "balancepane"
+          ],
+          "candidates": [
+            {
+              "kind": "xpath",
+              "value": "//tr[td[normalize-space(.)=\"Savings\"]]/td[last()]",
+              "role": null,
+              "exact": false,
+              "reasoning": "Label-relative XPath: finds the value cell by its adjacent label; robust to table reflow."
+            },
+            {
+              "kind": "css",
+              "value": "html > body > table > tbody > tr:nth-of-type(2) > td:nth-of-type(2)",
+              "role": null,
+              "exact": false,
+              "reasoning": "Structural CSS of the value cell; fallback."
+            }
+          ]
+        },
+        "attribute": "text",
+        "transform": "money_to_cents"
+      },
+      "wait": null,
+      "checkpoint": null,
+      "risk": "safe",
+      "requires_confirmation": false
+    }
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "Savings",
+    "frame_path": [
+      "balancepane"
+    ],
+    "description": "The savings balance pane rendered for a valid member."
+  },
+  "known_conditions": [
+    {
+      "code": "MEMBER_NOT_FOUND",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "No member found",
+        "frame_path": []
+      },
+      "message": "No member exists for the supplied ID.",
+      "recovery": null,
+      "surfaces_outputs": false
+    },
+    {
+      "code": "PERMISSION_DENIED",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "Access Denied",
+        "frame_path": []
+      },
+      "message": "The operator is not permitted to view this member/account.",
+      "recovery": null,
+      "surfaces_outputs": false
+    },
+    {
+      "code": "VALIDATION_ERROR",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "Validation error",
+        "frame_path": []
+      },
+      "message": "The submitted input failed the application's validation.",
+      "recovery": null,
+      "surfaces_outputs": false
+    },
+    {
+      "code": "MAINTENANCE_INTERSTITIAL",
+      "klass": "recoverable",
+      "detector": {
+        "kind": "text_present",
+        "value": "System Maintenance Notice",
+        "frame_path": []
+      },
+      "message": "Unexpected maintenance gate; dismiss and continue.",
+      "recovery": {
+        "kind": "click",
+        "target": {
+          "description": "maintenance 'Continue to application' link",
+          "frame_path": [],
+          "candidates": [
+            {
+              "kind": "text",
+              "value": "Continue to application",
+              "role": null,
+              "exact": false,
+              "reasoning": "Stable link text on the gate page."
+            }
+          ]
+        },
+        "max_attempts": 1,
+        "backoff_ms": 1500
+      },
+      "surfaces_outputs": false
+    },
+    {
+      "code": "APP_ERROR_500",
+      "klass": "recoverable",
+      "detector": {
+        "kind": "text_present",
+        "value": "Application Error",
+        "frame_path": []
+      },
+      "message": "Transient application error; reload and retry.",
+      "recovery": {
+        "kind": "reload",
+        "target": null,
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      },
+      "surfaces_outputs": false
+    },
+    {
+      "code": "SESSION_TIMEOUT",
+      "klass": "hard_failure",
+      "detector": {
+        "kind": "text_present",
+        "value": "Session expired",
+        "frame_path": []
+      },
+      "message": "Session timed out; re-authentication required (surfaced to caller).",
+      "recovery": null,
+      "surfaces_outputs": false
+    }
+  ],
+  "approval_state": "draft",
+  "provenance": {
+    "recorded_at": null,
+    "recorded_by": "anthropic",
+    "discovery_run_id": "discovery-corebank.member_savings_lookup-20260813-183533",
+    "transcript_ref": "evidence/discovery-corebank.member_savings_lookup-20260813-183533/transcript.json",
+    "transcript_sha256": "37ebff51abcb7ef17de91740dfa91139430d6fbad2637086d09b7d4cad1d3edf",
+    "notes": "Compiled from a successful discovery run."
+  },
+  "stability": null
+}

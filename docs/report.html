@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>bank-cua — Design Report</title>
+<style>
+  :root{
+    --ink:#1a1f29; --muted:#5b6472; --line:#d9dee6; --accent:#1f3a5f;
+    --accent2:#2c6b4f; --chip:#eef2f7; --danger:#8a2b2b;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  body{font-family:"Helvetica Neue",Arial,sans-serif; color:var(--ink);
+       font-size:10.5pt; line-height:1.5; margin:0;}
+  .page{padding:0 4mm;}
+  h1{font-size:22pt; color:var(--accent); margin:0 0 2pt;}
+  h2{font-size:13pt; color:var(--accent); border-bottom:2px solid var(--accent);
+     padding-bottom:3pt; margin:20pt 0 8pt;}
+  h3{font-size:11pt; color:var(--ink); margin:12pt 0 4pt;}
+  p{margin:0 0 7pt;}
+  .sub{color:var(--muted); font-size:10pt; margin:0 0 4pt;}
+  .rule{height:3px;background:var(--accent);border:0;margin:10pt 0 14pt;}
+  strong{color:var(--ink);}
+  code{font-family:"SF Mono",Consolas,Menlo,monospace; font-size:9pt;
+       background:var(--chip); padding:0.5pt 3pt; border-radius:3px;}
+  ul{margin:0 0 8pt; padding-left:16pt;} li{margin:0 0 4pt;}
+  .lead{font-size:11pt;}
+  .tagline{background:var(--chip); border-left:3px solid var(--accent);
+    padding:8pt 12pt; font-size:10.5pt; margin:10pt 0; color:var(--accent);}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:6pt 18pt; margin:6pt 0 10pt;}
+  .kv{font-size:9.7pt;}
+  .kv b{color:var(--accent);}
+  .flow{font-family:"SF Mono",Consolas,monospace; font-size:8.6pt; background:#f7f9fc;
+    border:1px solid var(--line); border-radius:6px; padding:10pt; white-space:pre;
+    color:var(--ink); margin:8pt 0; line-height:1.35;}
+  .pill{display:inline-block; background:var(--accent); color:#fff; font-size:8pt;
+    padding:1pt 7pt; border-radius:10px; margin-right:4pt; vertical-align:middle;}
+  .pill.g{background:var(--accent2);} .pill.r{background:var(--danger);}
+  table{width:100%; border-collapse:collapse; margin:6pt 0 10pt; font-size:9.3pt;}
+  th,td{border:1px solid var(--line); padding:4pt 7pt; text-align:left; vertical-align:top;}
+  th{background:var(--chip); color:var(--accent);}
+  .foot{color:var(--muted); font-size:8.5pt; border-top:1px solid var(--line);
+    padding-top:6pt; margin-top:14pt;}
+  .page-break{page-break-before:always;}
+  .summary-card{border:1px solid var(--line); border-radius:8px; padding:10pt 12pt;
+    margin:8pt 0; background:#fbfcfe;}
+  .status-ok{color:var(--accent2); font-weight:bold;}
+  .status-bad{color:var(--danger); font-weight:bold;}
+  @page{size:A4; margin:14mm 12mm;}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ===================== EXECUTIVE SUMMARY (1 page) ===================== -->
+<h1>bank-cua</h1>
+<p class="sub">Record-once / replay-many computer use for legacy back-office banking apps</p>
+<p class="sub">Design report &amp; executive summary &nbsp;·&nbsp; Surya Prabhav Gurram</p>
+<hr class="rule">
+
+<h2 style="margin-top:6pt">Executive summary</h2>
+<p class="lead">Banks and credit unions run a long tail of legacy applications with
+no API — the only way in is to drive the UI like a human operator. <strong>bank-cua</strong>
+lets an LLM figure out a task <em>once</em>, compiles that run into a typed,
+reviewable <strong>capability artifact</strong>, and then <strong>replays it deterministically
+with no model in the loop</strong> — the cheap, reliable path an AI agent triggers in
+production.</p>
+
+<div class="tagline">The model discovers → the artifact becomes a reusable capability →
+deterministic replay is how the agent invokes it in production.</div>
+
+<h3>What was built (end-to-end vertical slice)</h3>
+<div class="grid">
+  <div class="kv"><b>Discovery</b> — goal-driven observe→decide→act loop drives a real, live UI.</div>
+  <div class="kv"><b>Artifact</b> — typed, versioned, parameterised capability contract (JSON).</div>
+  <div class="kv"><b>Replay</b> — deterministic, no-LLM execution with stable locators + checkpoints.</div>
+  <div class="kv"><b>Error taxonomy</b> — business-outcome vs. recoverable vs. hard-failure.</div>
+  <div class="kv"><b>Safety</b> — allowlist, irreversible-action gating, secret/PII redaction.</div>
+  <div class="kv"><b>Escalation</b> — human takes control of the <em>same live session</em> over CDP.</div>
+  <div class="kv"><b>Cross-tenant</b> — one artifact reused across a rebranded 2nd tenant via a small override.</div>
+  <div class="kv"><b>Agent API + codegen</b> — callable-by-name HTTP endpoints; artifact → runnable Playwright.</div>
+  <div class="kv"><b>Confidence</b> — multi-run stability signal + draft→approved gate; bounded assisted recovery.</div>
+</div>
+
+<h3>Proven, not described — from <code>evidence/</code></h3>
+<table>
+  <tr><th>Scenario</th><th>Result</th></tr>
+  <tr><td>Member lookup, valid member (12345)</td><td><span class="status-ok">SUCCESS</span> · outputs <code>member_name</code>, <code>savings_balance=421355</code> (cents)</td></tr>
+  <tr><td>Member 00000 / 99999</td><td><span class="status-ok">BUSINESS_OUTCOME</span> · <code>MEMBER_NOT_FOUND</code> / <code>PERMISSION_DENIED</code> (not a crash)</td></tr>
+  <tr><td>Unexpected maintenance interstitial</td><td><span class="status-ok">RECOVERED</span> · auto-dismissed, run still succeeds</td></tr>
+  <tr><td>Session timeout injected</td><td><span class="status-bad">HARD_FAILURE</span> · <code>SESSION_TIMEOUT</code> surfaced w/ screenshot + DOM</td></tr>
+  <tr><td>Sub-account creation (irreversible)</td><td><span class="status-ok">HANDOFF</span> · paused → operator confirmed on same session → resumed to SUCCESS</td></tr>
+  <tr><td>Same artifact on a 2nd tenant (rebranded labels)</td><td><span class="status-ok">CROSS-TENANT</span> · clean with a ~4-line override; still works via fallback (drift) without one</td></tr>
+  <tr><td>Replayed N times</td><td><span class="status-ok">STABILITY</span> · pass-rate signal feeding the draft→approved gate</td></tr>
+</table>
+
+<h3>Design stance</h3>
+<p>Go deep on the load-bearing pieces — the artifact schema, deterministic replay
+plus its error contract, and the safety/escalation model — and keep everything
+else thin at a clean seam. The <code>Surface</code> abstraction and the
+flow-vs-tenant-binding split in <code>Target</code> keep legacy-web, desktop, and
+multi-tenant reuse out of the core's way without building that plumbing
+prematurely. Stack: Python + Playwright, Pydantic v2 schema, a legacy-style Flask
+mock as the proxy target.</p>
+
+<div class="foot">Full source, artifacts, and evidence in the accompanying public repository.
+87 automated tests pass; a repo-wide sweep finds no secret in any artifact, log, or transcript.</div>
+
+<!-- ===================== FULL REPORT ===================== -->
+<div class="page-break"></div>
+<h1 style="font-size:16pt">Design report</h1>
+<hr class="rule">
+
+<h2 style="margin-top:4pt">1 · Architecture</h2>
+<p>The system is one Python package with sharp internal seams and a single
+dependency direction: everything speaks the <strong>schema</strong> and the
+<strong>surface</strong> interface; nothing speaks Playwright except one file.</p>
+<div class="flow">goal + target ─▶ Discovery loop ──▶ Transcript ──▶ Compiler ──▶ Capability artifact (JSON)
+                 (LLM: observe/decide/act)                          │
+                                                                    ▼
+input params ─────────────────────────────────▶ Replay engine (NO LLM) ─▶ ReplayResult
+                                                    │  ▲
+                                    guardrails ◀────┘  └──▶ Escalation / live-session handoff</div>
+<ul>
+<li><strong>Surface (perceive/act) vs. the recorded flow.</strong> The schema, discovery
+loop, and replay engine import only this interface. A legacy-web frame driver or a
+desktop accessibility driver is a new <code>Surface</code> and touches nothing else.</li>
+<li><strong>Discovery and replay share the same targeting primitives.</strong> Discovery
+synthesises a Locator from the element it chose and acts <em>through</em> it, so what is
+recorded is exactly what is exercised — it already worked once.</li>
+<li><strong>The model never writes selectors.</strong> It picks elements by an integer
+<code>ref</code>; the system computes the robust, multi-strategy Locator. Locator quality
+is a property of code, not prompt luck.</li>
+<li><strong>The compiler is the record→capability boundary</strong> — parameterising,
+synthesising checkpoints, attaching the vendor condition library, referencing (not
+inlining) a redacted transcript.</li>
+<li><strong>Single process, synchronous, file-backed.</strong> No queue, no services; the
+parts that would scale (artifact-as-data, catalog, handoff inbox) are already
+serialisable and stateless. Simplicity is deliberate.</li>
+</ul>
+
+<h2>2 · Artifact schema</h2>
+<p>A <code>CapabilityArtifact</code> is a <strong>contract</strong>, not a step dump: a calling
+agent should understand what it needs and returns without reading the steps.</p>
+<ul>
+<li><strong>Contract-first</strong> — typed <code>inputs</code> (with <code>required</code>,
+<code>sensitive</code>, <code>example</code>), typed <code>outputs</code>, and a top-level
+<code>success</code> checkpoint. The catalog turns these into an agent function-calling manifest.</li>
+<li><strong>Robust targeting as data</strong> — every control is a frame-aware
+<code>Locator</code> with an <strong>ordered candidate list, most-stable-first</strong>
+(role+name → label → placeholder → text → CSS → XPath), each with human
+<code>reasoning</code>. Read-only values get <strong>label-relative XPath</strong>
+(<code>//tr[td="Savings"]/td[last()]</code>) that survives table reflow.</li>
+<li><strong>The error taxonomy lives in the schema</strong> — <code>KnownCondition</code>
+records a detector, a class, and an optional recovery, as reviewable data.</li>
+<li><strong>Safety in the schema</strong> — each step carries a <code>RiskClass</code> and
+<code>requires_confirmation</code>; the compiler flags create/confirm/submit as risky.</li>
+<li><strong>Reuse-ready target</strong> — <code>Target</code> separates the shared flow
+from the per-tenant binding (<code>base_url</code>, <code>tenant_id</code>,
+<code>vendor_product</code>, <code>version</code>).</li>
+<li><strong>Provenance, decoupled from the transcript</strong> — semver, approval state,
+<code>recorded_by</code>, and a transcript reference + sha256; the raw transcript is stored
+separately and redacted, never inlined.</li>
+</ul>
+
+<h2>3 · Determinism &amp; error handling</h2>
+<p><strong>Determinism.</strong> Replay runs with no model: it resolves each control via the
+ordered candidates, waits for declared conditions instead of sleeping, and asserts a
+<strong>per-step checkpoint</strong> after acting before proceeding. Parameters are substituted
+into URLs, values, and checkpoints at run time.</p>
+<p><strong>The runtime-error contract is the core.</strong> After every step (and on any action
+failure) replay runs the artifact's condition detectors and acts on the first match:</p>
+<ul>
+<li><span class="pill g">business_outcome</span> stop and return a code the caller wants —
+"no such member" / "permission denied" are <em>answers</em>, never crashes.</li>
+<li><span class="pill">recoverable</span> run the declared recovery (dismiss interstitial,
+reload transient 500) up to its budget, then re-scan and continue; each recovery is recorded.</li>
+<li><span class="pill r">hard_failure</span> stop with a structured error: step, expected,
+observed, plus screenshot + redacted DOM snapshot.</li>
+</ul>
+<p>A checkpoint that fails with no matching condition is itself a hard failure with full
+evidence — unrecognised trouble never silently proceeds. UI drift (secondary) is absorbed
+by the ordered locator fallbacks and by checkpoints failing loudly; a stability signal and
+an approval gate are the hooks to catch drift before unattended production.</p>
+
+<h2>4 · Heterogeneity &amp; multi-tenant</h2>
+<p><strong>Other surfaces.</strong> The seam is <code>Surface</code>. The schema speaks roles,
+names, labels, and frames — vocabulary a desktop <strong>accessibility tree</strong> exposes
+just as a browser does — so the format assumes no DOM. Legacy web is the same surface leaning
+on <code>frame_path</code> and structural fallbacks; desktop is a new <code>Surface</code> over
+an OS accessibility API or screenshot+coordinates (the schema already has a coordinate locator
+kind). Perception/action change; the flow, compiler, replay, error contract, and safety do not.</p>
+<p><strong>Multi-tenant reuse.</strong> <code>Target</code> splits the shared flow from the
+per-tenant binding, so hundreds of tenants on one vendor product share a single artifact and
+differ only by binding + optional overrides. Two mechanisms make this real: <strong>vendor-level
+condition libraries</strong> (how "Corebank" signals a locked account is curated once and
+inherited by all its tenants), and <strong>semantic-first locators</strong> that survive
+per-tenant theming better than structural paths. Drift is detected by watching checkpoint
+failures and which locator candidate resolved (both logged); a per-tenant stability score gates
+unattended use. Canonicalising routes (<code>/item/12345 → /item/:id</code>) extends the existing
+URL parameteriser. <strong>Built and demonstrated:</strong> a rebranded second tenant variant
+(<code>MOCKBANK_VARIANT=summit</code>, "Member Number"/"Find"/"Log In"); the member-lookup
+artifact recorded on <code>demo-cu</code> runs against <code>summit-cu</code> — clean with a
+~4-line override, and still succeeding via structural fallbacks (with drift signals) without
+one. Only the multi-tenant <em>plumbing</em> (registry, scheduling) is left unbuilt, per the brief.</p>
+
+<h2>5 · Escalation &amp; handoff</h2>
+<p><strong>Detecting "stuck."</strong> Discovery escalates on no-progress over N steps, an
+unresolvable target, a policy block, or a model <code>escalate</code>. Replay escalates on a
+policy-gated irreversible step or an unrecoverable condition.</p>
+<p><strong>Routing with context.</strong> An <code>InterventionRequest</code> carries the
+capability/goal, current step, live URL, screenshot + DOM, reason, a <strong>control token</strong>
+(<code>agent</code>/<code>operator</code>), and the <strong>CDP endpoint</strong> of the live
+session, to a file-backed inbox; the automation blocks on it (and, unattended, times out and
+aborts cleanly, preserving the request for triage).</p>
+<p><strong>Taking control of the same live session.</strong> The browser is launched with a
+remote-debugging port, so the operator attaches to the <strong>same Chromium</strong> via
+<code>connect_over_cdp</code> and drives the <strong>same page</strong> — cookies, half-filled
+forms, and URL all preserved. Human actions are recorded; on resolve the token returns to
+<code>agent</code>; replay resumes, or skips execution if the human performed the gated step
+(so an irreversible action is never double-executed). The full round trip runs in evidence and
+via the <code>operator</code> CLI. The control-transfer <em>model</em> is real; the operator
+<em>console</em> is a CLI stand-in for a co-browsing UI, which is out of scope.</p>
+
+<h2>6 · Safety</h2>
+<p>Guardrails run on <strong>every action, before it happens, in both discovery and replay</strong>;
+a violation raises, never warns-and-continues.</p>
+<ul>
+<li><strong>Layered allowlist</strong> — a global policy (URL patterns, action types, an explicit
+denylist) plus the artifact's own allowlist; a URL must satisfy both, else it is blocked (fail closed).</li>
+<li><strong>Irreversibility, treated conservatively</strong> — reversible actions are safe;
+create/confirm/submit/delete are risky and <strong>blocked unless explicitly approved</strong>,
+or gated behind human confirmation (an escalation when unattended). Refusing to create a
+sub-account is far cheaper than creating one by mistake.</li>
+<li><strong>Never persist secrets or regulated data</strong> — sensitive inputs are stored as
+parameter <em>names</em>, never values; redaction is name-based + pattern-based (SSN, card,
+email) across logs, transcripts, and DOM snapshots. The observation indexer never captures a
+control's typed value, so secrets never reach the model prompt in the first place.</li>
+</ul>
+<p><strong>Limits.</strong> Screenshots can still show on-screen PII (treated as sensitive
+evidence today; masked capture next). The allowlist is URL/action-shaped, not semantic —
+value-level policy (amount limits, dual control) is the next layer. Risk classification is a
+keyword+action heuristic and should become an explicit per-step review gate before approval.</p>
+
+<h2>7 · Cuts</h2>
+<p>Most stretch goals are <strong>built</strong>: agent-facing API (<code>serve</code>), code
+generation (<code>codegen</code>), confidence/approval (stability signal + draft→approved gate),
+bounded assisted recovery, and cross-tenant reuse with per-variant overrides + route
+canonicalisation. Left thin at clean seams: the <strong>operator console</strong> (CLI
+stand-in; the handoff mechanism is real); <strong>desktop/legacy-web surfaces</strong> (designed,
+not built — the <code>Surface</code> seam keeps the core uncommitted); <strong>multi-tenant
+plumbing</strong> (registry/scheduling — the scaling infrastructure the brief says to avoid); and
+the <strong>committed discovery evidence is a genuine live run</strong> via the Anthropic Messages
+API (<code>recorded_by: anthropic</code>), with a key-free offline
+reproduction via the bridge provider.</p>
+<p><strong>Next, in order:</strong> (1) a second <code>Surface</code> (desktop accessibility tree)
+to prove the seam on a genuinely non-DOM target; (2) value-level semantic policy (amount limits,
+dual control on money movement); (3) a real co-browsing console over the existing CDP seam; (4) an
+artifact auto-repair loop that proposes locator/override updates when drift crosses a threshold,
+gated by the approval workflow.</p>
+
+<div class="foot">bank-cua · design report · generated from the working system and its evidence.</div>
+
+</div>
+</body>
+</html>

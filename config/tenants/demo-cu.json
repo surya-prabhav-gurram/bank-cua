@@ -1,0 +1,6 @@
+{
+  "tenant_id": "demo-cu",
+  "base_url": "http://127.0.0.1:5057",
+  "version": "7.2.1",
+  "label_map": {}
+}

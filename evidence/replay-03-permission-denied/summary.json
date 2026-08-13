@@ -1,0 +1,18 @@
+{
+  "status": "business_outcome",
+  "capability_id": "corebank.member_savings_lookup",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": {
+    "code": "PERMISSION_DENIED",
+    "message": "The ***REDACTED*** is not permitted to view this member/account.",
+    "step_index": 4
+  },
+  "failure": null,
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 5,
+  "duration_s": 0.4
+}

@@ -1,0 +1,704 @@
+{
+  "schema_version": 1,
+  "id": "corebank.open_subaccount",
+  "name": "Open a new sub-account and reach the confirmation screen",
+  "description": "Sign on, open the sub-account form for a member, enter the account type and initial deposit, review, and confirm creation (irreversible) to reach the confirmation screen.",
+  "version": "1.0.0",
+  "target": {
+    "app_id": "corebank-servicing",
+    "surface_type": "web",
+    "base_url": "http://127.0.0.1:5057",
+    "entry_path": "/login",
+    "tenant_id": "demo-cu",
+    "vendor_product": "Corebank",
+    "version": "7.2.1",
+    "allowed_url_patterns": [
+      "http://127.0.0.1:5057/*",
+      "http://127.0.0.1:5057"
+    ]
+  },
+  "inputs": [
+    {
+      "name": "username",
+      "type": "string",
+      "required": true,
+      "description": "Operator sign-on user id.",
+      "example": null,
+      "sensitive": true
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "description": "Operator sign-on password.",
+      "example": null,
+      "sensitive": true
+    },
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "description": "The member number.",
+      "example": "12345",
+      "sensitive": false
+    },
+    {
+      "name": "acct_type",
+      "type": "string",
+      "required": true,
+      "description": "Account type label to select (Savings/Money Market/Certificate of Deposit).",
+      "example": "Money Market",
+      "sensitive": false
+    },
+    {
+      "name": "deposit",
+      "type": "string",
+      "required": true,
+      "description": "Initial deposit amount.",
+      "example": "500.00",
+      "sensitive": false
+    }
+  ],
+  "outputs": [
+    {
+      "name": "confirmation_number",
+      "type": "string",
+      "description": "The new sub-account confirmation number."
+    }
+  ],
+  "steps": [
+    {
+      "index": 0,
+      "intent": "Fill in the User ID field with the provided username credential",
+      "action": "fill",
+      "target": {
+        "description": "textbox: textbox",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"User ID\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Label-proximity: the input in the row labelled 'User ID'. Survives markup/theming churn far better than an absolute path."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "secret_param",
+        "literal": null,
+        "param": "username"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 1,
+      "intent": "Fill in the password field with the provided password credential",
+      "action": "fill",
+      "target": {
+        "description": "textbox: textbox",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Password\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Label-proximity: the input in the row labelled 'Password'. Survives markup/theming churn far better than an absolute path."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "secret_param",
+        "literal": null,
+        "param": "password"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 2,
+      "intent": "Click the Sign On button to authenticate with the credentials that have already been filled in.",
+      "action": "click",
+      "target": {
+        "description": "button: Sign On",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Sign On",
+            "role": "button",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[3]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/home",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 3,
+      "intent": "Fill in the Member ID field with the provided member_id parameter to search for member 12345",
+      "action": "fill",
+      "target": {
+        "description": "textbox: textbox",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Member ID\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Label-proximity: the input in the row labelled 'Member ID'. Survives markup/theming churn far better than an absolute path."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "param",
+        "literal": null,
+        "param": "member_id"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 4,
+      "intent": "Click the Search button to search for member 12345 whose ID has already been filled in from the previous step.",
+      "action": "click",
+      "target": {
+        "description": "button: Search",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Search",
+            "role": "button",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr > td:nth-of-type(3) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[3]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/member?mid={member_id}",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 5,
+      "intent": "Click the \"Open New Sub-Account\" link to begin creating a new Money Market sub-account for member 12345.",
+      "action": "click",
+      "target": {
+        "description": "link: Open New Sub-Account",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Open New Sub-Account",
+            "role": "link",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "text",
+            "value": "Open New Sub-Account",
+            "role": null,
+            "exact": false,
+            "reasoning": "Visible link text."
+          },
+          {
+            "kind": "css",
+            "value": "tbody > tr:nth-of-type(2) > td > p:nth-of-type(2) > a",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/p[2]/a[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/subaccount/new?mid={member_id}",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 6,
+      "intent": "Select 'Money Market' as the account type from the dropdown menu using the provided acct_type parameter.",
+      "action": "select_option",
+      "target": {
+        "description": "combobox: selected: -- select --",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Account Type\"]]//select",
+            "role": null,
+            "exact": false,
+            "reasoning": "Label-proximity: the select in the row labelled 'Account Type'. Survives markup/theming churn far better than an absolute path."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > select",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/select[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "param",
+        "literal": null,
+        "param": "acct_type"
+      },
+      "select_by": "label",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 7,
+      "intent": "Fill in the Initial Deposit field with the provided deposit amount of 500.00",
+      "action": "fill",
+      "target": {
+        "description": "textbox: textbox",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Initial Deposit\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Label-proximity: the input in the row labelled 'Initial Deposit'. Survives markup/theming churn far better than an absolute path."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "param",
+        "literal": null,
+        "param": "deposit"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 8,
+      "intent": "Click the Review button to proceed to the review screen for the new sub-account with the already-filled details (Money Market account type and 500.00 initial deposit).",
+      "action": "click",
+      "target": {
+        "description": "button: Review",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Review",
+            "role": "button",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[3]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/subaccount/review",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "risk": "safe",
+      "requires_confirmation": false
+    },
+    {
+      "index": 9,
+      "intent": "Click the 'Confirm and Create' button to complete the sub-account creation and reach the confirmation screen as required by the goal.",
+      "action": "click",
+      "target": {
+        "description": "button: Confirm and Create",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Confirm and Create",
+            "role": "button",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "css",
+            "value": "tbody > tr:nth-of-type(2) > td > form > input:nth-of-type(4)",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/input[4]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/subaccount/confirm",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "risk": "risky",
+      "requires_confirmation": true
+    },
+    {
+      "index": 10,
+      "intent": "Extract the confirmation number <confirmation_number> as required by the goal.",
+      "action": "extract",
+      "target": null,
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": {
+        "output": "confirmation_number",
+        "locator": {
+          "description": "value for Confirmation",
+          "frame_path": [],
+          "candidates": [
+            {
+              "kind": "xpath",
+              "value": "//tr[td[normalize-space(.)=\"Confirmation\"]]/td[last()]",
+              "role": null,
+              "exact": false,
+              "reasoning": "Label-relative XPath: finds the value cell by its adjacent label; robust to table reflow."
+            },
+            {
+              "kind": "css",
+              "value": "tr:nth-of-type(2) > td > table > tbody > tr:nth-of-type(1) > td:nth-of-type(2)",
+              "role": null,
+              "exact": false,
+              "reasoning": "Structural CSS of the value cell; fallback."
+            }
+          ]
+        },
+        "attribute": "value",
+        "transform": "strip"
+      },
+      "wait": null,
+      "checkpoint": null,
+      "risk": "safe",
+      "requires_confirmation": false
+    }
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "Sub-Account Created",
+    "frame_path": [],
+    "description": "The confirmation screen was reached."
+  },
+  "known_conditions": [
+    {
+      "code": "MEMBER_NOT_FOUND",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "No member found",
+        "frame_path": []
+      },
+      "message": "No member exists for the supplied ID.",
+      "recovery": null,
+      "surfaces_outputs": false
+    },
+    {
+      "code": "PERMISSION_DENIED",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "Access Denied",
+        "frame_path": []
+      },
+      "message": "The operator is not permitted to view this member/account.",
+      "recovery": null,
+      "surfaces_outputs": false
+    },
+    {
+      "code": "VALIDATION_ERROR",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "Validation error",
+        "frame_path": []
+      },
+      "message": "The submitted input failed the application's validation.",
+      "recovery": null,
+      "surfaces_outputs": false
+    },
+    {
+      "code": "MAINTENANCE_INTERSTITIAL",
+      "klass": "recoverable",
+      "detector": {
+        "kind": "text_present",
+        "value": "System Maintenance Notice",
+        "frame_path": []
+      },
+      "message": "Unexpected maintenance gate; dismiss and continue.",
+      "recovery": {
+        "kind": "click",
+        "target": {
+          "description": "maintenance 'Continue to application' link",
+          "frame_path": [],
+          "candidates": [
+            {
+              "kind": "text",
+              "value": "Continue to application",
+              "role": null,
+              "exact": false,
+              "reasoning": "Stable link text on the gate page."
+            }
+          ]
+        },
+        "max_attempts": 1,
+        "backoff_ms": 1500
+      },
+      "surfaces_outputs": false
+    },
+    {
+      "code": "APP_ERROR_500",
+      "klass": "recoverable",
+      "detector": {
+        "kind": "text_present",
+        "value": "Application Error",
+        "frame_path": []
+      },
+      "message": "Transient application error; reload and retry.",
+      "recovery": {
+        "kind": "reload",
+        "target": null,
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      },
+      "surfaces_outputs": false
+    },
+    {
+      "code": "SESSION_TIMEOUT",
+      "klass": "hard_failure",
+      "detector": {
+        "kind": "text_present",
+        "value": "Session expired",
+        "frame_path": []
+      },
+      "message": "Session timed out; re-authentication required (surfaced to caller).",
+      "recovery": null,
+      "surfaces_outputs": false
+    }
+  ],
+  "approval_state": "draft",
+  "provenance": {
+    "recorded_at": null,
+    "recorded_by": "anthropic",
+    "discovery_run_id": "discovery-corebank.open_subaccount-20260813-184404",
+    "transcript_ref": "evidence/discovery-corebank.open_subaccount-20260813-184404/transcript.json",
+    "transcript_sha256": "658fee9201557baea49599e73720ba1940f1862112159dd4c41e3b090545832e",
+    "notes": "Compiled from a successful discovery run."
+  },
+  "stability": null
+}

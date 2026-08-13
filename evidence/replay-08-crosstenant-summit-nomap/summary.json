@@ -1,0 +1,42 @@
+{
+  "status": "success",
+  "capability_id": "corebank.member_savings_lookup",
+  "version": "1.0.0",
+  "outputs": {
+    "member_name": "Jane A. Doe",
+    "savings_balance": 421355
+  },
+  "business_outcome": null,
+  "failure": null,
+  "recoveries": [],
+  "drifts": [
+    {
+      "step_index": 0,
+      "description": "textbox: textbox",
+      "candidate_index": 1,
+      "kind": "css"
+    },
+    {
+      "step_index": 2,
+      "description": "button: Sign On",
+      "candidate_index": 1,
+      "kind": "css"
+    },
+    {
+      "step_index": 3,
+      "description": "textbox: textbox",
+      "candidate_index": 1,
+      "kind": "css"
+    },
+    {
+      "step_index": 4,
+      "description": "button: Search",
+      "candidate_index": 1,
+      "kind": "css"
+    }
+  ],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 7,
+  "duration_s": 0.48
+}

@@ -1,0 +1,8 @@
+[project]
+name = "bank-cua"
+version = "0.1.0"
+description = "Record-once / replay-many computer-use automation for legacy back-office apps"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
