@@ -139,3 +139,12 @@ def test_discovery_policy_block_escalates(mock_app, tmp_path):
     res = _run(mock_app, tmp_path, task,
                [DiscoveryAction(action="navigate", url="/logout", intent="bad")])
     assert res.status == "escalated"
+
+
+def test_discovery_unresolvable_target_escalates(mock_app, tmp_path):
+    task = _lookup_task(mock_app)
+    # the model references an element ref that does not exist -> escalate
+    res = _run(mock_app, tmp_path, task,
+               [DiscoveryAction(action="click", ref=999, intent="ghost")])
+    assert res.status == "escalated"
+    assert "unresolvable" in res.reason.lower()

@@ -114,7 +114,7 @@ mock as the proxy target.</p>
 <h2 style="margin-top:4pt">1 · Architecture</h2>
 <p>The system is one Python package with sharp internal seams and a single
 dependency direction: everything speaks the <strong>schema</strong> and the
-<strong>surface</strong> interface; nothing speaks Playwright except one file.</p>
+<strong>surface</strong> interface; the only places that speak Playwright are the web surface and the operator's CDP client (the handoff).</p>
 <div class="flow">goal + target ─▶ Discovery loop ──▶ Transcript ──▶ Compiler ──▶ Capability artifact (JSON)
                  (LLM: observe/decide/act)                          │
                                                                     ▼

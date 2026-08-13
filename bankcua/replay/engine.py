@@ -52,7 +52,8 @@ from .result import (
 
 class ReplayEngine:
     def __init__(self, surface: Surface, policy: PolicyEngine, logger,
-                 coordinator=None, assist_provider=None, max_assists: int = 1):
+                 coordinator=None, assist_provider=None, max_assists: int = 1,
+                 escalate_unrecoverable: bool = False):
         self.surface = surface
         self.policy = policy
         self.logger = logger
@@ -60,15 +61,21 @@ class ReplayEngine:
         # optional bounded assisted-recovery (task 15): a provider + a hard cap.
         self.assist_provider = assist_provider
         self.max_assists = max_assists
+        # brief 3.6: a replay that hits a condition it can't recover from can
+        # route a human intervention (needs a coordinator) instead of just
+        # failing. Off by default so unattended runs fail fast.
+        self.escalate_unrecoverable = escalate_unrecoverable
         self._drifts: list[DriftSignal] = []
         self._assists: list[AssistEvent] = []
         self._assist_used = 0
+        self._params: dict = {}
 
     def run(self, art: CapabilityArtifact, params: dict[str, Any]) -> ReplayResult:
         t0 = time.time()
         art.validate_inputs(params)
         outputs: dict[str, Any] = {}
         recoveries: list[RecoveryEvent] = []
+        self._params = params
         self._drifts, self._assists, self._assist_used = [], [], 0
         result = ReplayResult(status=ReplayStatus.FAILURE,
                               capability_id=art.id, version=art.version)
@@ -95,6 +102,7 @@ class ReplayEngine:
         for step in art.steps:
             outcome = self._run_step(art, step, params, outputs, recoveries)
             if outcome is not None:            # terminal (business/failure/escalated)
+                outcome = self._maybe_escalate(art, outcome)
                 outcome.capability_id = art.id
                 outcome.version = art.version
                 outcome.outputs = outputs
@@ -124,9 +132,49 @@ class ReplayEngine:
                 failure=FailureDetail(code="SUCCESS_CHECKPOINT_FAILED",
                                       expected=f"{art.success.kind}:{art.success.value}",
                                       observed=self.surface.current_url()))
+            result = self._maybe_escalate(art, result)
         self.logger.event("replay_finished", status=result.status.value,
                           outputs={k: v for k, v in outputs.items()})
         return result
+
+    # config/policy failures that should NOT trigger a human intervention
+    _NON_ESCALATABLE = {"POLICY_VIOLATION", "STEP_BLOCKED_BY_POLICY",
+                        "CONFIRMATION_REQUIRED", "ESCALATION_UNRESOLVED"}
+
+    def _maybe_escalate(self, art, res: ReplayResult) -> ReplayResult:
+        """Brief 3.6: on an UNRECOVERABLE runtime failure, route a human
+        intervention (with full context, on the same live session) rather than
+        just failing -- if a coordinator is present and this is enabled. The
+        operator may salvage the run; otherwise the result becomes ESCALATED.
+        No-op (returns the failure unchanged) for unattended runs."""
+        if res.status != ReplayStatus.FAILURE or res.failure is None:
+            return res
+        if not (self.coordinator and self.escalate_unrecoverable):
+            return res
+        if res.failure.code in self._NON_ESCALATABLE:
+            return res
+        from ..escalation.handoff import InterventionKind, InterventionRequest
+        caps = self.logger.capture(self.surface, "unrecoverable", dom=True)
+        req = InterventionRequest(
+            id=f"replay-{art.id}-unrecoverable-step{res.failure.step_index}",
+            kind=InterventionKind.REPLAY_UNRECOVERABLE,
+            reason=f"unrecoverable: {res.failure.code} at step "
+                   f"{res.failure.step_index}",
+            capability_id=art.id, current_step_index=res.failure.step_index,
+            state_url=self.surface.current_url(),
+            screenshot_path=caps.get("screenshot"), dom_path=caps.get("dom"),
+            cdp_endpoint=getattr(self.surface, "cdp_endpoint", None))
+        self.coordinator.raise_intervention(req)
+        resolved = self.coordinator.wait_for_resolution(req.id)
+        res.intervention_id = req.id
+        if resolved.status.value == "resolved" and resolved.resume \
+                and self.surface.check(self._render_checkpoint(art.success, self._params)):
+            self.logger.event("unrecoverable_salvaged", id=req.id)
+            return ReplayResult(status=ReplayStatus.SUCCESS, capability_id=art.id,
+                                version=art.version, outputs=res.outputs,
+                                intervention_id=req.id)
+        res.status = ReplayStatus.ESCALATED
+        return res
 
     # ------------------------------------------------------------------
     def _run_step(self, art, step: Step, params, outputs,

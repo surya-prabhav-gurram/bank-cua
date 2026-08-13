@@ -11,3 +11,5 @@ secrets/
 # transient scratch
 /tmp/
 .pytest_cache/
+# transient test/service run outputs
+evidence/service/

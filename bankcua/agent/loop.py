@@ -177,6 +177,15 @@ class DiscoveryLoop:
                         loc = rf.locator
             risk = infer_risk(elem, action.action)
 
+            # ---- unresolvable target -> escalate ----------------------
+            if action.action in ("click", "fill", "select", "extract") and loc is None:
+                iid = self._escalate(
+                    task, i, f"unresolvable target (ref {action.ref})", obs)
+                return DiscoveryResult(status="escalated",
+                                       reason=f"unresolvable target (ref {action.ref})",
+                                       transcript=transcript, outputs=outputs,
+                                       intervention_id=iid)
+
             # ---- safety pre-flight ------------------------------------
             target_url = (action.url if action.action == "navigate"
                           else self.surface.current_url())

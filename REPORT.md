@@ -11,7 +11,7 @@ trade-offs behind it.
 
 The system is one Python package with sharp internal seams and a single
 dependency direction: everything speaks the **schema** and the **surface**
-interface; nothing speaks Playwright except one file.
+interface; the only places that speak Playwright are the web surface and the operator's CDP client (the handoff).
 
 ```
 goal + target ─▶ Discovery loop ──▶ Transcript ──▶ Compiler ──▶ Capability artifact (JSON)

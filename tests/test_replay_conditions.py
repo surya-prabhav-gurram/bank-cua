@@ -91,6 +91,87 @@ def test_missing_required_param_raises(mock_app, tmp_path):
         _replay(mock_app, tmp_path, art, {"username": "operator"})  # no member_id/pw
 
 
+def test_replay_unrecoverable_condition_escalates(mock_app, tmp_path):
+    """Brief 3.6: a replay that hits a failure it cannot recover from routes a
+    human intervention (on the same live session) instead of just failing. Here
+    the operator reviews but cannot salvage -> the run resolves as ESCALATED,
+    carrying the intervention id. Off by default; enabled via
+    escalate_unrecoverable + a coordinator so unattended runs still fail fast."""
+    import threading
+    import time
+
+    from bankcua.escalation.handoff import (HandoffStore, HandoffCoordinator,
+                                            InterventionStatus)
+    _reset(mock_app)
+    # a top-level success checkpoint that can never hold -> unrecoverable failure
+    art = CapabilityArtifact(
+        id="probe-unrec", name="p", description="d",
+        target=Target(app_id="a", base_url=mock_app, entry_path="/login"),
+        inputs=[InputParameter(name="username", sensitive=True),
+                InputParameter(name="password", sensitive=True),
+                InputParameter(name="member_id")],
+        outputs=[],
+        success=Checkpoint(kind="text_present", value="NO_SUCH_TEXT_ZZZ"),
+        steps=[Step(index=0, intent="land", action=ActionType.NAVIGATE,
+                    url_template="/login")])
+
+    store = HandoffStore(str(tmp_path / "handoffs"))
+    logger = RunLogger(str(tmp_path / "run"), "replay", art.secret_params(),
+                       ["operator", "password123"])
+    pe = PolicyEngine(Policy(allowed_url_patterns=["http://127.0.0.1:*"]))
+    surf = WebSurface(art.target.base_url, headless=True)
+    surf.start()
+    coord = HandoffCoordinator(store, logger)
+
+    def operator():
+        # attend the console: resolve the first open intervention (control back
+        # to the agent) but with no salvage -- the checkpoint still won't hold.
+        for _ in range(400):
+            openreqs = store.list_open()
+            if openreqs:
+                r = openreqs[0]
+                r.status = InterventionStatus.RESOLVED
+                r.controller = "agent"
+                r.resume = True
+                r.resolution_note = "reviewed; cannot salvage"
+                store.write(r)
+                return
+            time.sleep(0.05)
+
+    t = threading.Thread(target=operator)
+    t.start()
+    try:
+        res = ReplayEngine(surf, pe, logger, coord,
+                           escalate_unrecoverable=True).run(
+            art, {**CREDS, "member_id": "12345"})
+    finally:
+        t.join(timeout=8)
+        surf.stop()
+
+    assert res.status == ReplayStatus.ESCALATED
+    assert res.intervention_id and "unrecoverable" in res.intervention_id
+
+
+def test_replay_unrecoverable_no_escalation_when_disabled(mock_app, tmp_path):
+    """Default (no escalate_unrecoverable / no coordinator): the same
+    unrecoverable failure fails fast with a coded FailureDetail, never blocking
+    on a human. This is the unattended contract."""
+    _reset(mock_app)
+    art = CapabilityArtifact(
+        id="probe-unrec2", name="p", description="d",
+        target=Target(app_id="a", base_url=mock_app, entry_path="/login"),
+        inputs=[InputParameter(name="username", sensitive=True),
+                InputParameter(name="password", sensitive=True),
+                InputParameter(name="member_id")],
+        outputs=[],
+        success=Checkpoint(kind="text_present", value="NO_SUCH_TEXT_ZZZ"),
+        steps=[Step(index=0, intent="land", action=ActionType.NAVIGATE,
+                    url_template="/login")])
+    r = _replay(mock_app, tmp_path, art, {**CREDS, "member_id": "12345"})
+    assert r.status == ReplayStatus.FAILURE
+    assert r.failure.code == "SUCCESS_CHECKPOINT_FAILED"
+
+
 def test_value_attribute_extraction_falls_back_to_text(mock_app, tmp_path):
     """A read with attribute='value' on a non-input cell must fall back to text."""
     _reset(mock_app)
