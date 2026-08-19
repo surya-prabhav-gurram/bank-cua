@@ -20,6 +20,9 @@ KnownCondition detectors and act on the FIRST match:
 Unrecognised trouble (a checkpoint that fails with no matching condition) is a
 hard failure too, with rich evidence captured for debugging.
 
+Declared outputs are guaranteed: a run cannot report SUCCESS while an output
+the artifact promised the caller is missing (OUTPUT_EXTRACTION_FAILED).
+
 Irreversible steps flagged requires_confirmation are gated by policy: unattended
 they raise an intervention (human-in-the-loop) rather than proceeding.
 """
@@ -114,6 +117,39 @@ class ReplayEngine:
                 self.logger.event("replay_finished", status=outcome.status.value,
                                   outputs={k: v for k, v in outputs.items()})
                 return outcome
+
+        # all steps done -> every DECLARED output must actually be populated.
+        # The artifact is a CONTRACT: returning success while an output the
+        # caller was promised is missing would be a silent breach -- worse than
+        # an error, because nothing downstream knows to check. Note the split of
+        # responsibility: a failed extract is deliberately NOT fatal at the step
+        # (so the condition detectors still get their chance to explain *why*
+        # the value was absent -- e.g. PERMISSION_DENIED), but the contract is
+        # enforced here, once, at the end of the run.
+        missing = [o.name for o in art.outputs if o.name not in outputs]
+        if missing:
+            # blame the step that was supposed to produce the first missing
+            # output, so the failure points somewhere debuggable rather than
+            # "somewhere in the run"
+            blame = next((st.index for st in art.steps
+                          if st.extract and st.extract.output == missing[0]),
+                         len(art.steps) - 1)
+            caps = self.logger.capture(self.surface, "outputs_missing", dom=True)
+            result = ReplayResult(
+                status=ReplayStatus.FAILURE, capability_id=art.id,
+                version=art.version, outputs=outputs, recoveries=recoveries,
+                drifts=self._drifts, assists=self._assists,
+                steps_executed=len(art.steps),
+                duration_s=round(time.time() - t0, 2),
+                failure=FailureDetail(
+                    code="OUTPUT_EXTRACTION_FAILED", step_index=blame,
+                    expected=f"declared outputs {missing} to be populated",
+                    observed=f"populated: {sorted(outputs)}",
+                    evidence=caps))
+            result = self._maybe_escalate(art, result)
+            self.logger.event("replay_finished", status=result.status.value,
+                              outputs={k: v for k, v in outputs.items()})
+            return result
 
         # all steps done -> assert top-level success
         if self.surface.check(self._render_checkpoint(art.success, params)):

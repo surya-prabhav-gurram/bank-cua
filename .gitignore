@@ -13,3 +13,8 @@ secrets/
 .pytest_cache/
 # transient test/service run outputs
 evidence/service/
+.DS_Store
+.coverage
+.ruff_cache/
+_to_delete/
+bank-cua-technical-document.docx

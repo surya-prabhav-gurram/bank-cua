@@ -1,12 +1,12 @@
-{"ts": 1786647318.515, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-02-not-found"}
-{"ts": 1786647319.058, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "00000"}}
-{"ts": 1786647319.084, "event": "replay_navigated_entry", "entry": "/login"}
-{"ts": 1786647319.135, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided ***REDACTED*** credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
-{"ts": 1786647319.164, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
-{"ts": 1786647319.23, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
-{"ts": 1786647319.281, "event": "step_executed", "index": 3, "action": "fill", "intent": "Enter the member ID 12345 into the search field to search for the member's account", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
-{"ts": 1786647319.345, "event": "step_executed", "index": 4, "action": "click", "intent": "Submit the member search form to retrieve member 12345's account information", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
-{"ts": 1786647319.352, "event": "condition_detected", "step": 4, "code": "MEMBER_NOT_FOUND", "klass": "business_outcome"}
-{"ts": 1786647319.426, "event": "evidence_captured", "label": "business_MEMBER_NOT_FOUND", "screenshot": "evidence/replay-02-not-found/business_MEMBER_NOT_FOUND.png"}
-{"ts": 1786647319.426, "event": "replay_finished", "status": "business_outcome", "outputs": {}}
-{"ts": 1786647319.47, "event": "run_finished", "summary_path": "evidence/replay-02-not-found/summary.json"}
+{"ts": 1787169056.568, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-02-not-found"}
+{"ts": 1787169056.94, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "00000"}}
+{"ts": 1787169056.956, "event": "replay_navigated_entry", "entry": "/login"}
+{"ts": 1787169056.987, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided {username} credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787169057.008, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787169057.039, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787169057.059, "event": "step_executed", "index": 3, "action": "fill", "intent": "Enter the member ID {member_id} into the search field to search for the member's account", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787169057.096, "event": "step_executed", "index": 4, "action": "click", "intent": "Submit the member search form to retrieve member {member_id}'s account information", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787169057.099, "event": "condition_detected", "step": 4, "code": "MEMBER_NOT_FOUND", "klass": "business_outcome"}
+{"ts": 1787169057.131, "event": "evidence_captured", "label": "business_MEMBER_NOT_FOUND", "screenshot": "evidence/replay-02-not-found/business_MEMBER_NOT_FOUND.png"}
+{"ts": 1787169057.131, "event": "replay_finished", "status": "business_outcome", "outputs": {}}
+{"ts": 1787169057.161, "event": "run_finished", "summary_path": "evidence/replay-02-not-found/summary.json"}

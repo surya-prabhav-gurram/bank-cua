@@ -3,7 +3,7 @@
   "capability_id": "corebank.open_subaccount",
   "version": "1.0.0",
   "outputs": {
-    "confirmation_number": "SA-12345-8107"
+    "confirmation_number": "SA-12345-8101"
   },
   "business_outcome": null,
   "failure": null,
@@ -12,5 +12,5 @@
   "assists": [],
   "intervention_id": null,
   "steps_executed": 11,
-  "duration_s": 2.77
+  "duration_s": 1.32
 }

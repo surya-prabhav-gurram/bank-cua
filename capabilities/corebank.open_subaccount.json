@@ -209,7 +209,7 @@
     },
     {
       "index": 3,
-      "intent": "Fill in the Member ID field with the provided member_id parameter to search for member 12345",
+      "intent": "Fill in the Member ID field with the provided member_id parameter to search for member {member_id}",
       "action": "fill",
       "target": {
         "description": "textbox: textbox",
@@ -254,7 +254,7 @@
     },
     {
       "index": 4,
-      "intent": "Click the Search button to search for member 12345 whose ID has already been filled in from the previous step.",
+      "intent": "Click the Search button to search for member {member_id} whose ID has already been filled in from the previous step.",
       "action": "click",
       "target": {
         "description": "button: Search",
@@ -304,7 +304,7 @@
     },
     {
       "index": 5,
-      "intent": "Click the \"Open New Sub-Account\" link to begin creating a new Money Market sub-account for member 12345.",
+      "intent": "Click the \"Open New Sub-Account\" link to begin creating a new {acct_type} sub-account for member {member_id}.",
       "action": "click",
       "target": {
         "description": "link: Open New Sub-Account",
@@ -361,7 +361,7 @@
     },
     {
       "index": 6,
-      "intent": "Select 'Money Market' as the account type from the dropdown menu using the provided acct_type parameter.",
+      "intent": "Select '{acct_type}' as the account type from the dropdown menu using the provided acct_type parameter.",
       "action": "select_option",
       "target": {
         "description": "combobox: selected: -- select --",
@@ -406,7 +406,7 @@
     },
     {
       "index": 7,
-      "intent": "Fill in the Initial Deposit field with the provided deposit amount of 500.00",
+      "intent": "Fill in the Initial Deposit field with the provided deposit amount of {deposit}",
       "action": "fill",
       "target": {
         "description": "textbox: textbox",
@@ -451,7 +451,7 @@
     },
     {
       "index": 8,
-      "intent": "Click the Review button to proceed to the review screen for the new sub-account with the already-filled details (Money Market account type and 500.00 initial deposit).",
+      "intent": "Click the Review button to proceed to the review screen for the new sub-account with the already-filled details ({acct_type} account type and {deposit} initial deposit).",
       "action": "click",
       "target": {
         "description": "button: Review",
@@ -616,7 +616,7 @@
         "value": "Access Denied",
         "frame_path": []
       },
-      "message": "The operator is not permitted to view this member/account.",
+      "message": "The signed-in user is not permitted to view this member/account.",
       "recovery": null,
       "surfaces_outputs": false
     },

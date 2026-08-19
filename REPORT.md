@@ -122,6 +122,15 @@ Never open-ended. All paths are demonstrated in `evidence/` (success, not-found,
 permission-denied, interstitial-recovered, session-timeout). Transient slowness
 is handled by explicit waits.
 
+**Declared outputs are guaranteed.** A run cannot report `success` while an
+output the contract promised is missing -- that would be a silent breach, worse
+than an error because nothing downstream knows to check. Note the split of
+responsibility: a failed extract is deliberately *not* fatal at the step, so the
+condition detectors still get their chance to explain *why* the value was absent
+(`PERMISSION_DENIED` is a better answer to the caller than "extraction failed");
+the contract is then enforced once, at the end of the run, as
+`OUTPUT_EXTRACTION_FAILED` with full evidence.
+
 **Locator robustness.** Beyond the ordered candidates, legacy inputs with no
 `<label for>` get a **label-proximity** locator (`//tr[td="User ID"]//input` —
 "the box next to this text"), ranked above structural paths. Replay records which
@@ -229,8 +238,19 @@ and replay** — a violation raises, it never warns-and-continues.
   secrets) and pattern-based (SSN, card, email as a safety net), applied to
   logs, transcripts, and DOM snapshots. Crucially, the observation indexer never
   captures a control's typed value, so secrets never reach the model prompt or
-  the logs in the first place. A repo-wide sweep of `evidence/` and
-  `capabilities/` finds no secret.
+  the logs in the first place. The compiler additionally scrubs run-specific
+  values out of the human-readable step intents: the model narrates in prose
+  ("the provided operator credentials"), which would otherwise bake one run's
+  data -- and potentially a real credential -- into a committed artifact, so
+  inputs become `{param}` placeholders and extracted values `<output>` (both the
+  raw and the transformed form). Card detection is Luhn-checked so the safety net
+  does not fire on ordinary digit runs such as timestamps, and literal matching
+  is token-bounded; the mapping form names the parameter
+  (`***REDACTED:username***`) so an over-redaction reads as intentional rather
+  than as corrupted evidence. Over-redaction remains the deliberate bias. The
+  repo-wide sweep of `capabilities/` for secrets is not a claim but an enforced
+  invariant (`tests/test_artifact_hygiene.py`), so it cannot silently regress the
+  next time a capability is recorded.
 
 **Limits.** Screenshots can still show PII on screen; today they are treated as
 sensitive evidence — the production answer is masked capture and a restricted

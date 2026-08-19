@@ -5,7 +5,7 @@
   "outputs": {},
   "business_outcome": {
     "code": "PERMISSION_DENIED",
-    "message": "The ***REDACTED*** is not permitted to view this member/account.",
+    "message": "The signed-in user is not permitted to view this member/account.",
     "step_index": 4
   },
   "failure": null,
@@ -14,5 +14,5 @@
   "assists": [],
   "intervention_id": null,
   "steps_executed": 5,
-  "duration_s": 0.4
+  "duration_s": 0.19
 }

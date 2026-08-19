@@ -10,6 +10,10 @@ compiler:
     "did it actually work" guards that make replay deterministic),
   * declares typed outputs with the right transform,
   * attaches the vendor's shared KnownConditions (error taxonomy),
+  * scrubs run-specific values (both extracted outputs and supplied inputs)
+    out of the human-readable step intents, so the artifact describes the
+    *flow* and never carries one run's data -- including a sensitive value the
+    model happened to echo in its own prose,
   * writes a redacted transcript to disk and references it from provenance
     (the raw transcript is NOT inlined into the artifact).
 """
@@ -18,10 +22,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from typing import Optional
 from urllib.parse import urlparse
 
 from ..knowledge import conditions_for
+from ..replay.errors import apply_transform
 from ..safety.redaction import redact_mapping
 from ..schema import (
     ActionType,
@@ -101,10 +107,41 @@ def compile_artifact(task: DiscoveryTask, result: DiscoveryResult,
     # model may echo a captured value in a step intent -> replace with the
     # output-name placeholder.
     for name, val in result.outputs.items():
-        sval = str(val)
-        if sval:
+        sval = str(val).strip()
+        if not sval:
+            continue
+        # scrub the value as read AND as the caller will receive it: a model
+        # often narrates its own transform ("$4,213.55 ... normalized to
+        # 421355"), so the derived form has to go too.
+        forms = {sval}
+        try:
+            forms.add(str(apply_transform(
+                sval, _transform_for(output_types.get(name, ValueType.STRING)))))
+        except Exception:
+            pass
+        for form in sorted(forms, key=len, reverse=True):
+            if len(form) < 3:
+                continue
             for step in steps:
-                step.intent = step.intent.replace(sval, f"<{name}>")
+                step.intent = step.intent.replace(form, f"<{name}>")
+
+    # ...and the same for the run's INPUT values. The model writes its own prose
+    # ("search for member 12345", "the provided operator credentials"), which
+    # would otherwise bake one run's data -- and, for a `sensitive` input, an
+    # actual credential -- into a reusable, committed artifact. Replacing them
+    # with {param} placeholders makes the intent describe the flow and keeps the
+    # artifact secret-free. Matched on word boundaries so a short value cannot
+    # corrupt unrelated prose; values under 3 chars are left alone as too
+    # ambiguous to substitute safely.
+    for name, val in pv.items():
+        if val is None:
+            continue
+        sval = str(val)
+        if len(sval) < 3:
+            continue
+        pat = re.compile(rf"(?<!\w){re.escape(sval)}(?!\w)")
+        for step in steps:
+            step.intent = pat.sub("{" + name + "}", step.intent)
 
     # write redacted transcript to disk; reference (not inline) from provenance
     os.makedirs(evidence_dir, exist_ok=True)

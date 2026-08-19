@@ -73,7 +73,8 @@ def create_app(catalog_dir="capabilities", policy_path="config/policy.yaml",
         run_dir = os.path.join(
             evidence_dir, f"{cap_id}-{_dt.datetime.now().strftime('%Y%m%d-%H%M%S')}")
         logger = RunLogger(run_dir, "replay", art.secret_params(),
-                           [str(params.get(n)) for n in art.secret_params()])
+                           {n: str(params.get(n)) for n in art.secret_params()
+                            if params.get(n)})
         pe = PolicyEngine(pol, artifact_url_patterns=art.target.allowed_url_patterns,
                           allow_risky_override=bool(body.get("allow_risky")))
         surf = WebSurface(art.target.base_url, headless=True)

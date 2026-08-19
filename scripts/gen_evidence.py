@@ -81,7 +81,8 @@ def run_replay(run_dir, art, params, allow_risky=False):
     if os.path.exists(run_dir):
         shutil.rmtree(run_dir)
     logger = RunLogger(run_dir, "replay", art.secret_params(),
-                       [str(params.get(n)) for n in art.secret_params()])
+                       {n: str(params[n]) for n in art.secret_params()
+                        if params.get(n)})
     pe = PolicyEngine(POL, artifact_url_patterns=art.target.allowed_url_patterns,
                       allow_risky_override=allow_risky)
     surf = WebSurface(art.target.base_url, headless=True)
@@ -145,7 +146,7 @@ def escalation_handoff():
     if os.path.exists(run_dir):
         shutil.rmtree(run_dir)
     store = HandoffStore("evidence/handoffs")
-    logger = RunLogger(run_dir, "replay", SUB.secret_params(), ["operator", "password123"])
+    logger = RunLogger(run_dir, "replay", SUB.secret_params(), dict(CREDS))
     pe = PolicyEngine(POL, artifact_url_patterns=SUB.target.allowed_url_patterns,
                       allow_risky_override=False)
     surf = WebSurface(SUB.target.base_url, headless=True, cdp_port=9222)

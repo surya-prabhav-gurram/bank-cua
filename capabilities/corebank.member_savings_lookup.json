@@ -58,7 +58,7 @@
   "steps": [
     {
       "index": 0,
-      "intent": "Fill in the username field with the provided operator credentials",
+      "intent": "Fill in the username field with the provided {username} credentials",
       "action": "fill",
       "target": {
         "description": "textbox: textbox",
@@ -198,7 +198,7 @@
     },
     {
       "index": 3,
-      "intent": "Enter the member ID 12345 into the search field to search for the member's account",
+      "intent": "Enter the member ID {member_id} into the search field to search for the member's account",
       "action": "fill",
       "target": {
         "description": "textbox: textbox",
@@ -243,7 +243,7 @@
     },
     {
       "index": 4,
-      "intent": "Submit the member search form to retrieve member 12345's account information",
+      "intent": "Submit the member search form to retrieve member {member_id}'s account information",
       "action": "click",
       "target": {
         "description": "button: Search",
@@ -332,7 +332,7 @@
     },
     {
       "index": 6,
-      "intent": "Extract the savings balance as required by the goal. The balance is $4,213.55 which needs to be normalized to integer cents (421355).",
+      "intent": "Extract the savings balance as required by the goal. The balance is <savings_balance> which needs to be normalized to integer cents (<savings_balance>).",
       "action": "extract",
       "target": null,
       "value": null,
@@ -401,7 +401,7 @@
         "value": "Access Denied",
         "frame_path": []
       },
-      "message": "The operator is not permitted to view this member/account.",
+      "message": "The signed-in user is not permitted to view this member/account.",
       "recovery": null,
       "surfaces_outputs": false
     },

@@ -52,8 +52,8 @@ def _parse_params(args) -> dict:
 def cmd_discover(args):
     task = DiscoveryTask.load(args.task)
     secret_names = {p.name for p in task.inputs if p.sensitive}
-    secret_values = [str(task.param_values[n]) for n in secret_names
-                     if task.param_values.get(n)]
+    secret_values = {n: str(task.param_values[n]) for n in secret_names
+                     if task.param_values.get(n)}
 
     run_id = f"discovery-{task.capability_id}-{_ts()}"
     run_dir = os.path.join(args.evidence, run_id)
@@ -129,7 +129,8 @@ def cmd_replay(args):
         run_id = f"replay-{art.id}-{_ts()}{tag}"
         run_dir = os.path.join(args.evidence, run_id)
         logger = RunLogger(run_dir, "replay", art.secret_params(),
-                           [str(params[n]) for n in art.secret_params() if params.get(n)])
+                           {n: str(params[n]) for n in art.secret_params()
+                            if params.get(n)})
         engine_policy = PolicyEngine(
             policy, artifact_url_patterns=art.target.allowed_url_patterns,
             allow_risky_override=args.allow_risky)

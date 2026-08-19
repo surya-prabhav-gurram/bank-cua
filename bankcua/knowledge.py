@@ -42,7 +42,7 @@ COREBANK_CONDITIONS: list[KnownCondition] = [
     KnownCondition(
         code="PERMISSION_DENIED", klass=ConditionClass.BUSINESS_OUTCOME,
         detector=ConditionDetector(kind="text_present", value="Access Denied"),
-        message="The operator is not permitted to view this member/account."),
+        message="The signed-in user is not permitted to view this member/account."),
     KnownCondition(
         code="VALIDATION_ERROR", klass=ConditionClass.BUSINESS_OUTCOME,
         detector=ConditionDetector(kind="text_present", value="Validation error"),
