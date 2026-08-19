@@ -104,7 +104,8 @@ prematurely. Stack: Python + Playwright, Pydantic v2 schema, a legacy-style Flas
 mock as the proxy target.</p>
 
 <div class="foot">Full source, artifacts, and evidence in the accompanying public repository.
-87 automated tests pass; a repo-wide sweep finds no secret in any artifact, log, or transcript.</div>
+99 automated tests pass; the no-secret sweep of every committed artifact is an enforced test
+invariant rather than a claim, so it cannot silently regress.</div>
 
 <!-- ===================== FULL REPORT ===================== -->
 <div class="page-break"></div>
@@ -178,6 +179,15 @@ reload transient 500) up to its budget, then re-scan and continue; each recovery
 <li><span class="pill r">hard_failure</span> stop with a structured error: step, expected,
 observed, plus screenshot + redacted DOM snapshot.</li>
 </ul>
+<p><strong>Declared outputs are guaranteed.</strong> A run cannot report
+<span class="pill g">success</span> while an output the contract promised is missing — that
+would be a silent breach, worse than an error because nothing downstream knows to check. Note
+the split of responsibility: a failed extract is deliberately <em>not</em> fatal at the step,
+so the condition detectors still get their chance to explain <em>why</em> the value was absent
+(<code>PERMISSION_DENIED</code> is a better answer to the caller than "extraction failed"); the
+contract is then enforced once, at the end of the run, as <code>OUTPUT_EXTRACTION_FAILED</code>
+with the blamed step, expected/observed, and full evidence.</p>
+
 <p>A checkpoint that fails with no matching condition is itself a hard failure with full
 evidence — unrecognised trouble never silently proceeds. UI drift (secondary) is absorbed
 by the ordered locator fallbacks and by checkpoints failing loudly; a stability signal and
@@ -235,7 +245,17 @@ sub-account is far cheaper than creating one by mistake.</li>
 <li><strong>Never persist secrets or regulated data</strong> — sensitive inputs are stored as
 parameter <em>names</em>, never values; redaction is name-based + pattern-based (SSN, card,
 email) across logs, transcripts, and DOM snapshots. The observation indexer never captures a
-control's typed value, so secrets never reach the model prompt in the first place.</li>
+control's typed value, so secrets never reach the model prompt in the first place. The compiler
+additionally scrubs run-specific values out of the human-readable step intents — the model
+narrates in prose ("the provided operator credentials"), which would otherwise bake one run's
+data, and potentially a real credential, into a committed artifact; inputs become
+<code>{param}</code> placeholders and extracted values <code>&lt;output&gt;</code>, in both raw
+and transformed form. Card detection is Luhn-checked so the safety net does not fire on ordinary
+digit runs such as timestamps, literal matching is token-bounded, and the mapping form names the
+parameter (<code>***REDACTED:username***</code>) so an over-redaction reads as intentional rather
+than as corrupted evidence — over-redaction remains the deliberate bias. The repo-wide sweep of
+<code>capabilities/</code> is an <strong>enforced invariant</strong>
+(<code>tests/test_artifact_hygiene.py</code>), not a claim.</li>
 </ul>
 <p><strong>Limits.</strong> Screenshots can still show on-screen PII (treated as sensitive
 evidence today; masked capture next). The allowlist is URL/action-shaped, not semantic —
