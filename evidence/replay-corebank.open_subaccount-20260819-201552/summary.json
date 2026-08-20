@@ -1,0 +1,21 @@
+{
+  "status": "escalated",
+  "capability_id": "corebank.open_subaccount",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": null,
+  "refusal": null,
+  "failure": {
+    "code": "ESCALATION_UNRESOLVED",
+    "step_index": 9,
+    "expected": "a human reviewer to approve or perform the step",
+    "observed": "aborted",
+    "evidence": {}
+  },
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": "replay-corebank.open_subaccount-step9",
+  "steps_executed": 10,
+  "duration_s": 120.85
+}

@@ -159,3 +159,101 @@ def test_typing_and_keys_are_forwarded_and_recorded(paused_run):
     thread.join(timeout=25)
     assert store.read(req_id).status.value == "resolved"
     assert box.get("result").status == ReplayStatus.ESCALATED
+
+
+def test_console_refuses_clearly_when_no_session_was_exposed(tmp_path):
+    """A run started without --cdp-port never offered its session to anyone.
+
+    The operator meets that fact at the worst possible moment -- a bank screen is
+    paused and waiting on them -- so it has to arrive as a sentence telling them
+    what to do, not as a stack trace.
+    """
+    from bankcua.escalation.console import NotAttachable, create_console
+    from bankcua.escalation.handoff import (InterventionKind,
+                                            InterventionRequest)
+
+    store = HandoffStore(str(tmp_path / "handoffs"))
+    store.write(InterventionRequest(
+        id="replay-x-step1", kind=InterventionKind.RISKY_CONFIRMATION,
+        reason="irreversible step needs confirmation", cdp_endpoint=None))
+
+    with pytest.raises(NotAttachable) as ex:
+        create_console("replay-x-step1", handoffs=store.root)
+    msg = str(ex.value)
+    assert "--cdp-port" in msg          # names the cause
+    assert "operator resolve" in msg    # and offers the way out
+
+
+def test_console_stops_cleanly_once_control_is_handed_back(paused_run):
+    """After resolve the worker is gone. A page that keeps polling would queue to
+    a dead thread, wait out the timeout and 500 -- dozens of times. Closed
+    endpoints answer immediately instead."""
+    from bankcua.escalation.console import create_console
+
+    store, req_id, _box, thread = paused_run
+    app = create_console(req_id, handoffs=store.root)
+    client = app.test_client()
+
+    done = client.post("/resolve", json={"resume": False, "note": "aborting"})
+    assert done.status_code == 200
+    assert done.get_json()["closed"] is True        # tells the page to stop
+
+    # everything after handback answers at once, with a status the page can act on
+    assert client.get("/screen").status_code == 410
+    assert client.post("/click", json={"x": 1, "y": 1}).status_code == 410
+    assert client.post("/key", json={"key": "Tab"}).status_code == 410
+
+    # reloading the console is the most natural thing an operator does next, and
+    # it used to be the one route that answered with a stack trace
+    home = client.get("/")
+    assert home.status_code == 410
+    body = home.get_data(as_text=True)
+    assert "returned to the agent" in body and "close this window" in body
+    assert "/screen" not in body                 # nothing left to poll
+
+    # and a second Resume click is not an error
+    again = client.post("/resolve", json={"resume": False})
+    assert again.status_code == 200 and again.get_json()["closed"] is True
+
+    thread.join(timeout=25)
+
+
+def test_click_coordinates_are_scaled_and_never_collapse_to_the_origin():
+    """Two mapping bugs, both found by driving the console by hand.
+
+    The picture is rarely displayed at natural size, so raw offsets miss. And
+    swapping `img.src` directly blanks the element while the next frame loads --
+    during which `naturalWidth` is 0, so a click in that gap scales to (0,0) and
+    is sent to the corner of a live banking screen. Frames are preloaded and a
+    click with no frame is dropped rather than guessed.
+    """
+    from bankcua.escalation import console
+    js = console._PAGE
+    assert "new Image()" in js and "next.onload" in js      # preloaded, not swapped
+    assert "img.naturalWidth||nw" in js                     # cached fallback
+    assert "if(!w||!h) return;" in js                       # never guess
+
+
+def test_page_tells_the_operator_when_control_has_gone_back():
+    """A dimmed page with disabled buttons reads as 'broken'. Say what happened."""
+    from bankcua.escalation import console
+    assert "id=\"banner\"" in console._PAGE
+    assert "returned to the agent" in console._PAGE
+    assert "getElementById('banner').style.display='block'" in console._PAGE
+
+
+def test_origin_clicks_are_rejected_server_side(paused_run):
+    """Defence in depth: even if a client sends (0,0), the session must not
+    receive a click nobody aimed."""
+    from bankcua.escalation.console import create_console
+
+    store, req_id, _box, thread = paused_run
+    client = create_console(req_id, handoffs=store.root).test_client()
+
+    bad = client.post("/click", json={"x": 0, "y": 0})
+    assert bad.status_code == 400
+    assert "did not map" in bad.get_json()["error"]
+    assert bad.get_json()["actions"] == []        # nothing recorded
+
+    client.post("/resolve", json={"resume": False, "note": "done"})
+    thread.join(timeout=25)

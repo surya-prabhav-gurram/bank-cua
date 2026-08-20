@@ -120,9 +120,17 @@ class HandoffStore:
 class HandoffCoordinator:
     """Raises interventions and blocks the automation until they're resolved."""
 
-    def __init__(self, store: HandoffStore, logger=None):
+    def __init__(self, store: HandoffStore, logger=None,
+                 wait_timeout_s: float = 120.0):
         self.store = store
         self.logger = logger
+        # How long automation holds the session open for a human. Two minutes
+        # suits an unattended run, where the point is to fail promptly and leave
+        # the request for triage. A person who has to be fetched, briefed and
+        # walked to a screen needs longer, so it is a knob rather than a
+        # constant -- and the run stays paused on a live session throughout,
+        # which is the cost being traded against.
+        self.wait_timeout_s = wait_timeout_s
 
     def raise_intervention(self, req: InterventionRequest) -> InterventionRequest:
         req.created_at = time.time()
@@ -135,10 +143,36 @@ class HandoffCoordinator:
                               step=req.current_step_index)
         return req
 
-    def wait_for_resolution(self, req_id: str, timeout_s: float = 120.0,
+    def wait_for_resolution(self, req_id: str, timeout_s: Optional[float] = None,
                             poll_s: float = 1.0) -> InterventionRequest:
-        """Block until an operator resolves/aborts, or time out (unattended)."""
-        deadline = time.time() + timeout_s
+        """Block until an operator resolves/aborts, or time out (unattended).
+
+        One case is decided without waiting at all. Taking control -- whether
+        through the console or the `operator resolve` CLI -- requires attaching
+        to the live session over CDP. If the run never exposed one, there is no
+        path by which any operator can resolve this request, so blocking for the
+        full timeout is a guaranteed dead wait: it delays the failure without
+        changing it. Abort immediately, say why, and leave the request on disk
+        for triage exactly as a timeout would.
+        """
+        first = self.store.read(req_id)
+        # Only for a request still awaiting someone. One that has already been
+        # resolved -- by an operator, or by a test, or out of band -- must be
+        # returned as it stands, not overwritten.
+        if first.status == InterventionStatus.OPEN and not first.cdp_endpoint:
+            first.status = InterventionStatus.ABORTED
+            first.resolution_note = (
+                "no live session was exposed (the run was started without a CDP "
+                "port), so no operator can take control of it")
+            first.controller = "agent"
+            self.store.write(first)
+            if self.logger:
+                self.logger.event("escalation_unattendable", id=req_id,
+                                  reason=first.resolution_note)
+            return first
+
+        deadline = time.time() + (self.wait_timeout_s if timeout_s is None
+                                  else timeout_s)
         while time.time() < deadline:
             cur = self.store.read(req_id)
             if cur.status != InterventionStatus.OPEN:
@@ -152,7 +186,9 @@ class HandoffCoordinator:
         # timed out with nobody home -> abort, keep the request for triage
         cur = self.store.read(req_id)
         cur.status = InterventionStatus.ABORTED
-        cur.resolution_note = "timed out waiting for a human reviewer (unattended)"
+        waited = self.wait_timeout_s if timeout_s is None else timeout_s
+        cur.resolution_note = (f"timed out after {waited:g}s waiting for a "
+                               f"human reviewer")
         cur.controller = "agent"
         self.store.write(cur)
         if self.logger:

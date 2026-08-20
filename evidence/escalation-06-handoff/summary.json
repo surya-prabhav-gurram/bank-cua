@@ -3,7 +3,7 @@
   "capability_id": "corebank.open_subaccount",
   "version": "1.0.0",
   "outputs": {
-    "confirmation_number": "SA-12345-8101"
+    "confirmation_number": "SA-12345-8107"
   },
   "business_outcome": null,
   "refusal": null,

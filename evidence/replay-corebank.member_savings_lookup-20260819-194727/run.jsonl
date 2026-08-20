@@ -1,0 +1,12 @@
+{"ts": 1787194047.409, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-corebank.member_savings_lookup-20260819-194727"}
+{"ts": 1787194047.647, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "12345"}}
+{"ts": 1787194047.657, "event": "replay_navigated_entry", "entry": "/login"}
+{"ts": 1787194047.675, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided {username} credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787194047.692, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787194047.727, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787194047.741, "event": "step_executed", "index": 3, "action": "fill", "intent": "Enter the member ID {member_id} into the search field to search for the member's account", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787194047.767, "event": "evidence_captured", "label": "step03_fill_not_applied", "screenshot": "evidence/replay-corebank.member_savings_lookup-20260819-194727/step03_fill_not_applied.png", "dom": "evidence/replay-corebank.member_savings_lookup-20260819-194727/step03_fill_not_applied.dom.html"}
+{"ts": 1787194047.767, "event": "fill_not_applied", "step": 3, "secret": false}
+{"ts": 1787194047.767, "event": "hard_failure", "step": 3, "code": "FILL_NOT_APPLIED", "expected": "the control to hold '12345'", "observed": "read-back was empty or different (control may be readonly, disabled, or JS-managed)"}
+{"ts": 1787194047.767, "event": "replay_finished", "status": "failure", "outputs": {}}
+{"ts": 1787194047.769, "event": "run_finished", "summary_path": "evidence/replay-corebank.member_savings_lookup-20260819-194727/summary.json"}

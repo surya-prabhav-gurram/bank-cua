@@ -137,3 +137,72 @@ def test_live_handoff_over_cdp(mock_app, tmp_path):
     assert fin.status == InterventionStatus.RESOLVED
     assert fin.controller == "agent"                       # control handed back
     assert len(fin.human_actions) >= 2                     # note + click recorded
+
+
+def test_no_dead_wait_when_no_session_was_exposed(tmp_path):
+    """Taking control requires attaching over CDP. If the run never exposed a
+    session, no operator can resolve the request -- so blocking for the full
+    timeout only delays the same failure. Abort at once, and say why."""
+    import time as _t
+
+    from bankcua.escalation.handoff import (HandoffCoordinator, HandoffStore,
+                                            InterventionKind, InterventionRequest)
+
+    store = HandoffStore(str(tmp_path / "handoffs"))
+    coord = HandoffCoordinator(store, logger=None)
+    coord.raise_intervention(InterventionRequest(
+        id="replay-x-step9", kind=InterventionKind.RISKY_CONFIRMATION,
+        reason="irreversible step needs confirmation", cdp_endpoint=None))
+
+    started = _t.time()
+    resolved = coord.wait_for_resolution("replay-x-step9", timeout_s=30.0)
+    elapsed = _t.time() - started
+
+    assert elapsed < 2.0, "should not have waited out the timeout"
+    assert resolved.status.value == "aborted"
+    assert "no live session" in resolved.resolution_note
+    assert resolved.controller == "agent"
+    # the request stays on disk for triage, exactly as a timeout would leave it
+    assert store.read("replay-x-step9").status.value == "aborted"
+
+
+def test_an_attachable_intervention_still_waits(tmp_path):
+    """The fast path must not swallow the normal one."""
+    import time as _t
+
+    from bankcua.escalation.handoff import (HandoffCoordinator, HandoffStore,
+                                            InterventionKind, InterventionRequest)
+
+    store = HandoffStore(str(tmp_path / "handoffs"))
+    coord = HandoffCoordinator(store, logger=None)
+    coord.raise_intervention(InterventionRequest(
+        id="replay-y-step9", kind=InterventionKind.RISKY_CONFIRMATION,
+        reason="needs confirmation", cdp_endpoint="http://127.0.0.1:9222"))
+
+    started = _t.time()
+    resolved = coord.wait_for_resolution("replay-y-step9", timeout_s=2.0, poll_s=0.2)
+    assert _t.time() - started >= 1.5      # it really waited
+    assert resolved.status.value == "aborted"
+    assert "timed out" in resolved.resolution_note
+
+
+def test_wait_budget_is_configurable(tmp_path):
+    """Two minutes suits an unattended run. A person who has to be fetched and
+    briefed needs longer, and the run holds a live session open the whole time --
+    so it is a knob, with the cost visible, rather than a constant."""
+    import time as _t
+
+    from bankcua.escalation.handoff import (HandoffCoordinator, HandoffStore,
+                                            InterventionKind, InterventionRequest)
+
+    store = HandoffStore(str(tmp_path / "h"))
+    coord = HandoffCoordinator(store, logger=None, wait_timeout_s=1.0)
+    coord.raise_intervention(InterventionRequest(
+        id="r", kind=InterventionKind.RISKY_CONFIRMATION, reason="x",
+        cdp_endpoint="http://127.0.0.1:9222"))
+
+    started = _t.time()
+    out = coord.wait_for_resolution("r", poll_s=0.1)
+    assert 0.8 <= _t.time() - started < 3.0
+    assert out.status.value == "aborted"
+    assert "timed out after 1s" in out.resolution_note

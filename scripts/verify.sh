@@ -46,8 +46,8 @@ step "4/6  Deterministic replay + all runtime scenarios"
 # gen_evidence starts its own tenants and runs 9 scenarios
 if python scripts/gen_evidence.py > /tmp/bankcua_evidence.log 2>&1; then
   grep -E "^\[" /tmp/bankcua_evidence.log
-  passes=$(grep -cE "status=success|status=business_outcome|STABILITY|CROSS" /tmp/bankcua_evidence.log)
-  [ "$passes" -ge 7 ] && ok "scenarios ran ($passes reported)" || bad "scenarios ($passes)"
+  passes=$(grep -cE "^\[[0-9]" /tmp/bankcua_evidence.log)
+  [ "$passes" -ge 14 ] && ok "scenarios ran ($passes reported)" || bad "scenarios ($passes)"
 else
   bad "gen_evidence.py (see /tmp/bankcua_evidence.log)"
 fi

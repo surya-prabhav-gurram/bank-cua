@@ -139,6 +139,17 @@ def cmd_replay(args):
     policy = _load_policy(args.policy)
     assist = _build_assist_provider(args)
 
+    # A capability that can pause for a human is useless to that human unless the
+    # session is exposed. Say so at the start, not when they are already staring
+    # at a paused screen wondering why the console will not open.
+    if not getattr(args, "cdp_port", 0) and any(
+            st.requires_confirmation for st in art.steps):
+        gated = [st.index for st in art.steps if st.requires_confirmation]
+        print(f"[replay] NOTE: step(s) {gated} are gated for human confirmation, "
+              f"but no --cdp-port was given. If this run pauses, an operator will "
+              f"NOT be able to take control of the live session. Re-run with "
+              f"--cdp-port 9222 to enable the operator console.")
+
     def one_run(tag=""):
         run_id = f"replay-{art.id}-{_ts()}{tag}"
         run_dir = os.path.join(args.evidence, run_id)
@@ -150,7 +161,9 @@ def cmd_replay(args):
             allow_risky_override=args.allow_risky)
         surface = _make_surface(args, art.target.base_url)
         surface.start()
-        coordinator = HandoffCoordinator(HandoffStore(args.handoffs), logger)
+        coordinator = HandoffCoordinator(
+            HandoffStore(args.handoffs), logger,
+            wait_timeout_s=getattr(args, "handoff_timeout", 120.0))
         res = None
         try:
             engine = ReplayEngine(surface, engine_policy, logger, coordinator,
@@ -246,14 +259,22 @@ def cmd_operator(args):
     store = HandoffStore(args.handoffs)
     if args.action == "list":
         for r in store.list_open():
+            attach = (f"console: python -m bankcua.cli operator console --id {r.id}"
+                      if r.cdp_endpoint else
+                      "NOT ATTACHABLE (run started without --cdp-port)")
             print(f"- {r.id} [{r.kind.value}] step={r.current_step_index} "
                   f"reason={r.reason}")
-            print(f"    url={r.state_url} cdp={r.cdp_endpoint}")
+            print(f"    url={r.state_url} cdp={r.cdp_endpoint or '-'}")
+            print(f"    {attach}")
             print(f"    screenshot={r.screenshot_path}")
         return
     if args.action == "console":
-        from .escalation.console import create_console
-        app = create_console(args.id, handoffs=args.handoffs)
+        from .escalation.console import NotAttachable, create_console
+        try:
+            app = create_console(args.id, handoffs=args.handoffs)
+        except NotAttachable as ex:
+            print(f"[operator] CANNOT ATTACH: {ex}")
+            sys.exit(7)
         print(f"[operator] console for {args.id} on "
               f"http://{args.host}:{args.port} -- you are driving the SAME live "
               f"session the automation paused")
@@ -370,6 +391,9 @@ def build_parser():
     r.add_argument("--headed", action="store_true")
     r.add_argument("--cdp-port", type=int, default=0)
     r.add_argument("--allow-risky", action="store_true")
+    r.add_argument("--handoff-timeout", type=float, default=120.0,
+                   help="seconds automation holds the paused session open for a "
+                        "human operator before aborting (default 120)")
     r.add_argument("--surface", choices=sorted(SURFACES), default="web",
                    help="which Surface implementation to replay through; the "
                         "artifact is unchanged either way")

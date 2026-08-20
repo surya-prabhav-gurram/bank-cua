@@ -610,7 +610,7 @@
       },
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "lexical: caption contains 'Confirm'; corroborated by POST form submission | reviewed: creates a real sub-account; irreversible. Confirmed.",
+      "risk_reason": "lexical: caption contains 'Confirm'; corroborated by POST form submission | reviewed: creates a real sub-account; irreversible. Confirmed. | reviewed: creates a real sub-account; irreversible",
       "risk_reviewed": true,
       "requires_confirmation": true
     },
@@ -766,7 +766,7 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",

@@ -1,0 +1,24 @@
+{
+  "status": "failure",
+  "capability_id": "corebank.open_subaccount",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": null,
+  "refusal": null,
+  "failure": {
+    "code": "CHECKPOINT_FAILED",
+    "step_index": 9,
+    "expected": "url_matches:/subaccount/confirm",
+    "observed": "http://127.0.0.1:5057/subaccount/review",
+    "evidence": {
+      "screenshot": "evidence/replay-corebank.open_subaccount-20260819-202736/step09_checkpoint_failed.png",
+      "dom": "evidence/replay-corebank.open_subaccount-20260819-202736/step09_checkpoint_failed.dom.html"
+    }
+  },
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 10,
+  "duration_s": 27.43
+}

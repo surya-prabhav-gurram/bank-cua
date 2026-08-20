@@ -1,0 +1,5 @@
+{"ts": 1787194059.479, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-corebank.open_subaccount-20260819-194739"}
+{"ts": 1787194059.711, "event": "replay_started", "capability": "corebank.open_subaccount", "version": "1.0.0", "num_steps": 11, "params": {"member_id": "12345", "acct_type": "Money Market", "deposit": "25000.00"}}
+{"ts": 1787194059.711, "event": "value_policy_block", "reason": "value policy: 'deposit'=25000 USD exceeds the permitted maximum of 10000 USD"}
+{"ts": 1787194059.711, "event": "replay_refused", "code": "VALUE_LIMIT_EXCEEDED", "requirement": "inputs within policy limits"}
+{"ts": 1787194059.714, "event": "run_finished", "summary_path": "evidence/replay-corebank.open_subaccount-20260819-194739/summary.json"}

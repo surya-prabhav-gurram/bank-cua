@@ -1,0 +1,13 @@
+{"ts": 1787194034.903, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-corebank.member_savings_lookup-20260819-194714"}
+{"ts": 1787194035.161, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "99999"}}
+{"ts": 1787194035.171, "event": "replay_navigated_entry", "entry": "/login"}
+{"ts": 1787194035.191, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided {username} credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787194035.21, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787194035.243, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787194035.258, "event": "step_executed", "index": 3, "action": "fill", "intent": "Enter the member ID {member_id} into the search field to search for the member's account", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787194035.292, "event": "step_executed", "index": 4, "action": "click", "intent": "Submit the member search form to retrieve member {member_id}'s account information", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787194035.297, "event": "condition_detected", "step": 4, "code": "PERMISSION_DENIED", "klass": "business_outcome"}
+{"ts": 1787194035.323, "event": "evidence_captured", "label": "business_PERMISSION_DENIED", "screenshot": "evidence/replay-corebank.member_savings_lookup-20260819-194714/business_PERMISSION_DENIED.png"}
+{"ts": 1787194035.326, "event": "outcome_outputs_surfaced", "outputs": ["member_name"]}
+{"ts": 1787194035.326, "event": "replay_finished", "status": "business_outcome", "outputs": {"member_name": "Restricted Account"}}
+{"ts": 1787194035.328, "event": "run_finished", "summary_path": "evidence/replay-corebank.member_savings_lookup-20260819-194714/summary.json"}
