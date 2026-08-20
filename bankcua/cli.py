@@ -26,6 +26,7 @@ from .escalation.handoff import HandoffCoordinator, HandoffStore, OperatorSessio
 from .observability.logging import RunLogger
 from .replay.engine import ReplayEngine
 from .safety.policy import Policy, PolicyEngine
+from .surface.accessibility import AccessibilitySurface
 from .surface.web_playwright import WebSurface
 
 
@@ -49,6 +50,19 @@ def _parse_params(args) -> dict:
 
 
 # ---------------------------------------------------------------------------
+SURFACES = {"web": WebSurface, "a11y": AccessibilitySurface}
+
+
+def _make_surface(args, base_url):
+    """Build the requested Surface. The engines never see this choice -- they
+    only ever hold the abstract interface, which is the whole point of §4."""
+    kind = getattr(args, "surface", "web") or "web"
+    if kind == "a11y":
+        return AccessibilitySurface(base_url, headless=not args.headed)
+    return WebSurface(base_url, headless=not args.headed,
+                      cdp_port=getattr(args, "cdp_port", 0))
+
+
 def cmd_discover(args):
     task = DiscoveryTask.load(args.task)
     secret_names = {p.name for p in task.inputs if p.sensitive}
@@ -134,8 +148,7 @@ def cmd_replay(args):
         engine_policy = PolicyEngine(
             policy, artifact_url_patterns=art.target.allowed_url_patterns,
             allow_risky_override=args.allow_risky)
-        surface = WebSurface(art.target.base_url, headless=not args.headed,
-                             cdp_port=args.cdp_port)
+        surface = _make_surface(args, art.target.base_url)
         surface.start()
         coordinator = HandoffCoordinator(HandoffStore(args.handoffs), logger)
         res = None
@@ -148,6 +161,14 @@ def cmd_replay(args):
                                   initiator=getattr(args, "initiator", ""),
                                   approver=getattr(args, "approver", ""))
             res = engine.run(art, params)
+            # Drift is only meaningful as a trend, so every run contributes to the
+            # history the repair loop reasons over.
+            try:
+                from .repair import DriftLedger
+                DriftLedger(os.path.join(args.evidence, "drift_ledger.jsonl")) \
+                    .record_result(res, tenant_id=art.target.tenant_id)
+            except Exception:
+                pass
         finally:
             logger.finish(json.loads(res.model_dump_json()) if res else {})
             surface.stop()
@@ -200,6 +221,11 @@ def cmd_catalog(args):
         print(cat.get(args.id).to_json())
     elif args.action == "manifest":
         print(json.dumps(cat.manifest(), indent=2))
+    elif args.action == "portability":
+        from .portability import portability_report
+        art = cat.get(args.id)
+        for name in sorted(SURFACES):
+            print(portability_report(art, SURFACES[name], name).summary())
     elif args.action == "review":
         art = cat.review_step(args.id, args.step, risk=args.risk, note=args.note)
         st = next(x for x in art.steps if x.index == args.step)
@@ -225,6 +251,14 @@ def cmd_operator(args):
             print(f"    url={r.state_url} cdp={r.cdp_endpoint}")
             print(f"    screenshot={r.screenshot_path}")
         return
+    if args.action == "console":
+        from .escalation.console import create_console
+        app = create_console(args.id, handoffs=args.handoffs)
+        print(f"[operator] console for {args.id} on "
+              f"http://{args.host}:{args.port} -- you are driving the SAME live "
+              f"session the automation paused")
+        app.run(host=args.host, port=args.port, threaded=True)
+        return
     if args.action == "resolve":
         req = store.read(args.id)
         print(f"[operator] taking control of live session at {req.cdp_endpoint}")
@@ -240,6 +274,45 @@ def cmd_operator(args):
             print(f"[operator] resolved (resume={not args.no_resume}); control -> agent")
         finally:
             sess.detach()
+
+
+def cmd_repair(args):
+    from .repair import DriftLedger, ProposalStore, analyse, apply as apply_repair
+    cat = Catalog(args.dir)
+    ledger = DriftLedger(os.path.join(args.evidence, "drift_ledger.jsonl"))
+    store = ProposalStore(os.path.join(args.evidence, "repairs"))
+
+    if args.action == "analyse":
+        art = cat.get(args.id)
+        proposal = analyse(art, ledger, min_occurrences=args.min_occurrences,
+                           tenant_id=args.tenant_id)
+        print(proposal.summary())
+        if proposal.repairs or proposal.unrepairable:
+            print(f"[repair] wrote {store.save(proposal)}")
+        return
+
+    if args.action == "list":
+        for p in store.list():
+            print(f"- {p.id} [{'applied' if p.applied else 'open'}] "
+                  f"{len(p.repairs)} repair(s), {len(p.unrepairable)} needing a human")
+        return
+
+    if args.action == "apply":
+        proposal = store.load(args.id)
+        art = cat.get(proposal.capability_id)
+        if art.version != proposal.from_version:
+            print(f"[repair] REFUSED: proposal targets {proposal.from_version}, "
+                  f"catalog holds {art.version}")
+            sys.exit(6)
+        repaired = apply_repair(art, proposal)
+        cat.save(repaired)
+        proposal.applied = True
+        store.save(proposal)
+        print(f"[repair] {repaired.id} -> v{repaired.version} "
+              f"[{repaired.approval_state.value}]")
+        print("[repair] a human must approve it before unattended replay "
+              "(`catalog approve`)")
+        return
 
 
 def cmd_serve(args):
@@ -297,6 +370,9 @@ def build_parser():
     r.add_argument("--headed", action="store_true")
     r.add_argument("--cdp-port", type=int, default=0)
     r.add_argument("--allow-risky", action="store_true")
+    r.add_argument("--surface", choices=sorted(SURFACES), default="web",
+                   help="which Surface implementation to replay through; the "
+                        "artifact is unchanged either way")
     r.add_argument("--initiator", default="",
                    help="who is running this capability (dual control)")
     r.add_argument("--approver", default="",
@@ -323,7 +399,8 @@ def build_parser():
 
     c = sub.add_parser("catalog", help="list / show / manifest / approve")
     c.add_argument("action",
-                   choices=["list", "show", "manifest", "review", "approve"])
+                   choices=["list", "show", "manifest", "portability",
+                            "review", "approve"])
     c.add_argument("--id")
     c.add_argument("--step", type=int,
                    help="step index to review (catalog review)")
@@ -335,7 +412,9 @@ def build_parser():
     c.set_defaults(func=cmd_catalog)
 
     o = sub.add_parser("operator", help="operator console (handoff)")
-    o.add_argument("action", choices=["list", "resolve"])
+    o.add_argument("action", choices=["list", "console", "resolve"])
+    o.add_argument("--host", default="127.0.0.1")
+    o.add_argument("--port", type=int, default=8090)
     o.add_argument("--id")
     o.add_argument("--do", action="append",
                    help="operator op, e.g. 'click_text:Continue to application'")
@@ -345,6 +424,16 @@ def build_parser():
     o.add_argument("--no-resume", action="store_true")
     o.add_argument("--handoffs", default="evidence/handoffs")
     o.set_defaults(func=cmd_operator)
+
+    rp = sub.add_parser("repair", help="drift-driven artifact repair proposals")
+    rp.add_argument("action", choices=["analyse", "list", "apply"])
+    rp.add_argument("--id", help="capability id (analyse) or proposal id (apply)")
+    rp.add_argument("--dir", default="capabilities")
+    rp.add_argument("--evidence", default="evidence")
+    rp.add_argument("--tenant-id", default=None)
+    rp.add_argument("--min-occurrences", type=int, default=3,
+                    help="drifts on the same step before a repair is proposed")
+    rp.set_defaults(func=cmd_repair)
 
     s = sub.add_parser("serve", help="agent-facing capability API")
     s.add_argument("--host", default="127.0.0.1")

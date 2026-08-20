@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "outputs": {},
   "business_outcome": null,
+  "refusal": null,
   "failure": {
     "code": "FILL_NOT_APPLIED",
     "step_index": 3,

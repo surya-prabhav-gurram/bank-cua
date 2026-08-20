@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "outputs": {},
   "business_outcome": null,
+  "refusal": null,
   "failure": {
     "code": "SESSION_TIMEOUT",
     "step_index": 2,

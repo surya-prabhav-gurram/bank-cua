@@ -11,8 +11,8 @@
   "cdp_endpoint": "http://127.0.0.1:9222",
   "controller": "agent",
   "status": "resolved",
-  "created_at": 1787186156.70035,
-  "resolved_at": 1787186157.600619,
+  "created_at": 1787192090.750255,
+  "resolved_at": 1787192091.6678212,
   "resolution_note": "performed manually by operator",
   "resume": true,
   "human_actions": [
@@ -20,13 +20,13 @@
       "op": "note",
       "detail": "reviewed irreversible sub-account creation; approving",
       "value": null,
-      "ts": 1787186157.164497
+      "ts": 1787192091.22118
     },
     {
       "op": "click_selector",
       "detail": "input[type=submit]",
       "value": null,
-      "ts": 1787186157.195453
+      "ts": 1787192091.262336
     }
   ]
 }

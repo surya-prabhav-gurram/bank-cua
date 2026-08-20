@@ -13,6 +13,7 @@
       "member_name"
     ]
   },
+  "refusal": null,
   "failure": null,
   "recoveries": [],
   "drifts": [],

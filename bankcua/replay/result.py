@@ -15,8 +15,18 @@ from pydantic import BaseModel, Field
 
 
 class ReplayStatus(str, Enum):
+    """What happened, in terms the caller can branch on.
+
+    The split that matters is between things that WENT WRONG and things that were
+    DECIDED. A "no such member" is a decision by the application; a policy refusal
+    is a decision by us; only FAILURE means something actually broke. Collapsing
+    either into FAILURE leaves the caller unable to tell "get a bigger mandate"
+    from "page an engineer" -- which is the same mistake, one layer up, that
+    conflating a business outcome with a crash would be.
+    """
     SUCCESS = "success"                 # goal reached; outputs populated
     BUSINESS_OUTCOME = "business_outcome"  # legitimate non-success the caller wants
+    REFUSED = "refused"                # a guardrail declined; the system is fine
     ESCALATED = "escalated"            # paused for a human (e.g. risky confirmation)
     FAILURE = "failure"                # hard failure; debuggable error
 
@@ -47,6 +57,22 @@ class AssistEvent(BaseModel):
     succeeded: bool = False
 
 
+class Refusal(BaseModel):
+    """A guardrail declined to act. Deterministic, expected, and actionable.
+
+    Kept separate from FailureDetail on purpose: the caller's response to a
+    refusal is to change the REQUEST (a smaller amount, a second approver, an
+    approved capability), whereas its response to a failure is to investigate the
+    SYSTEM. Same field shapes would have hidden two different jobs behind one.
+    """
+    code: str
+    requirement: str = Field(
+        default="", description="What would have to be true for this to proceed.")
+    reason: str = Field(default="", description="Why it was declined, as observed.")
+    step_index: Optional[int] = None
+    evidence: dict[str, str] = Field(default_factory=dict)
+
+
 class FailureDetail(BaseModel):
     code: str
     step_index: Optional[int] = None
@@ -74,6 +100,7 @@ class ReplayResult(BaseModel):
     version: str = ""
     outputs: dict[str, Any] = Field(default_factory=dict)
     business_outcome: Optional[BusinessOutcome] = None
+    refusal: Optional[Refusal] = None
     failure: Optional[FailureDetail] = None
     recoveries: list[RecoveryEvent] = Field(default_factory=list)
     drifts: list[DriftSignal] = Field(default_factory=list)

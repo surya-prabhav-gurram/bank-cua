@@ -36,6 +36,7 @@ from bankcua.schema import CapabilityArtifact
 from bankcua.replay.engine import ReplayEngine
 from bankcua.observability.logging import RunLogger
 from bankcua.safety.policy import Policy, PolicyEngine
+from bankcua.surface.accessibility import AccessibilitySurface
 from bankcua.surface.web_playwright import WebSurface
 from bankcua.escalation.handoff import HandoffStore, HandoffCoordinator, OperatorSession
 from bankcua.tenancy import TenantOverride, apply_overrides
@@ -85,7 +86,8 @@ def reset(base):
     urllib.request.urlopen(f"{base}/_control/reset").read()
 
 
-def run_replay(run_dir, art, params, allow_risky=False, policy=None, **engine_kw):
+def run_replay(run_dir, art, params, allow_risky=False, policy=None,
+               surface_cls=WebSurface, **engine_kw):
     if os.path.exists(run_dir):
         shutil.rmtree(run_dir)
     logger = RunLogger(run_dir, "replay", art.secret_params(),
@@ -94,7 +96,7 @@ def run_replay(run_dir, art, params, allow_risky=False, policy=None, **engine_kw
     pe = PolicyEngine(policy or POL,
                       artifact_url_patterns=art.target.allowed_url_patterns,
                       allow_risky_override=allow_risky)
-    surf = WebSurface(art.target.base_url, headless=True)
+    surf = surface_cls(art.target.base_url, headless=True)
     surf.start()
     try:
         res = ReplayEngine(surf, pe, logger, None, **engine_kw).run(art, params)
@@ -110,6 +112,10 @@ def line(tag, res):
         s += f" outcome={res.business_outcome.code}"
         if res.business_outcome.outputs_surfaced:
             s += f" surfaced={res.business_outcome.outputs_surfaced}"
+    if res.refusal:
+        where = ("@step%d" % res.refusal.step_index
+                 if res.refusal.step_index is not None else " (pre-flight)")
+        s += f" refused={res.refusal.code}{where}"
     if res.failure:
         # a pre-flight refusal has no step: it happens before anything is opened
         where = ("@step%d" % res.failure.step_index
@@ -153,6 +159,7 @@ def main():
         stability()
         fill_not_applied(base)
         value_policy()
+        second_surface()
     finally:
         stop_tenants()
 
@@ -265,6 +272,25 @@ def value_policy():
                     {**base_params, "deposit": "1500.00"},
                     allow_risky=True, policy=pol,
                     initiator="alice", approver="bruce"))
+
+
+def second_surface():
+    """14: the SAME artifact, replayed through a surface with no DOM.
+
+    Perception is an accessibility tree; action is a mouse click and keystrokes.
+    Nothing in the schema, compiler, replay engine, error taxonomy or safety model
+    differs between this run and scenario 01 -- only the Surface implementation.
+    A static portability report is written alongside, because whether an artifact
+    CAN run on a surface is decidable before anything is launched."""
+    from bankcua.portability import portability_report
+    run_dir = "evidence/replay-14-second-surface-a11y"
+    res = run_replay(run_dir, LOOKUP, {**CREDS, "member_id": "12345"},
+                     surface_cls=AccessibilitySurface)
+    line("14-second-surface-a11y", res)
+    rep = portability_report(LOOKUP, AccessibilitySurface, "a11y")
+    with open(os.path.join(run_dir, "portability.json"), "w") as f:
+        f.write(rep.model_dump_json(indent=2))
+    print(f"    portability: {rep.summary()}")
 
 
 def stability():

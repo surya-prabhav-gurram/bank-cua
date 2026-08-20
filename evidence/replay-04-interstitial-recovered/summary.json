@@ -7,6 +7,7 @@
     "savings_balance": 421355
   },
   "business_outcome": null,
+  "refusal": null,
   "failure": null,
   "recoveries": [
     {
@@ -21,5 +22,5 @@
   "assists": [],
   "intervention_id": null,
   "steps_executed": 7,
-  "duration_s": 1.72
+  "duration_s": 1.71
 }

@@ -104,6 +104,10 @@ with a crash is the classic mistake. After every step (and on any action
 failure) replay runs the artifact's `KnownCondition` detectors and acts on the
 first match:
 
+- **refused** → a guardrail declined before or during the run; `{status: refused,
+  refusal: {code, requirement, reason}}`, where `requirement` states what would
+  have to be true for it to proceed. Over HTTP this is a 403, not the 422 used
+  for a run that broke.
 - **business_outcome** → stop and return `{status: business_outcome, code}`.
   "No such member" and "permission denied" are *answers the caller wants*, not
   errors. (`ReplayStatus.BUSINESS_OUTCOME`, never `FAILURE`.) A condition may
@@ -128,6 +132,19 @@ may fire: exactly one LLM decision, for the failing step only, capped per run
 Never open-ended. All paths are demonstrated in `evidence/` (success, not-found,
 permission-denied, interstitial-recovered, session-timeout). Transient slowness
 is handled by explicit waits.
+
+**A refusal is not a failure.** The result contract separates things that *went
+wrong* from things that were *decided*. A business outcome is a decision by the
+application; a **refusal** is a decision by us — a value ceiling, an unmet
+dual-control requirement, an unapproved irreversible step, a URL outside the
+allowlist. Only `FAILURE` means something actually broke. The distinction is
+operational, not cosmetic: the caller's response to `VALUE_LIMIT_EXCEEDED` is to
+change the *request* (a smaller amount, a second approver), while its response to
+`FILL_NOT_APPLIED` is to investigate the *system*. Typing both as failure would
+repeat, one layer up, exactly the mistake that conflating "no such member" with a
+crash would be — and the evidence shows the split: scenarios 11–13 are `refused`,
+scenario 10 is `failure`. The refusal set is the same set that is never escalated
+to a human, because a person at a browser cannot fix a policy file.
 
 **A fill is verified on the control, not the page.** A `FILL` has no page-state
 consequence, so no checkpoint can see one that silently failed -- a readonly,
@@ -158,6 +175,30 @@ absorb the rest. The `StabilitySignal` (`replay --repeat N` → pass rate) and t
 unattended production.
 
 ## 4. Heterogeneity & multi-tenant
+
+**Other surfaces — demonstrated, not argued.** A second `Surface` is built:
+`surface/accessibility.py` perceives only an accessibility tree ({role, name,
+value, bounds} nodes) and acts only through a mouse and a keyboard. It shares no
+targeting machinery with the Playwright surface — no CSS, no XPath, no
+`element.fill()`. The **same artifact**, recorded on the DOM surface, replays
+through it to identical outputs with zero drift (evidence 14); business outcomes
+and `surfaces_outputs` behave identically. The tree is sourced from Chromium over
+CDP rather than an OS API, because there is no desktop application here to drive:
+the delta to a real UIA/AX driver is `_ax_nodes()`, one method wide, and the
+vocabulary it already returns is the OS vocabulary.
+
+Building it changed the design, which is the point of building it. The legacy
+form's inputs have **no accessible name at all**, so they are unaddressable by
+name on a DOM *and* on an a11y tree; the only durable handle is the one a person
+uses — proximity to the words "User ID". That is now `LocatorKind.NEAR_LABEL`, a
+statement of intent the web surface resolves structurally (same table row) and the
+a11y surface resolves spatially (nearest control to the label's bounds). An
+accessibility tree also stops at a frame boundary, so the driver walks the frame
+tree explicitly — the desktop analogue being a nested pane. Each surface declares
+`supported_locator_kinds`, and `portability_report` uses that to answer "will this
+artifact run there?" **before** anything launches: discovering that step 7 is
+unreachable after steps 1–6 have run is how automation half-completes an
+irreversible flow.
 
 **Other surfaces.** The seam is `Surface`. The schema speaks roles, names,
 labels, and frames — vocabulary a desktop **accessibility tree** exposes just as
@@ -228,10 +269,19 @@ skips execution and verifies the checkpoint — so an irreversible action is nev
 double-executed. This full round trip runs in `evidence/escalation-06-handoff`
 and via the `operator` CLI (README §4).
 
-**What is real vs. mocked.** The control-transfer *model* is real: pause, cede
-via the token, CDP attach to the live session, recorded human actions, resume,
-hand back. The operator *console* is a CLI stand-in for a real-time co-browsing
-UI, which is explicitly out of scope; the seam it plugs into is real.
+**The console.** The control-transfer model was always real; what was mocked was
+the human's window onto it — a CLI where the operator typed
+`--do click_selector:input[type=submit]`, which is not how a bank operator works.
+That window is now built (`escalation/console.py`, `operator console --id ...`):
+it serves the live page as a picture, forwards clicks at the coordinates the human
+clicked **on that picture**, forwards keystrokes, and records each one into the
+intervention before handing control back. No selector appears anywhere, because
+the person is not thinking in selectors. One worker thread owns the session and
+every request queues work to it — Playwright's sync API is thread-affine, and a
+live banking screen is a single-owner resource where interleaved writes are not
+debuggable. Human actions are persisted as they happen rather than at resolve, so
+a console that dies mid-handoff cannot lose the record of what a person already
+did to a live account.
 
 ## 6. Safety
 
@@ -249,6 +299,39 @@ and replay** — a violation raises, it never warns-and-continues.
   escalation. In a bank, refusing to create a sub-account is far cheaper than
   creating one by mistake, so failing closed on the irreversible class is the
   right default.
+- **Risk classification: heuristic proposes, human ratifies.** Two layered
+  signals. *Lexical* — the caption matches create/confirm/submit/delete/transfer;
+  cheap, and catches link-styled actions and GET-based mutations. *Structural* —
+  the control submits a form and that form uses POST; evidence about what the
+  action **does** rather than what it is called, so it survives relabelling,
+  translation and per-tenant branding, with a direct analogue on a desktop
+  accessibility tree. The structural signal *corroborates* rather than overrides:
+  a POST submit is risky unless its caption is on a short, explicit benign list.
+  Promoting every POST would flag "Sign On" and "Search", and a guardrail that
+  cries wolf gets switched off; what the layering buys over the caption alone is
+  the unlabelled mutation — "Apply", "Proceed", "Finalise" carry no risky keyword
+  but still change state. The class **and the reason for it** are persisted on the
+  step, and `catalog approve` refuses to promote a capability while any risky step
+  is unreviewed. A reviewer may also *downgrade* a false positive with a recorded
+  justification — a gate that can only rubber-stamp is a checkbox.
+- **Value-level (semantic) policy.** The allowlist is URL/action-shaped: it can
+  answer "may the agent click here", never "is this amount sane". A third layer
+  reads the **inputs** a capability is invoked with, before the browser opens.
+  `max` is a hard ceiling — refused outright, never escalated, because no operator
+  standing at a browser should wave through an amount the institution has already
+  ruled out. `dual_control_above` is the softer band: permitted, but not by one
+  person alone; it resolves to an independent second approver, or to an operator
+  counter-signature, and unattended it fails closed. A run may not approve itself,
+  and an approver must appear in a configured registry — without one,
+  `--approver whoever` is theatre. `max_per_window` bounds the **sum** over a
+  rolling window against a file-backed ledger, because a per-invocation ceiling is
+  blind to velocity: ten $999 deposits inside a minute clear a $1,000 limit ten
+  times over. Amounts are booked only on success; a refused or escalated run moved
+  no money and must not starve the budget. A governed value that will not parse as
+  a number is refused — a limit you cannot evaluate is not a limit. The value gate
+  and the irreversible-step gate are independent and compose: evidence 13 clears
+  the value gate on a counter-signed $1,500 deposit and is then stopped by the
+  step gate on the irreversible click.
 - **Never persist secrets or regulated data.** Sensitive inputs are declared in
   the schema and stored as parameter *names*, never values; the artifact records
   `secret_param` references. Redaction is two-layered: name-based (declared
@@ -271,13 +354,12 @@ and replay** — a violation raises, it never warns-and-continues.
 
 **Limits.** Screenshots can still show PII on screen; today they are treated as
 sensitive evidence — the production answer is masked capture and a restricted
-evidence store. Value rules are per-parameter and stateless: they bound a single
-invocation, not a velocity — ten $999 deposits in a minute pass every check — so
-aggregate and rate limits are the next layer. The benign-submit list is a curated
-regex: short and reviewable by design, but still a list someone maintains per
-vendor. Dual control is enforced in-process against an honour-system identifier;
-production would bind it to authenticated operator identity rather than a CLI
-string.
+evidence store. The velocity ledger is a JSON file with an append write: correct
+for one process, and the seam (`Ledger`) is where an institution's ledger of
+record would go. The approver registry is a config list standing in for a
+directory; binding it to authenticated identity changes where the set comes from,
+not the shape of the check. The benign-submit list is a curated regex: short and
+reviewable by design, but still maintained per vendor.
 
 ## 7. Cuts
 
@@ -307,10 +389,25 @@ one action whose effect no page checkpoint could see (§3, evidence 10); and
 `surfaces_outputs`, so a business outcome can return the data it does have (§3,
 evidence 03).
 
-**What I'd build next, in order:** (1) a second `Surface` (desktop accessibility
-tree) to prove the seam against a genuinely non-DOM target — the one remaining
-claim that is argued rather than demonstrated; (2) aggregate and velocity limits
-on the value layer, plus binding dual control to authenticated operator identity
-rather than a supplied string; (3) a real co-browsing operator console over the
-existing CDP seam; (4) an artifact auto-repair loop that proposes locator/override
-updates when drift crosses a threshold, gated by the approval workflow.
+All four items this section previously listed as future work are now **built and
+evidenced**: a second `Surface` (§4, evidence 14); value-level policy with
+ceilings, dual control, a velocity ledger and a registry-bound approver (§6,
+evidence 11–13); a real co-browsing operator console over the existing CDP seam
+(§5); and a drift-driven artifact repair loop (`repair analyse|apply`) that
+aggregates drift across runs, proposes a reviewable patch, bumps the version and
+lands it in `draft` so the existing approval gate still decides. That loop is
+deliberately not self-modifying: automation that silently rewrites its own
+instructions for driving a bank is a worse problem than the staleness it fixes.
+It also refuses the repairs that would make things worse — drift from a semantic
+primary to a structural fallback is a **renamed** control, not a stale locator,
+so it reports "supply a tenant label_map" rather than permanently demoting the
+step to a CSS path.
+
+**What I'd build next, in order:** (1) a genuine OS-level driver (UIA/AX) behind
+the `_ax_nodes()` seam, to replace the one remaining stand-in in the surface
+story; (2) binding dual control and the approver registry to authenticated
+identity, and moving the velocity ledger to the institution's ledger of record;
+(3) a screencast transport for the console in place of frame polling, which is a
+bandwidth change rather than a capability one; (4) letting the repair loop propose
+tenant `label_map` entries directly by reading what the renamed control now says,
+rather than naming the string a human must supply.

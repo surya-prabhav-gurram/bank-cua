@@ -38,9 +38,13 @@ def test_index_elements_and_locator_ordering(surf):
     loc = surf.locator_for_element(els[2])
     assert loc.candidates[0].kind == LocatorKind.ROLE
     assert loc.candidates[0].value == "Sign On"
-    # unlabeled input gets a label-proximity xpath ahead of structural css
+    # An unlabelled input is addressable only by proximity. The PORTABLE form of
+    # that intent comes first (a non-DOM surface can resolve it spatially), the
+    # DOM-bound form second, and structural paths last.
     uloc = surf.locator_for_element(els[0])
-    assert uloc.candidates[0].kind == LocatorKind.XPATH
+    assert uloc.candidates[0].kind == LocatorKind.NEAR_LABEL
+    assert uloc.candidates[0].value == "User ID"
+    assert uloc.candidates[1].kind == LocatorKind.XPATH
     assert 'User ID' in uloc.candidates[0].value
 
 

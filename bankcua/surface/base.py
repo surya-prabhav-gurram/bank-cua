@@ -128,6 +128,12 @@ class ActResult(BaseModel):
 class Surface(abc.ABC):
     """Abstract perceive/act interface. See module docstring."""
 
+    #: Locator strategies this surface can actually resolve. A surface with no
+    #: DOM cannot honour css/xpath/test_id, and saying so in data (rather than
+    #: failing at run time) is what lets `portability_report` answer "will this
+    #: artifact run here?" BEFORE anything is launched.
+    supported_locator_kinds: frozenset = frozenset()
+
     # ---- lifecycle -------------------------------------------------------
     @abc.abstractmethod
     def start(self) -> None: ...

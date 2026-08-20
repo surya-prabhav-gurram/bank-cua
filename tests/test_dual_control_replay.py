@@ -51,19 +51,24 @@ def _params(deposit):
             "deposit": deposit}
 
 
-def test_ceiling_breach_fails_before_the_browser_navigates(mock_app, tmp_path):
+def test_ceiling_breach_is_refused_before_the_browser_navigates(mock_app, tmp_path):
+    """A ceiling breach is a DECISION, not a fault: nothing broke, the request was
+    declined. The caller's move is a smaller amount, not an incident."""
     art = _load(mock_app)
     r = _replay(art, _params("25000.00"), tmp_path, "ceiling")
-    assert r.status == ReplayStatus.FAILURE
-    assert r.failure.code == "VALUE_LIMIT_EXCEEDED"
+    assert r.status == ReplayStatus.REFUSED
+    assert r.failure is None               # never typed as a system failure
+    assert r.refusal.code == "VALUE_LIMIT_EXCEEDED"
+    assert "10000" in r.refusal.reason
     assert r.steps_executed == 0          # nothing was opened, nothing was typed
 
 
 def test_dual_control_unmet_fails_closed_when_unattended(mock_app, tmp_path):
     art = _load(mock_app)
     r = _replay(art, _params("1500.00"), tmp_path, "unmet")
-    assert r.status == ReplayStatus.FAILURE
-    assert r.failure.code == "DUAL_CONTROL_REQUIRED"
+    assert r.status == ReplayStatus.REFUSED
+    assert r.refusal.code == "DUAL_CONTROL_REQUIRED"
+    assert "approver" in r.refusal.requirement
     assert r.steps_executed == 0
 
 
@@ -71,7 +76,8 @@ def test_a_run_cannot_approve_itself(mock_app, tmp_path):
     art = _load(mock_app)
     r = _replay(art, _params("1500.00"), tmp_path, "self",
                 initiator="alice", approver="alice")
-    assert r.failure.code == "DUAL_CONTROL_REQUIRED"
+    assert r.status == ReplayStatus.REFUSED
+    assert r.refusal.code == "DUAL_CONTROL_REQUIRED"
 
 
 def test_independent_approver_lets_the_run_proceed(mock_app, tmp_path):
@@ -80,7 +86,8 @@ def test_independent_approver_lets_the_run_proceed(mock_app, tmp_path):
     art = _load(mock_app)
     r = _replay(art, _params("1500.00"), tmp_path, "countersigned",
                 initiator="alice", approver="bruce")
-    assert r.failure.code == "CONFIRMATION_REQUIRED"      # not DUAL_CONTROL
+    assert r.status == ReplayStatus.REFUSED
+    assert r.refusal.code == "CONFIRMATION_REQUIRED"      # not DUAL_CONTROL
     assert r.steps_executed > 0
 
     log = (tmp_path / "countersigned" / "run.jsonl").read_text()
@@ -90,6 +97,25 @@ def test_independent_approver_lets_the_run_proceed(mock_app, tmp_path):
 def test_below_threshold_needs_no_countersignature(mock_app, tmp_path):
     art = _load(mock_app)
     r = _replay(art, _params("500.00"), tmp_path, "under")
-    assert r.failure.code == "CONFIRMATION_REQUIRED"
+    assert r.status == ReplayStatus.REFUSED
+    assert r.refusal.code == "CONFIRMATION_REQUIRED"
     log = (tmp_path / "under" / "run.jsonl").read_text()
     assert "dual_control" not in log
+
+
+def test_a_refusal_is_never_typed_as_a_failure(mock_app, tmp_path):
+    """The distinction this contract exists to make. A caller branching on
+    `failure` must not be told a policy decision broke something -- that is the
+    same conflation, one layer up, as calling "no such member" a crash."""
+    art = _load(mock_app)
+    refused = _replay(art, _params("25000.00"), tmp_path, "refused")
+    assert refused.status == ReplayStatus.REFUSED
+    assert refused.refusal is not None and refused.failure is None
+    assert refused.ok() is False        # still not a success
+
+    # and a genuine fault is still a fault, with a debuggable failure attached
+    broken = _load(mock_app)
+    broken.target.base_url = "http://127.0.0.1:5999"
+    hard = _replay(broken, _params("500.00"), tmp_path, "hard")
+    assert hard.status == ReplayStatus.FAILURE
+    assert hard.failure is not None and hard.refusal is None

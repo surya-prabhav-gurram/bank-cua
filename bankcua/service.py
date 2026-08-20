@@ -89,7 +89,11 @@ def create_app(catalog_dir="capabilities", policy_path="config/policy.yaml",
         finally:
             logger.finish(res.model_dump() if res else {})
             surf.stop()
-        status = 200 if res.status.value in ("success", "business_outcome") else 422
+        # A refusal is not a server fault: the caller must change the REQUEST
+        # (smaller amount, second approver, approved capability), so it maps to
+        # 403 rather than the 422 used for a run that actually broke.
+        status = {"success": 200, "business_outcome": 200,
+                  "refused": 403, "escalated": 409}.get(res.status.value, 422)
         return app.response_class(res.model_dump_json(), mimetype="application/json"), status
 
     return app

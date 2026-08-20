@@ -78,6 +78,10 @@ deterministic replay is how the agent invokes it in production.</div>
   <div class="kv"><b>Safety</b> — allowlist, irreversible-action gating, secret/PII redaction.</div>
   <div class="kv"><b>Escalation</b> — human takes control of the <em>same live session</em> over CDP.</div>
   <div class="kv"><b>Cross-tenant</b> — one artifact reused across a rebranded 2nd tenant via a small override.</div>
+  <div class="kv"><b>Second surface</b> — the same artifact replayed with no DOM
+  (accessibility tree + coordinates); portability decided statically.</div>
+  <div class="kv"><b>Self-healing</b> — drift aggregated across runs into a
+  reviewable repair proposal, gated by the approval workflow.</div>
   <div class="kv"><b>Agent API + codegen</b> — callable-by-name HTTP endpoints; artifact → runnable Playwright.</div>
   <div class="kv"><b>Confidence</b> — multi-run stability signal + draft→approved gate; bounded assisted recovery.</div>
 </div>
@@ -97,6 +101,9 @@ deterministic replay is how the agent invokes it in production.</div>
 <tr><td>Deposit over the ceiling / over the dual-control threshold</td>
     <td><span class="status-bad">REFUSED</span> · <code>VALUE_LIMIT_EXCEEDED</code> /
         <code>DUAL_CONTROL_REQUIRED</code> — before the browser opens</td></tr>
+<tr><td>Same artifact on a surface with <b>no DOM</b></td>
+    <td><span class="status-ok">SECOND SURFACE</span> · accessibility tree +
+        coordinates · identical outputs, zero drift</td></tr>
 <tr><td>Replayed N times</td><td><span class="status-ok">STABILITY</span> · pass-rate signal feeding the draft→approved gate</td></tr>
 </table>
 
@@ -110,7 +117,7 @@ prematurely. Stack: Python + Playwright, Pydantic v2 schema, a legacy-style Flas
 mock as the proxy target.</p>
 
 <div class="foot">Full source, artifacts, and evidence in the accompanying public repository.
-126 automated tests pass; the no-secret sweep of every committed artifact is an enforced test
+164 automated tests pass; the no-secret sweep of every committed artifact is an enforced test
 invariant rather than a claim, so it cannot silently regress.</div>
 
 <!-- ===================== FULL REPORT ===================== -->
@@ -178,6 +185,11 @@ into URLs, values, and checkpoints at run time.</p>
 <p><strong>The runtime-error contract is the core.</strong> After every step (and on any action
 failure) replay runs the artifact's condition detectors and acts on the first match:</p>
 <ul>
+<li><span class="pill">refused</span> a guardrail declined &mdash; a value ceiling, an unmet
+dual-control requirement, an unapproved irreversible step. Nothing broke: the caller's move is to
+change the <em>request</em>, not to investigate the system, so this is a 403 rather than the 422
+used for a run that failed. Typing these as failures would repeat, one layer up, the mistake that
+conflating "no such member" with a crash would be.</li>
 <li><span class="pill g">business_outcome</span> stop and return a code the caller wants —
 "no such member" / "permission denied" are <em>answers</em>, never crashes. A condition may also
 declare <code>surfaces_outputs</code>: Corebank's denial screen withholds the balance but still
@@ -218,6 +230,17 @@ just as a browser does — so the format assumes no DOM. Legacy web is the same 
 on <code>frame_path</code> and structural fallbacks; desktop is a new <code>Surface</code> over
 an OS accessibility API or screenshot+coordinates (the schema already has a coordinate locator
 kind). Perception/action change; the flow, compiler, replay, error contract, and safety do not.</p>
+<p><strong>A second surface, demonstrated.</strong>
+<code>surface/accessibility.py</code> perceives only an accessibility tree (role, name, value,
+bounds) and acts only through a mouse and keyboard — no CSS, no XPath, no
+<code>element.fill()</code>. The <em>same</em> artifact replays through it to identical outputs
+with zero drift. The tree comes from Chromium over CDP rather than an OS API, because there is no
+desktop application here to drive; the delta to a real UIA/AX driver is <code>_ax_nodes()</code>,
+one method wide. Building it changed the design: the legacy inputs have no accessible name at
+all, so the only durable handle is proximity — now <code>LocatorKind.NEAR_LABEL</code>, resolved
+structurally on the web and spatially on the tree. Each surface declares what it can honour, so
+<code>portability_report</code> answers "will this run there?" before anything launches.</p>
+
 <p><strong>Multi-tenant reuse.</strong> <code>Target</code> splits the shared flow from the
 per-tenant binding, so hundreds of tenants on one vendor product share a single artifact and
 differ only by binding + optional overrides. Two mechanisms make this real: <strong>vendor-level
@@ -233,6 +256,14 @@ artifact recorded on <code>demo-cu</code> runs against <code>summit-cu</code> �
 one. Only the multi-tenant <em>plumbing</em> (registry, scheduling) is left unbuilt, per the brief.</p>
 
 <h2>5 · Escalation &amp; handoff</h2>
+<p><strong>The console.</strong> The control-transfer model was always real; what was mocked was
+the human's window onto it — a CLI where the operator typed a CSS selector. That window is now
+built: the live page served as a picture, clicks forwarded at the coordinates the human clicked
+on it, keystrokes forwarded, every action recorded into the intervention before control returns.
+No selector appears anywhere, because the person is not thinking in selectors. One worker thread
+owns the session — a live banking screen is a single-owner resource, and human actions are
+persisted as they happen so a console that dies mid-handoff loses nothing.</p>
+
 <p><strong>Detecting "stuck."</strong> Discovery escalates on no-progress over N steps, an
 unresolvable target, a policy block, or a model <code>escalate</code>. Replay escalates on a
 policy-gated irreversible step or an unrecoverable condition.</p>
@@ -300,21 +331,20 @@ design but still maintained per vendor. Dual control is enforced against an hono
 identifier; production would bind it to authenticated operator identity.</p>
 
 <h2>7 · Cuts</h2>
-<p>Most stretch goals are <strong>built</strong>: agent-facing API (<code>serve</code>), code
-generation (<code>codegen</code>), confidence/approval (stability signal + draft→approved gate),
-bounded assisted recovery, and cross-tenant reuse with per-variant overrides + route
-canonicalisation. Left thin at clean seams: the <strong>operator console</strong> (CLI
-stand-in; the handoff mechanism is real); <strong>desktop/legacy-web surfaces</strong> (designed,
-not built — the <code>Surface</code> seam keeps the core uncommitted); <strong>multi-tenant
-plumbing</strong> (registry/scheduling — the scaling infrastructure the brief says to avoid); and
-the <strong>committed discovery evidence is a genuine live run</strong> via the Anthropic Messages
-API (<code>recorded_by: anthropic</code>), with a key-free offline
-reproduction via the bridge provider.</p>
-<p><strong>Next, in order:</strong> (1) a second <code>Surface</code> (desktop accessibility tree)
-to prove the seam on a genuinely non-DOM target; (2) value-level semantic policy (amount limits,
-dual control on money movement); (3) a real co-browsing console over the existing CDP seam; (4) an
-artifact auto-repair loop that proposes locator/override updates when drift crosses a threshold,
-gated by the approval workflow.</p>
+<p>Every item this section previously listed as future work is now <strong>built and
+evidenced</strong>: a second <code>Surface</code>; value-level policy with ceilings, dual control,
+a velocity ledger and a registry-bound approver; a real co-browsing console; and a drift-driven
+repair loop that aggregates drift across runs, proposes a reviewable patch, bumps the version and
+lands it in <code>draft</code> so the approval gate still decides.</p>
+<p>The repair loop is deliberately <em>not</em> self-modifying — automation that silently rewrites
+its own instructions for driving a bank is a worse problem than the staleness it fixes — and it
+refuses the repairs that would make the artifact worse: drift from a semantic primary to a
+structural fallback is a <em>renamed</em> control, so it asks for a tenant override rather than
+permanently demoting the step to a CSS path.</p>
+<p><strong>Next:</strong> a genuine OS-level UIA/AX driver behind the <code>_ax_nodes()</code>
+seam; binding dual control to authenticated identity and the velocity ledger to a system of
+record; a screencast transport for the console in place of frame polling; and letting repair
+propose <code>label_map</code> entries by reading what the renamed control now says.</p>
 
 <div class="foot">bank-cua · design report · generated from the working system and its evidence.</div>
 

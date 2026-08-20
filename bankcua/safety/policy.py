@@ -76,6 +76,12 @@ class ValueRule:
     max: Optional[float] = None
     dual_control_above: Optional[float] = None
     unit: str = ""
+    # Aggregate band. A per-invocation ceiling is blind to velocity: ten $999
+    # deposits inside a minute clear a $1,000 limit ten times over. This bounds
+    # the SUM over a rolling window, which is the shape real money-movement
+    # controls take.
+    max_per_window: Optional[float] = None
+    window_seconds: int = 3600
 
 
 # Action types that mutate irreversible state by default.
@@ -95,6 +101,12 @@ class Policy:
     require_confirmation_for_risky: bool = True
     # Per-parameter semantic limits, keyed by input parameter name.
     value_rules: dict[str, ValueRule] = field(default_factory=dict)
+    # Identities permitted to counter-sign a dual-control run. Empty means the
+    # registry is not configured and any independent name is accepted -- fine for
+    # a demo, refused in `strict_approvers` mode. Production binds this to the
+    # institution's directory; the shape of the check does not change.
+    approvers: set[str] = field(default_factory=set)
+    strict_approvers: bool = False
 
     @classmethod
     def from_yaml(cls, path: str) -> "Policy":
@@ -107,10 +119,14 @@ class Policy:
                                              [a.value for a in ActionType])),
             allow_risky=raw.get("allow_risky", False),
             require_confirmation_for_risky=raw.get("require_confirmation_for_risky", True),
+            approvers=set(raw.get("approvers") or []),
+            strict_approvers=raw.get("strict_approvers", False),
             value_rules={
                 name: ValueRule(max=rule.get("max"),
                                 dual_control_above=rule.get("dual_control_above"),
-                                unit=rule.get("unit", ""))
+                                unit=rule.get("unit", ""),
+                                max_per_window=rule.get("max_per_window"),
+                                window_seconds=rule.get("window_seconds", 3600))
                 for name, rule in (raw.get("value_rules") or {}).items()
             },
         )
@@ -177,11 +193,16 @@ class PolicyEngine:
         except ValueError:
             return None
 
-    def evaluate_inputs(self, params: dict) -> PolicyDecision:
+    def evaluate_inputs(self, params: dict, ledger=None) -> PolicyDecision:
         """Check a capability's invocation arguments before anything is opened.
 
         Returns ALLOW, NEEDS_CONFIRMATION (dual control required, naming the
         parameters), or raises PolicyViolation for a hard ceiling breach.
+
+        Velocity is checked against the parameter's TOTAL across capabilities,
+        not per capability: two different flows that both move money share one
+        budget, because splitting it per flow is the gap an attacker walks
+        through.
         """
         needs_dual: list[str] = []
         for name, rule in self.policy.value_rules.items():
@@ -196,6 +217,15 @@ class PolicyEngine:
                 raise PolicyViolation(
                     f"value policy: '{name}'={value:g}{rule.unit} exceeds the "
                     f"permitted maximum of {rule.max:g}{rule.unit}")
+            if rule.max_per_window is not None and ledger is not None:
+                spent = ledger.total_in_window(name, rule.window_seconds)
+                if spent + value > rule.max_per_window:
+                    raise PolicyViolation(
+                        f"value policy: '{name}' would take the trailing "
+                        f"{rule.window_seconds}s total to "
+                        f"{spent + value:g}{rule.unit}, over the permitted "
+                        f"{rule.max_per_window:g}{rule.unit} "
+                        f"({spent:g}{rule.unit} already spent)")
             if rule.dual_control_above is not None and value > rule.dual_control_above:
                 needs_dual.append(name)
         if needs_dual:
@@ -207,12 +237,25 @@ class PolicyEngine:
                 params=tuple(needs_dual))
         return PolicyDecision(Decision.ALLOW)
 
-    @staticmethod
-    def approver_is_independent(approver: Optional[str], initiator: Optional[str]) -> bool:
-        """Dual control means two *different* people. A run cannot approve itself."""
+    def approver_is_independent(self, approver: Optional[str],
+                                initiator: Optional[str]) -> bool:
+        """Dual control means two *different*, *authorised* people.
+
+        Two conditions, and they are not the same one. Independence stops a run
+        approving itself. Registry membership stops any typed string counting as
+        a second pair of eyes -- without it, `--approver whoever` is theatre. The
+        registry stands in for the institution's directory; binding it to real
+        authenticated identity changes where the set comes from, not the check.
+        """
         if not approver:
             return False
-        return approver.strip().lower() != (initiator or "").strip().lower()
+        approver = approver.strip()
+        if approver.lower() == (initiator or "").strip().lower():
+            return False
+        if self.policy.approvers:
+            return approver.lower() in {a.lower() for a in self.policy.approvers}
+        # registry not configured: independence alone, unless strictness is asked
+        return not self.policy.strict_approvers
 
     # ---- discovery-time guard -------------------------------------------
     def evaluate_discovery_action(self, action_type: ActionType, url: str,

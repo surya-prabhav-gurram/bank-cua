@@ -27,6 +27,10 @@ is redacted (no secrets/PII); screenshots are treated as sensitive evidence.
   reading the control back does (`Step.verify_value`).
 
 ## Value-level (semantic) policy — amounts and dual control
+These are `status: refused`, not `failure`. Nothing broke: a guardrail declined,
+and the caller's move is to change the request (a smaller amount, a second
+approver), not to investigate the system. Compare `replay-10`, which is a genuine
+`failure` because the automation could not proceed.
 The URL/action allowlist cannot tell $1 from $1M. These rules read the
 invocation's *inputs* before the browser opens.
 - `replay-11-value-limit-exceeded/` — `VALUE_LIMIT_EXCEEDED`: a $25,000 deposit
@@ -54,6 +58,13 @@ invocation's *inputs* before the browser opens.
 - `replay-08-crosstenant-summit-nomap/` — the SAME artifact against Summit with NO
   override: still SUCCEEDS via structural locator fallbacks, emitting drift signals
   at the label/role-based steps (graceful degradation, see `summary.json.drifts`).
+
+## A second surface (the `Surface` seam, demonstrated)
+- `replay-14-second-surface-a11y/` — the SAME artifact recorded on the Playwright
+  surface, replayed through one that has no DOM: it perceives an accessibility
+  tree and acts with a mouse and keyboard, the way a desktop UIA/AX driver does.
+  Identical outputs, zero drift. `portability.json` alongside is the static
+  answer to "can this artifact run here?", computed before anything launched.
 
 ## Confidence
 - `replay-09-stability/` — the capability replayed N times; pass rate reported

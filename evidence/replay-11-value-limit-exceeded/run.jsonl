@@ -1,4 +1,5 @@
-{"ts": 1787186160.914, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-11-value-limit-exceeded"}
-{"ts": 1787186161.137, "event": "replay_started", "capability": "corebank.open_subaccount", "version": "1.0.0", "num_steps": 11, "params": {"member_id": "12345", "acct_type": "Money Market", "deposit": "25000.00"}}
-{"ts": 1787186161.137, "event": "value_policy_block", "reason": "value policy: 'deposit'=25000 USD exceeds the permitted maximum of 10000 USD"}
-{"ts": 1787186161.154, "event": "run_finished", "summary_path": "evidence/replay-11-value-limit-exceeded/summary.json"}
+{"ts": 1787192094.977, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-11-value-limit-exceeded"}
+{"ts": 1787192095.202, "event": "replay_started", "capability": "corebank.open_subaccount", "version": "1.0.0", "num_steps": 11, "params": {"member_id": "12345", "acct_type": "Money Market", "deposit": "25000.00"}}
+{"ts": 1787192095.202, "event": "value_policy_block", "reason": "value policy: 'deposit'=25000 USD exceeds the permitted maximum of 10000 USD"}
+{"ts": 1787192095.202, "event": "replay_refused", "code": "VALUE_LIMIT_EXCEEDED", "requirement": "inputs within policy limits"}
+{"ts": 1787192095.218, "event": "run_finished", "summary_path": "evidence/replay-11-value-limit-exceeded/summary.json"}

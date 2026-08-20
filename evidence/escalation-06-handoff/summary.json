@@ -6,6 +6,7 @@
     "confirmation_number": "SA-12345-8101"
   },
   "business_outcome": null,
+  "refusal": null,
   "failure": null,
   "recoveries": [],
   "drifts": [],

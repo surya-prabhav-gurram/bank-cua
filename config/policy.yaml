@@ -44,8 +44,23 @@ require_confirmation_for_risky: true
 #
 # Keyed by input parameter name, so a capability declaring `deposit` inherits
 # these without knowing they exist.
+#   max_per_window     -> bounds the SUM over a rolling window. A per-invocation
+#                         ceiling is blind to velocity: ten $999 deposits inside a
+#                         minute clear a $1,000 limit ten times over.
 value_rules:
   deposit:
     max: 10000.00
     dual_control_above: 1000.00
+    max_per_window: 5000.00
+    window_seconds: 3600
     unit: " USD"
+
+# Identities permitted to counter-sign a dual-control run. Without a registry,
+# `--approver whoever` is theatre: any typed string counts as a second pair of
+# eyes. This stands in for the institution's directory -- binding it to real
+# authenticated identity changes where the set comes from, not the check.
+approvers:
+  - bruce
+  - dana
+# Refuse to accept an unregistered approver even when the registry is empty.
+strict_approvers: true

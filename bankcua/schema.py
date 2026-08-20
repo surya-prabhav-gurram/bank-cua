@@ -69,8 +69,21 @@ class LocatorKind(str, Enum):
     survive markup churn far better than structural ones (css, xpath) and are
     also what a desktop accessibility tree exposes -- so they port across
     surfaces. `coordinates` is the last-resort screenshot strategy.
+
+    NEAR_LABEL deserves its own note. Legacy forms routinely leave a control with
+    no accessible name at all -- no <label for>, no aria-label -- which makes it
+    unaddressable by name on ANY surface, including a desktop accessibility tree.
+    The only durable handle a human uses there is proximity: "the box next to the
+    words 'User ID'". Expressing that as an XPath would bind it to a DOM; as a
+    NEAR_LABEL it is a statement of intent each surface resolves in its own terms
+    (structurally on the web, spatially against node bounds on an a11y tree). It
+    is the strategy that makes an artifact recorded on one surface portable to
+    another, and it exists because building the second surface proved that
+    role+name alone was not enough.
     """
+
     ROLE = "role"              # accessibility role + accessible name
+    NEAR_LABEL = "near_label"  # the control adjacent to this label text
     LABEL = "label"           # associated <label> text
     PLACEHOLDER = "placeholder"
     TEXT = "text"             # visible text / link text

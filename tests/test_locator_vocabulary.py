@@ -30,7 +30,9 @@ PAGE = """
     <td><span title="Locked account">!</span></td>
     <td><button data-testid="confirm-btn">ok</button></td>
     <td><span class="bal">$1.00</span></td>
-  </tr></table>
+  </tr>
+  <tr><td>User ID</td><td><input id="i3" type="text"></td></tr>
+  </table>
 </body></html>
 """
 
@@ -48,6 +50,10 @@ CASES = {
                                               value="Locked account"),
     LocatorKind.TEST_ID:     LocatorCandidate(kind=LocatorKind.TEST_ID,
                                               value="confirm-btn"),
+    # No accessible name, no <label for> -- addressable only by proximity. This
+    # is the legacy default, and the one strategy that ports to a non-DOM surface.
+    LocatorKind.NEAR_LABEL:  LocatorCandidate(kind=LocatorKind.NEAR_LABEL,
+                                              value="User ID", role="textbox"),
     LocatorKind.CSS:         LocatorCandidate(kind=LocatorKind.CSS, value="span.bal"),
     LocatorKind.XPATH:       LocatorCandidate(kind=LocatorKind.XPATH,
                                               value='//span[@class="bal"]'),

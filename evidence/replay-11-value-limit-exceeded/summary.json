@@ -1,16 +1,17 @@
 {
-  "status": "failure",
+  "status": "refused",
   "capability_id": "corebank.open_subaccount",
   "version": "1.0.0",
   "outputs": {},
   "business_outcome": null,
-  "failure": {
+  "refusal": {
     "code": "VALUE_LIMIT_EXCEEDED",
+    "requirement": "inputs within policy limits",
+    "reason": "value policy: 'deposit'=25000 USD exceeds the permitted maximum of 10000 USD",
     "step_index": null,
-    "expected": "inputs within policy limits",
-    "observed": "value policy: 'deposit'=25000 USD exceeds the permitted maximum of 10000 USD",
     "evidence": {}
   },
+  "failure": null,
   "recoveries": [],
   "drifts": [],
   "assists": [],

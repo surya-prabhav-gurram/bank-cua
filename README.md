@@ -27,7 +27,11 @@ See **[REPORT.md](REPORT.md)** for the design write-up and trade-offs.
 | Deterministic replay engine + error taxonomy | `bankcua/replay/` |
 | Locator robustness (label-proximity) + drift telemetry | `surface/web_playwright.py`, `replay/result.py` |
 | Bounded, policy-checked assisted recovery | `bankcua/replay/engine.py` |
-| Safety: allowlist, layered risk model, value limits, redaction | `bankcua/safety/` |
+| Safety: allowlist, layered risk model, value limits + velocity ledger, redaction | `bankcua/safety/` |
+| Second surface: accessibility tree + coordinates (no DOM) | `bankcua/surface/accessibility.py` |
+| Static portability: will this artifact run on that surface? | `bankcua/portability.py` |
+| Drift-driven repair proposals (detect → propose → approve → apply) | `bankcua/repair.py` |
+| Co-browsing operator console over CDP | `bankcua/escalation/console.py` |
 | Escalation & live-session handoff (CDP) | `bankcua/escalation/handoff.py` |
 | Vendor-shared known-condition library | `bankcua/knowledge.py` |
 | Cross-tenant reuse: overrides + canonicalization | `bankcua/tenancy.py` |
@@ -217,6 +221,45 @@ python -m bankcua.cli operator resolve --id replay-corebank.open_subaccount-step
 
 A self-contained, scripted version of this handoff is in
 `scripts/gen_evidence.py` (scenario 06) if you don't want two terminals.
+
+### 4b. A second surface: replay with no DOM at all
+
+The same artifact, driven through a surface that perceives only an accessibility
+tree and acts only with a mouse and keyboard — the model a desktop UIA/AX driver
+works in. Nothing about the artifact changes.
+
+```bash
+python -m bankcua.cli replay --artifact capabilities/corebank.member_savings_lookup.json \
+  --surface a11y \
+  --param username=operator --param password=password123 --param member_id=12345
+
+# and whether an artifact CAN run on a surface is decidable before launching:
+python -m bankcua.cli catalog portability --id corebank.member_savings_lookup
+```
+
+### 4c. Operator console (real co-browsing)
+
+Replaying the sub-account capability pauses at the irreversible step. Instead of
+resolving it from the CLI, open the console and drive the live session yourself:
+
+```bash
+python -m bankcua.cli operator list
+python -m bankcua.cli operator console --id replay-corebank.open_subaccount-step9
+#   -> http://127.0.0.1:8090  : the live page as a picture; click it, type,
+#      then "Resume automation". Every action is recorded into the intervention.
+```
+
+### 4d. Drift-driven repair
+
+Every replay contributes drift to a ledger. Once a step drifts repeatedly, a
+reviewable proposal is emitted — never applied silently:
+
+```bash
+python -m bankcua.cli repair analyse --id corebank.member_savings_lookup
+python -m bankcua.cli repair list
+python -m bankcua.cli repair apply --id <proposal-id>   # -> new version, draft
+python -m bankcua.cli catalog approve --id corebank.member_savings_lookup
+```
 
 ### 5. Cross-tenant reuse (one artifact, another institution)
 

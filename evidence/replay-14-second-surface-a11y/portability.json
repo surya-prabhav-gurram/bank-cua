@@ -1,0 +1,94 @@
+{
+  "capability_id": "corebank.member_savings_lookup",
+  "surface": "a11y",
+  "portable": true,
+  "steps": [
+    {
+      "step_index": 0,
+      "intent": "Fill in the username field with the provided {username} credentials",
+      "what": "target",
+      "honoured": [
+        "near_label"
+      ],
+      "unhonoured": [
+        "xpath",
+        "css",
+        "xpath"
+      ]
+    },
+    {
+      "step_index": 1,
+      "intent": "Fill in the password field to complete the login credentials",
+      "what": "target",
+      "honoured": [
+        "near_label"
+      ],
+      "unhonoured": [
+        "xpath",
+        "css",
+        "xpath"
+      ]
+    },
+    {
+      "step_index": 2,
+      "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in",
+      "what": "target",
+      "honoured": [
+        "role"
+      ],
+      "unhonoured": [
+        "css",
+        "xpath"
+      ]
+    },
+    {
+      "step_index": 3,
+      "intent": "Enter the member ID {member_id} into the search field to search for the member's account",
+      "what": "target",
+      "honoured": [
+        "near_label"
+      ],
+      "unhonoured": [
+        "xpath",
+        "css",
+        "xpath"
+      ]
+    },
+    {
+      "step_index": 4,
+      "intent": "Submit the member search form to retrieve member {member_id}'s account information",
+      "what": "target",
+      "honoured": [
+        "role"
+      ],
+      "unhonoured": [
+        "css",
+        "xpath"
+      ]
+    },
+    {
+      "step_index": 5,
+      "intent": "Extract the member's name as required by the goal",
+      "what": "extract",
+      "honoured": [
+        "near_label"
+      ],
+      "unhonoured": [
+        "xpath",
+        "css"
+      ]
+    },
+    {
+      "step_index": 6,
+      "intent": "Extract the savings balance as required by the goal. The balance is <savings_balance> which needs to be normalized to integer cents (<savings_balance>).",
+      "what": "extract",
+      "honoured": [
+        "near_label"
+      ],
+      "unhonoured": [
+        "xpath",
+        "css"
+      ]
+    }
+  ]
+}

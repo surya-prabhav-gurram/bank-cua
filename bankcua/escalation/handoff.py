@@ -53,7 +53,8 @@ class InterventionStatus(str, Enum):
 
 
 class HumanAction(BaseModel):
-    op: str                       # navigate | click_text | click_selector | fill | note
+    op: str                       # navigate | click_text | click_selector | fill
+                                  # | click_xy | type | key | note
     detail: str = ""
     value: Optional[str] = None
     ts: float = 0.0
@@ -186,8 +187,16 @@ class OperatorSession:
         return self
 
     def _record(self, op: str, detail: str = "", value: Optional[str] = None):
+        """Record the action AND persist it immediately.
+
+        Deferring the write to resolve() would mean a console that crashes
+        mid-handoff loses the record of what a human already did to a live
+        banking screen -- the one part of this flow that cannot be reconstructed
+        afterwards. Each action costs one small write; the audit trail survives.
+        """
         self.req.human_actions.append(
             HumanAction(op=op, detail=detail, value=value, ts=time.time()))
+        self.store.write(self.req)
 
     def do(self, op: str, detail: str = "", value: Optional[str] = None):
         """Perform + record a single manual action on the live page."""
@@ -202,9 +211,29 @@ class OperatorSession:
             self.page.locator(detail).first.click()
         elif op == "fill":
             self.page.locator(detail).first.fill(value or "")
+        elif op == "click_xy":
+            # What a co-browsing console actually sends: a point on the picture
+            # the human is looking at. No selector is involved, because the human
+            # is not thinking in selectors.
+            x, y = (float(v) for v in detail.split(","))
+            self.page.mouse.click(x, y)
+        elif op == "type":
+            self.page.keyboard.type(detail)
+        elif op == "key":
+            self.page.keyboard.press(detail)
         else:
             raise ValueError(f"unknown operator op: {op}")
         self._record(op, detail, value)
+
+    def screenshot_bytes(self) -> bytes:
+        """The frame the operator is looking at. Polled rather than streamed:
+        a screencast is a bandwidth optimisation, not a capability difference,
+        and polling keeps the control-transfer model the thing on show."""
+        return self.page.screenshot()
+
+    def viewport(self) -> tuple:
+        vp = self.page.viewport_size or {"width": 1280, "height": 720}
+        return vp["width"], vp["height"]
 
     def resolve(self, note: str = "", resume: bool = True):
         self.req.status = InterventionStatus.RESOLVED

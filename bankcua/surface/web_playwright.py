@@ -205,6 +205,10 @@ _READOUT_JS = r"""
 
 
 class WebSurface(Surface):
+    # Everything except NEAR_LABEL's spatial form: on a DOM we resolve proximity
+    # structurally, which is cheaper and exact.
+    supported_locator_kinds = frozenset(LocatorKind)
+
     def __init__(self, base_url: str, headless: bool = True,
                  cdp_port: int = 0, default_timeout_ms: int = 8000):
         self.base_url = base_url.rstrip("/")
@@ -387,12 +391,19 @@ class WebSurface(Surface):
         # form ("the box next to 'User ID'").
         if not e.name and not e.label and e.near_label and '"' not in e.near_label \
                 and e.tag in ("input", "select", "textarea"):
+            # Portable form FIRST: a statement of intent every surface can act on.
+            cands.append(LocatorCandidate(
+                kind=LocatorKind.NEAR_LABEL, value=e.near_label, role=e.role,
+                reasoning=f"Label-proximity: the control adjacent to "
+                          f"'{e.near_label}'. This control has no accessible name, "
+                          f"so proximity is the only durable handle -- and stating "
+                          f"it semantically lets a non-DOM surface resolve it "
+                          f"spatially instead of structurally."))
             cands.append(LocatorCandidate(
                 kind=LocatorKind.XPATH,
                 value=f'//tr[td[normalize-space(.)="{e.near_label}"]]//{e.tag}',
-                reasoning=f"Label-proximity: the {e.tag} in the row labelled "
-                          f"'{e.near_label}'. Survives markup/theming churn far "
-                          f"better than an absolute path."))
+                reasoning=f"The same proximity bound to this DOM: the {e.tag} in "
+                          f"the row labelled '{e.near_label}'."))
         if e.css:
             cands.append(LocatorCandidate(
                 kind=LocatorKind.CSS, value=e.css,
@@ -412,6 +423,15 @@ class WebSurface(Surface):
 
     def _pw_locator(self, ctx, c: LocatorCandidate):
         k = c.kind
+        if k == LocatorKind.NEAR_LABEL:
+            # "the control adjacent to this label text", read structurally: the
+            # form control in the same table row as a cell holding that text.
+            # Legacy layouts are table-shaped, so the row IS the adjacency.
+            if '"' in c.value:
+                return None
+            return ctx.locator(
+                'xpath=//tr[td[normalize-space(.)=%s]]'
+                '//*[self::input or self::select or self::textarea]' % f'"{c.value}"')
         if k == LocatorKind.ROLE:
             role = c.role or "button"
             if c.value:

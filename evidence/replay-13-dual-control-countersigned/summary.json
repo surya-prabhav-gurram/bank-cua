@@ -1,16 +1,17 @@
 {
-  "status": "failure",
+  "status": "refused",
   "capability_id": "corebank.open_subaccount",
   "version": "1.0.0",
   "outputs": {},
   "business_outcome": null,
-  "failure": {
+  "refusal": {
     "code": "CONFIRMATION_REQUIRED",
+    "requirement": "human confirmation for irreversible step",
+    "reason": "no human reviewer available (unattended, no coordinator)",
     "step_index": 9,
-    "expected": "human confirmation for irreversible step",
-    "observed": "no human reviewer available (unattended, no coordinator)",
     "evidence": {}
   },
+  "failure": null,
   "recoveries": [],
   "drifts": [],
   "assists": [],

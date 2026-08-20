@@ -48,6 +48,7 @@ from .result import (
     DriftSignal,
     FailureDetail,
     RecoveryEvent,
+    Refusal,
     ReplayResult,
     ReplayStatus,
 )
@@ -57,7 +58,7 @@ class ReplayEngine:
     def __init__(self, surface: Surface, policy: PolicyEngine, logger,
                  coordinator=None, assist_provider=None, max_assists: int = 1,
                  escalate_unrecoverable: bool = False,
-                 initiator: str = "", approver: str = ""):
+                 initiator: str = "", approver: str = "", ledger=None):
         self.surface = surface
         self.policy = policy
         self.logger = logger
@@ -73,6 +74,9 @@ class ReplayEngine:
         # They must be different people -- a run may not approve itself.
         self.initiator = initiator
         self.approver = approver
+        # Memory for velocity limits. Without it a per-invocation ceiling is
+        # blind to ten near-limit runs in a row.
+        self.ledger = ledger
         self._drifts: list[DriftSignal] = []
         self._assists: list[AssistEvent] = []
         self._assist_used = 0
@@ -97,18 +101,19 @@ class ReplayEngine:
         # Runs before the browser is even pointed anywhere: the cheapest place to
         # refuse a $1M transfer is before it has been typed into anything.
         try:
-            vdec = self.policy.evaluate_inputs(params)
+            vdec = self.policy.evaluate_inputs(params, ledger=self.ledger)
         except PolicyViolation as pv:
             self.logger.event("value_policy_block", reason=str(pv))
-            return ReplayResult(
+            return self._as_refusal(ReplayResult(
                 status=ReplayStatus.FAILURE, capability_id=art.id,
                 version=art.version, duration_s=round(time.time() - t0, 2),
                 failure=FailureDetail(code="VALUE_LIMIT_EXCEEDED",
                                       expected="inputs within policy limits",
-                                      observed=str(pv)))
+                                      observed=str(pv))))
         if vdec.decision == Decision.NEEDS_CONFIRMATION:
             dual = self._satisfy_dual_control(art, vdec)
             if dual is not None:
+                dual = self._as_refusal(dual)
                 dual.duration_s = round(time.time() - t0, 2)
                 self.logger.event("replay_finished", status=dual.status.value)
                 return dual
@@ -119,18 +124,18 @@ class ReplayEngine:
         try:
             self.policy.check_url(art.target.base_url + entry)
         except PolicyViolation as pv:
-            return ReplayResult(
+            return self._as_refusal(ReplayResult(
                 status=ReplayStatus.FAILURE, capability_id=art.id, version=art.version,
                 duration_s=round(time.time() - t0, 2),
                 failure=FailureDetail(code="POLICY_VIOLATION", expected="allowed entry",
-                                      observed=str(pv)))
+                                      observed=str(pv))))
         self.surface.navigate(entry)
         self.logger.event("replay_navigated_entry", entry=entry)
 
         for step in art.steps:
             outcome = self._run_step(art, step, params, outputs, recoveries)
             if outcome is not None:            # terminal (business/failure/escalated)
-                outcome = self._maybe_escalate(art, outcome)
+                outcome = self._as_refusal(self._maybe_escalate(art, outcome))
                 outcome.capability_id = art.id
                 outcome.version = art.version
                 outcome.outputs = outputs
@@ -171,13 +176,14 @@ class ReplayEngine:
                     expected=f"declared outputs {missing} to be populated",
                     observed=f"populated: {sorted(outputs)}",
                     evidence=caps))
-            result = self._maybe_escalate(art, result)
+            result = self._as_refusal(self._maybe_escalate(art, result))
             self.logger.event("replay_finished", status=result.status.value,
                               outputs={k: v for k, v in outputs.items()})
             return result
 
         # all steps done -> assert top-level success
         if self.surface.check(self._render_checkpoint(art.success, params)):
+            self._record_value_movement(art, params)
             result = ReplayResult(status=ReplayStatus.SUCCESS, capability_id=art.id,
                                   version=art.version, outputs=outputs,
                                   recoveries=recoveries, drifts=self._drifts,
@@ -193,19 +199,66 @@ class ReplayEngine:
                 failure=FailureDetail(code="SUCCESS_CHECKPOINT_FAILED",
                                       expected=f"{art.success.kind}:{art.success.value}",
                                       observed=self.surface.current_url()))
-            result = self._maybe_escalate(art, result)
+            result = self._as_refusal(self._maybe_escalate(art, result))
         self.logger.event("replay_finished", status=result.status.value,
                           outputs={k: v for k, v in outputs.items()})
         return result
 
     # config/policy failures that should NOT trigger a human intervention
-    _NON_ESCALATABLE: ClassVar[set[str]] = {"POLICY_VIOLATION", "STEP_BLOCKED_BY_POLICY",
-                        "CONFIRMATION_REQUIRED", "ESCALATION_UNRESOLVED",
-                        # value-policy outcomes are decisions, not runtime faults:
-                        # a ceiling breach is never waved through by an operator,
-                        # and an unmet dual-control requirement already had its
-                        # human moment.
-                        "VALUE_LIMIT_EXCEEDED", "DUAL_CONTROL_REQUIRED"}
+    #: A guardrail declined. Nothing broke: the request was refused, and the
+    #: caller's move is to change the REQUEST -- a smaller amount, a second
+    #: approver, an approved capability -- not to investigate the system.
+    _REFUSAL_CODES: ClassVar[set[str]] = {
+        "POLICY_VIOLATION", "STEP_BLOCKED_BY_POLICY", "CONFIRMATION_REQUIRED",
+        "VALUE_LIMIT_EXCEEDED", "DUAL_CONTROL_REQUIRED",
+    }
+    #: Refusals plus the already-escalated case. None of these should wake a
+    #: human at 3am: a person cannot fix a policy file from a browser.
+    _NON_ESCALATABLE: ClassVar[set[str]] = _REFUSAL_CODES | {"ESCALATION_UNRESOLVED"}
+
+    def _record_value_movement(self, art, params) -> None:
+        """Book governed amounts to the ledger -- only on success.
+
+        A refused, escalated or failed run moved no money, so charging it against
+        the velocity budget would starve the budget with runs that never happened.
+        """
+        if self.ledger is None:
+            return
+        from ..safety.ledger import LedgerEntry
+        import time as _t
+        for name in getattr(self.policy.policy, "value_rules", {}):
+            if name not in params:
+                continue
+            amount = self.policy._as_number(params[name])
+            if amount is None or amount != amount:
+                continue
+            self.ledger.record(LedgerEntry(
+                ts=_t.time(), capability_id=art.id, param=name, value=amount,
+                initiator=self.initiator, approver=self.approver))
+            self.logger.event("value_recorded", param=name, value=amount,
+                              capability=art.id)
+
+    def _as_refusal(self, res: ReplayResult) -> ReplayResult:
+        """Retype a policy decision from FAILURE to REFUSED.
+
+        Applied at the boundary rather than at each guardrail so there is exactly
+        one place that decides what counts as a refusal -- the same set that
+        decides what must not page a human.
+        """
+        if res.status != ReplayStatus.FAILURE or res.failure is None:
+            return res
+        if res.failure.code not in self._REFUSAL_CODES:
+            return res
+        res.refusal = Refusal(code=res.failure.code,
+                              requirement=res.failure.expected,
+                              reason=res.failure.observed,
+                              step_index=res.failure.step_index,
+                              evidence=res.failure.evidence)
+        res.failure = None
+        res.status = ReplayStatus.REFUSED
+        self.logger.event("replay_refused", code=res.refusal.code,
+                          requirement=res.refusal.requirement)
+        return res
 
     def _satisfy_dual_control(self, art, vdec) -> Optional[ReplayResult]:
         """Resolve a dual-control requirement. Returns None to proceed, or a

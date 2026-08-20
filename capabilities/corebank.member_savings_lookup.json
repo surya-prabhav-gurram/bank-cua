@@ -65,6 +65,13 @@
         "frame_path": [],
         "candidates": [
           {
+            "kind": "near_label",
+            "value": "User ID",
+            "role": null,
+            "exact": false,
+            "reasoning": "The control/value adjacent to 'User ID'. This element has no accessible name, so proximity is the only durable handle; stating it semantically lets a non-DOM surface resolve it spatially."
+          },
+          {
             "kind": "xpath",
             "value": "//tr[td[normalize-space(.)=\"User ID\"]]//input",
             "role": null,
@@ -112,6 +119,13 @@
         "description": "textbox: textbox",
         "frame_path": [],
         "candidates": [
+          {
+            "kind": "near_label",
+            "value": "Password",
+            "role": null,
+            "exact": false,
+            "reasoning": "The control/value adjacent to 'Password'. This element has no accessible name, so proximity is the only durable handle; stating it semantically lets a non-DOM surface resolve it spatially."
+          },
           {
             "kind": "xpath",
             "value": "//tr[td[normalize-space(.)=\"Password\"]]//input",
@@ -213,6 +227,13 @@
         "description": "textbox: textbox",
         "frame_path": [],
         "candidates": [
+          {
+            "kind": "near_label",
+            "value": "Member ID",
+            "role": null,
+            "exact": false,
+            "reasoning": "The control/value adjacent to 'Member ID'. This element has no accessible name, so proximity is the only durable handle; stating it semantically lets a non-DOM surface resolve it spatially."
+          },
           {
             "kind": "xpath",
             "value": "//tr[td[normalize-space(.)=\"Member ID\"]]//input",
@@ -322,6 +343,13 @@
           "frame_path": [],
           "candidates": [
             {
+              "kind": "near_label",
+              "value": "Name",
+              "role": null,
+              "exact": false,
+              "reasoning": "The control/value adjacent to 'Name'. This element has no accessible name, so proximity is the only durable handle; stating it semantically lets a non-DOM surface resolve it spatially."
+            },
+            {
               "kind": "xpath",
               "value": "//tr[td[normalize-space(.)=\"Name\"]]/td[last()]",
               "role": null,
@@ -365,6 +393,13 @@
             "balancepane"
           ],
           "candidates": [
+            {
+              "kind": "near_label",
+              "value": "Savings",
+              "role": null,
+              "exact": false,
+              "reasoning": "The control/value adjacent to 'Savings'. This element has no accessible name, so proximity is the only durable handle; stating it semantically lets a non-DOM surface resolve it spatially."
+            },
             {
               "kind": "xpath",
               "value": "//tr[td[normalize-space(.)=\"Savings\"]]/td[last()]",
