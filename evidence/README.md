@@ -14,10 +14,32 @@ is redacted (no secrets/PII); screenshots are treated as sensitive evidence.
 ## Replay (deterministic, no LLM) — the result contract
 - `replay-01-success/` — SUCCESS with typed outputs (`savings_balance` in cents).
 - `replay-02-not-found/` — BUSINESS_OUTCOME `MEMBER_NOT_FOUND`.
-- `replay-03-permission-denied/` — BUSINESS_OUTCOME `PERMISSION_DENIED`.
+- `replay-03-permission-denied/` — BUSINESS_OUTCOME `PERMISSION_DENIED`, and the
+  outcome still carries data: Corebank's denial screen withholds the balance but
+  names the member, so `member_name` is returned with
+  `outputs_surfaced: ["member_name"]` (see `KnownCondition.surfaces_outputs`).
 - `replay-04-interstitial-recovered/` — RECOVERABLE: interstitial auto-dismissed;
   run still SUCCEEDS (see `summary.json.recoveries`).
 - `replay-05-session-timeout/` — HARD_FAILURE `SESSION_TIMEOUT` w/ screenshot + DOM.
+- `replay-10-fill-not-applied/` — HARD_FAILURE `FILL_NOT_APPLIED`. The injected
+  input accepts the keystrokes and discards them, so the action reports success
+  and the page looks entirely normal: no page-state checkpoint can see this. Only
+  reading the control back does (`Step.verify_value`).
+
+## Value-level (semantic) policy — amounts and dual control
+The URL/action allowlist cannot tell $1 from $1M. These rules read the
+invocation's *inputs* before the browser opens.
+- `replay-11-value-limit-exceeded/` — `VALUE_LIMIT_EXCEEDED`: a $25,000 deposit
+  against a $10,000 ceiling. Refused outright, never escalated, `steps_executed: 0`
+  — nothing was opened and nothing was typed.
+- `replay-12-dual-control-unmet/` — `DUAL_CONTROL_REQUIRED`: $1,500 is over the
+  dual-control threshold and nobody counter-signed. Unattended is precisely when a
+  second pair of eyes cannot be assumed, so it fails closed.
+- `replay-13-dual-control-countersigned/` — the same $1,500 with an independent
+  approver (`--initiator alice --approver bruce`) clears the *value* gate
+  (`dual_control_satisfied` in `run.jsonl`) and is then stopped by the *step* gate
+  on the irreversible click (`CONFIRMATION_REQUIRED`). Two independent guardrails,
+  both doing their job. A run cannot approve itself.
 
 ## Escalation & handoff
 - `escalation-06-handoff/` — replay of the irreversible sub-account flow pauses,

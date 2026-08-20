@@ -43,6 +43,7 @@ class InterventionKind(str, Enum):
     DISCOVERY_STUCK = "discovery_stuck"
     REPLAY_UNRECOVERABLE = "replay_unrecoverable"
     RISKY_CONFIRMATION = "risky_confirmation"
+    DUAL_CONTROL = "dual_control"
 
 
 class InterventionStatus(str, Enum):
@@ -106,7 +107,8 @@ class HandoffStore:
         out = []
         for p in sorted(glob.glob(os.path.join(self.root, "*.json"))):
             try:
-                r = InterventionRequest.model_validate_json(open(p).read())
+                with open(p) as f:
+                    r = InterventionRequest.model_validate_json(f.read())
                 if r.status == InterventionStatus.OPEN:
                     out.append(r)
             except Exception:
@@ -149,7 +151,7 @@ class HandoffCoordinator:
         # timed out with nobody home -> abort, keep the request for triage
         cur = self.store.read(req_id)
         cur.status = InterventionStatus.ABORTED
-        cur.resolution_note = "timed out waiting for operator (unattended)"
+        cur.resolution_note = "timed out waiting for a human reviewer (unattended)"
         cur.controller = "agent"
         self.store.write(cur)
         if self.logger:

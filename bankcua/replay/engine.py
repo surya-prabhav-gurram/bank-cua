@@ -29,7 +29,7 @@ they raise an intervention (human-in-the-loop) rather than proceeding.
 from __future__ import annotations
 
 import time
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 
 from ..safety.policy import Decision, PolicyEngine, PolicyViolation
 from ..schema import (
@@ -56,7 +56,8 @@ from .result import (
 class ReplayEngine:
     def __init__(self, surface: Surface, policy: PolicyEngine, logger,
                  coordinator=None, assist_provider=None, max_assists: int = 1,
-                 escalate_unrecoverable: bool = False):
+                 escalate_unrecoverable: bool = False,
+                 initiator: str = "", approver: str = ""):
         self.surface = surface
         self.policy = policy
         self.logger = logger
@@ -68,6 +69,10 @@ class ReplayEngine:
         # route a human intervention (needs a coordinator) instead of just
         # failing. Off by default so unattended runs fail fast.
         self.escalate_unrecoverable = escalate_unrecoverable
+        # Dual control: who asked for this run, and who (if anyone) counter-signed.
+        # They must be different people -- a run may not approve itself.
+        self.initiator = initiator
+        self.approver = approver
         self._drifts: list[DriftSignal] = []
         self._assists: list[AssistEvent] = []
         self._assist_used = 0
@@ -87,6 +92,26 @@ class ReplayEngine:
                           num_steps=len(art.steps),
                           params={k: v for k, v in params.items()
                                   if k not in art.secret_params()})
+
+        # ---- value-level (semantic) policy --------------------------------
+        # Runs before the browser is even pointed anywhere: the cheapest place to
+        # refuse a $1M transfer is before it has been typed into anything.
+        try:
+            vdec = self.policy.evaluate_inputs(params)
+        except PolicyViolation as pv:
+            self.logger.event("value_policy_block", reason=str(pv))
+            return ReplayResult(
+                status=ReplayStatus.FAILURE, capability_id=art.id,
+                version=art.version, duration_s=round(time.time() - t0, 2),
+                failure=FailureDetail(code="VALUE_LIMIT_EXCEEDED",
+                                      expected="inputs within policy limits",
+                                      observed=str(pv)))
+        if vdec.decision == Decision.NEEDS_CONFIRMATION:
+            dual = self._satisfy_dual_control(art, vdec)
+            if dual is not None:
+                dual.duration_s = round(time.time() - t0, 2)
+                self.logger.event("replay_finished", status=dual.status.value)
+                return dual
 
         # Navigate to the tenant/entry binding first (this is part of target,
         # not a recorded step, so the same artifact re-points per tenant).
@@ -174,8 +199,62 @@ class ReplayEngine:
         return result
 
     # config/policy failures that should NOT trigger a human intervention
-    _NON_ESCALATABLE = {"POLICY_VIOLATION", "STEP_BLOCKED_BY_POLICY",
-                        "CONFIRMATION_REQUIRED", "ESCALATION_UNRESOLVED"}
+    _NON_ESCALATABLE: ClassVar[set[str]] = {"POLICY_VIOLATION", "STEP_BLOCKED_BY_POLICY",
+                        "CONFIRMATION_REQUIRED", "ESCALATION_UNRESOLVED",
+                        # value-policy outcomes are decisions, not runtime faults:
+                        # a ceiling breach is never waved through by an operator,
+                        # and an unmet dual-control requirement already had its
+                        # human moment.
+                        "VALUE_LIMIT_EXCEEDED", "DUAL_CONTROL_REQUIRED"}
+
+    def _satisfy_dual_control(self, art, vdec) -> Optional[ReplayResult]:
+        """Resolve a dual-control requirement. Returns None to proceed, or a
+        terminal result.
+
+        Three ways this ends, in order of preference:
+          * a named second approver was supplied and is a different person ->
+            proceed, recorded;
+          * an operator is reachable -> raise an intervention carrying the exact
+            parameters that tripped the threshold, and let a human counter-sign;
+          * nobody is home -> refuse. Unattended is precisely when a second pair
+            of eyes cannot be assumed, so this fails closed.
+        """
+        if self.policy.approver_is_independent(self.approver, self.initiator):
+            self.logger.event("dual_control_satisfied", approver=self.approver,
+                              initiator=self.initiator, params=list(vdec.params),
+                              reason=vdec.reason)
+            return None
+        if self.approver and not self.policy.approver_is_independent(
+                self.approver, self.initiator):
+            self.logger.event("dual_control_rejected", reason="approver is the initiator")
+        if not self.coordinator:
+            self.logger.event("dual_control_unmet", reason=vdec.reason)
+            return ReplayResult(
+                status=ReplayStatus.FAILURE, capability_id=art.id,
+                version=art.version,
+                failure=FailureDetail(
+                    code="DUAL_CONTROL_REQUIRED",
+                    expected="an independent second approver",
+                    observed=vdec.reason))
+        from ..escalation.handoff import InterventionKind, InterventionRequest
+        req = InterventionRequest(
+            id=f"replay-{art.id}-dualcontrol",
+            kind=InterventionKind.DUAL_CONTROL,
+            reason=vdec.reason, capability_id=art.id,
+            state_url=self.surface.current_url(),
+            cdp_endpoint=getattr(self.surface, "cdp_endpoint", None))
+        self.coordinator.raise_intervention(req)
+        resolved = self.coordinator.wait_for_resolution(req.id)
+        if resolved.status.value == "resolved" and resolved.resume:
+            self.logger.event("dual_control_granted", id=req.id,
+                              note=resolved.resolution_note)
+            return None
+        return ReplayResult(
+            status=ReplayStatus.ESCALATED, capability_id=art.id,
+            version=art.version, intervention_id=req.id,
+            failure=FailureDetail(code="DUAL_CONTROL_REQUIRED",
+                                  expected="a second reviewer to counter-sign",
+                                  observed=resolved.status.value))
 
     def _maybe_escalate(self, art, res: ReplayResult) -> ReplayResult:
         """Brief 3.6: on an UNRECOVERABLE runtime failure, route a human
@@ -239,30 +318,38 @@ class ReplayEngine:
 
         # ---- execute ----------------------------------------------------
         if not skip_execution:
-            res = self._execute(art, step, params, outputs)
+            res = self._execute(step, params, outputs)
             self.logger.event("step_executed", index=step.index,
                               action=step.action.value, intent=step.intent,
                               ok=res.ok, message=res.message,
                               candidate_index=res.candidate_index)
             self._record_drift(step, res)
+            # A fill's effect is on the CONTROL, not the page, so a page-state
+            # checkpoint cannot see it. Read the value back instead: this is what
+            # catches a readonly/disabled/JS-managed input that silently swallows
+            # the write and leaves the flow running on empty data.
+            if res.ok and step.action == ActionType.FILL and step.verify_value:
+                bad = self._verify_fill(art, step, params, outputs, recoveries)
+                if bad is not None:
+                    return bad
             if not res.ok and step.action != ActionType.EXTRACT:
                 # execution failed -> maybe a known condition explains it
-                cond_outcome = self._handle_conditions(art, step, recoveries)
+                cond_outcome = self._handle_conditions(art, step, recoveries, outputs)
                 if cond_outcome is not None:
                     return cond_outcome
                 # bounded, policy-checked single-step assisted recovery (opt-in)
-                if not self._try_assist(art, step, params, outputs):
-                    self.logger.capture(self.surface, f"step{step.index:02d}_failed",
-                                        dom=True)
+                if not self._try_assist(art, step, params):
+                    caps = self.logger.capture(
+                        self.surface, f"step{step.index:02d}_failed", dom=True)
                     return self._fail(step, "ACTION_FAILED", "action to succeed",
-                                      res.message)
+                                      res.message, caps)
                 # assist succeeded -> fall through to checkpoint verification
 
         # ---- honour the step's declared wait before asserting ------------
         self._apply_wait(step)
 
         # ---- condition detection (business / recoverable / hard) --------
-        cond_outcome = self._handle_conditions(art, step, recoveries)
+        cond_outcome = self._handle_conditions(art, step, recoveries, outputs)
         if cond_outcome is not None:
             return cond_outcome
 
@@ -271,7 +358,7 @@ class ReplayEngine:
             cp = self._render_checkpoint(step.checkpoint, params)
             if not self.surface.check(cp):
                 # re-run detectors: a condition may have appeared
-                cond_outcome = self._handle_conditions(art, step, recoveries)
+                cond_outcome = self._handle_conditions(art, step, recoveries, outputs)
                 if cond_outcome is not None:
                     return cond_outcome
                 caps = self.logger.capture(self.surface,
@@ -282,6 +369,61 @@ class ReplayEngine:
                     f"{cp.kind}:{cp.value}",
                     self.surface.current_url(), caps)
         return None   # continue to next step
+
+    def _verify_fill(self, art, step: Step, params, outputs,
+                     recoveries) -> Optional[ReplayResult]:
+        """Read a filled control back and assert the write landed.
+
+        A secret is asserted NON-EMPTY only -- never compared, never logged. We
+        already refuse to let a credential reach an observation or a log; reading
+        one back to diff it would reintroduce exactly that leak for the sake of a
+        stricter assertion nobody needs."""
+        intended = step.value.resolve(params, outputs) if step.value else ""
+        secret = bool(step.value and step.value.kind == "secret_param")
+        back = self.surface.read(step.target, "value")
+        if back.ok:
+            got = (back.value or "").strip()
+            if (got != "") if secret else (got == str(intended).strip()):
+                return None
+        # a known condition (validation error, session gone) may explain it
+        cond = self._handle_conditions(art, step, recoveries, outputs)
+        if cond is not None:
+            return cond
+        caps = self.logger.capture(self.surface,
+                                   f"step{step.index:02d}_fill_not_applied", dom=True)
+        self.logger.event("fill_not_applied", step=step.index, secret=secret)
+        return self._fail(
+            step, "FILL_NOT_APPLIED",
+            "the control to hold a non-empty value" if secret
+            else f"the control to hold {intended!r}",
+            "read-back was empty or different (control may be readonly, disabled, "
+            "or JS-managed)", caps)
+
+    def _surface_outcome_outputs(self, art, outputs) -> list[str]:
+        """Best-effort read of declared outputs still visible on a business-outcome
+        screen (KnownCondition.surfaces_outputs).
+
+        "Permission denied" can legitimately still tell you *whose* account it
+        was; "not found" tells you nothing. Which of the two a condition is, is a
+        property of the vendor's UI, so it is declared per condition in the
+        knowledge library rather than guessed at runtime. Failures here are silent
+        by construction -- this is extra data on a non-success, never a reason to
+        turn one into an error."""
+        gained: list[str] = []
+        for st in art.steps:
+            if not st.extract or st.extract.output in outputs:
+                continue
+            try:
+                res = self.surface.read(st.extract.locator, st.extract.attribute)
+                if res.ok and (res.value or "").strip():
+                    outputs[st.extract.output] = apply_transform(
+                        res.value, st.extract.transform)
+                    gained.append(st.extract.output)
+            except Exception:
+                continue
+        if gained:
+            self.logger.event("outcome_outputs_surfaced", outputs=gained)
+        return gained
 
     def _apply_wait(self, step: Step) -> None:
         """Honour a step's declared WaitSpec. 'load' is a no-op (navigate already
@@ -297,7 +439,7 @@ class ReplayEngine:
                                  else w.timeout_ms)
 
     # ------------------------------------------------------------------
-    def _execute(self, art, step: Step, params, outputs):
+    def _execute(self, step: Step, params, outputs):
         s = self.surface
         if step.action == ActionType.NAVIGATE:
             url = self._render(step.url_template or "", params)
@@ -324,7 +466,8 @@ class ReplayEngine:
         return ActResult(ok=True, message="noop")
 
     # ------------------------------------------------------------------
-    def _handle_conditions(self, art, step, recoveries) -> Optional[ReplayResult]:
+    def _handle_conditions(self, art, step, recoveries,
+                           outputs=None) -> Optional[ReplayResult]:
         """Detect known conditions and act on the first match."""
         for cond in art.known_conditions:
             if not self.surface.detect(cond.detector):
@@ -333,12 +476,16 @@ class ReplayEngine:
                               code=cond.code, klass=cond.klass.value)
             if cond.klass == ConditionClass.BUSINESS_OUTCOME:
                 self.logger.capture(self.surface, f"business_{cond.code}")
+                # A legitimate non-success can still carry data the caller needs.
+                surfaced = (self._surface_outcome_outputs(art, outputs)
+                            if cond.surfaces_outputs and outputs is not None else [])
                 return ReplayResult(
                     status=ReplayStatus.BUSINESS_OUTCOME, capability_id=art.id,
                     version=art.version,
                     business_outcome=BusinessOutcome(code=cond.code,
                                                      message=cond.message,
-                                                     step_index=step.index))
+                                                     step_index=step.index,
+                                                     outputs_surfaced=surfaced))
             if cond.klass == ConditionClass.HARD_FAILURE:
                 caps = self.logger.capture(self.surface, f"hard_{cond.code}", dom=True)
                 return self._fail(step, cond.code, "flow to proceed", cond.message, caps)
@@ -350,7 +497,7 @@ class ReplayEngine:
                     return self._fail(step, f"RECOVERY_FAILED_{cond.code}",
                                       "recovery to succeed", cond.message, caps)
                 # recovered -> re-scan in case dismissing revealed another condition
-                return self._handle_conditions(art, step, recoveries)
+                return self._handle_conditions(art, step, recoveries, outputs)
         return None
 
     def _recover(self, cond: KnownCondition, step, recoveries) -> bool:
@@ -386,7 +533,7 @@ class ReplayEngine:
         if not self.coordinator:
             return self._fail(step, "CONFIRMATION_REQUIRED",
                               "human confirmation for irreversible step",
-                              "no operator available (unattended, no coordinator)")
+                              "no human reviewer available (unattended, no coordinator)")
         from ..escalation.handoff import InterventionKind, InterventionRequest
         caps = self.logger.capture(self.surface, f"confirm_step{step.index:02d}", dom=True)
         req = InterventionRequest(
@@ -404,7 +551,7 @@ class ReplayEngine:
                                 version=art.version, intervention_id=req.id,
                                 failure=FailureDetail(
                                     code="ESCALATION_UNRESOLVED", step_index=step.index,
-                                    expected="operator to approve/perform",
+                                    expected="a human reviewer to approve or perform the step",
                                     observed=resolved.status.value))
         self.logger.event("confirmation_granted", id=req.id,
                           note=resolved.resolution_note)
@@ -439,7 +586,7 @@ class ReplayEngine:
             self.logger.event("locator_drift", step=step.index, candidate_index=ci,
                               kind=kind, description=step.target.description)
 
-    def _try_assist(self, art, step, params, outputs) -> bool:
+    def _try_assist(self, art, step, params) -> bool:
         """Bounded, policy-checked single-step LLM recovery. Never open-ended:
         at most `max_assists` per run, one action, only for the failing step."""
         if not self.assist_provider or self._assist_used >= self.max_assists:

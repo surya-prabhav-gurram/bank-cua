@@ -1,11 +1,11 @@
-{"ts": 1787169059.875, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-05-session-timeout"}
-{"ts": 1787169060.215, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "12345"}}
-{"ts": 1787169060.227, "event": "replay_navigated_entry", "entry": "/login"}
-{"ts": 1787169060.254, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided {username} credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
-{"ts": 1787169060.273, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
-{"ts": 1787169060.305, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
-{"ts": 1787169060.31, "event": "condition_detected", "step": 2, "code": "SESSION_TIMEOUT", "klass": "hard_failure"}
-{"ts": 1787169060.336, "event": "evidence_captured", "label": "hard_SESSION_TIMEOUT", "screenshot": "evidence/replay-05-session-timeout/hard_SESSION_TIMEOUT.png", "dom": "evidence/replay-05-session-timeout/hard_SESSION_TIMEOUT.dom.html"}
-{"ts": 1787169060.336, "event": "hard_failure", "step": 2, "code": "SESSION_TIMEOUT", "expected": "flow to proceed", "observed": "Session timed out; re-authentication required (surfaced to caller)."}
-{"ts": 1787169060.336, "event": "replay_finished", "status": "failure", "outputs": {}}
-{"ts": 1787169060.364, "event": "run_finished", "summary_path": "evidence/replay-05-session-timeout/summary.json"}
+{"ts": 1787186155.887, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-05-session-timeout"}
+{"ts": 1787186156.111, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "12345"}}
+{"ts": 1787186156.12, "event": "replay_navigated_entry", "entry": "/login"}
+{"ts": 1787186156.138, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided {username} credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787186156.154, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787186156.191, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787186156.195, "event": "condition_detected", "step": 2, "code": "SESSION_TIMEOUT", "klass": "hard_failure"}
+{"ts": 1787186156.221, "event": "evidence_captured", "label": "hard_SESSION_TIMEOUT", "screenshot": "evidence/replay-05-session-timeout/hard_SESSION_TIMEOUT.png", "dom": "evidence/replay-05-session-timeout/hard_SESSION_TIMEOUT.dom.html"}
+{"ts": 1787186156.221, "event": "hard_failure", "step": 2, "code": "SESSION_TIMEOUT", "expected": "flow to proceed", "observed": "Session timed out; re-authentication required (surfaced to caller)."}
+{"ts": 1787186156.222, "event": "replay_finished", "status": "failure", "outputs": {}}
+{"ts": 1787186156.24, "event": "run_finished", "summary_path": "evidence/replay-05-session-timeout/summary.json"}

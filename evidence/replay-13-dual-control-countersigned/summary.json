@@ -1,0 +1,20 @@
+{
+  "status": "failure",
+  "capability_id": "corebank.open_subaccount",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": null,
+  "failure": {
+    "code": "CONFIRMATION_REQUIRED",
+    "step_index": 9,
+    "expected": "human confirmation for irreversible step",
+    "observed": "no human reviewer available (unattended, no coordinator)",
+    "evidence": {}
+  },
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 10,
+  "duration_s": 0.21
+}

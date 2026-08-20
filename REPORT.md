@@ -106,7 +106,14 @@ first match:
 
 - **business_outcome** → stop and return `{status: business_outcome, code}`.
   "No such member" and "permission denied" are *answers the caller wants*, not
-  errors. (`ReplayStatus.BUSINESS_OUTCOME`, never `FAILURE`.)
+  errors. (`ReplayStatus.BUSINESS_OUTCOME`, never `FAILURE`.) A condition may
+  also declare `surfaces_outputs`: some non-successes still carry data. Corebank's
+  denial screen withholds the balance but still identifies the member, which is
+  what the caller needs to route the request; "not found" has nothing to give.
+  Which of the two a condition is, is a property of the vendor's UI, so it is
+  declared per condition in the shared library rather than guessed at runtime, and
+  the surfaced names are reported separately (`outputs_surfaced`) so partial data
+  never reads as a success.
 - **recoverable** → run the declared recovery (dismiss an interstitial, reload a
   transient 500) up to its attempt budget, then re-scan and continue. Each
   recovery is recorded in `result.recoveries`.
@@ -121,6 +128,16 @@ may fire: exactly one LLM decision, for the failing step only, capped per run
 Never open-ended. All paths are demonstrated in `evidence/` (success, not-found,
 permission-denied, interstitial-recovered, session-timeout). Transient slowness
 is handled by explicit waits.
+
+**A fill is verified on the control, not the page.** A `FILL` has no page-state
+consequence, so no checkpoint can see one that silently failed -- a readonly,
+disabled, or JS-masked input accepts the keystrokes, the action reports success,
+and the flow runs on empty data. Fill steps therefore carry `verify_value`: read
+the control back and assert the write landed (`FILL_NOT_APPLIED`, with evidence).
+A `sensitive` value is asserted **non-empty only** -- never compared, never
+logged, because reading a credential back to diff it would reintroduce exactly
+the leak the observation indexer avoids. Evidence: `replay-10-fill-not-applied`,
+against an injected input that accepts a write and discards it.
 
 **Declared outputs are guaranteed.** A run cannot report `success` while an
 output the contract promised is missing -- that would be a silent breach, worse
@@ -254,10 +271,13 @@ and replay** — a violation raises, it never warns-and-continues.
 
 **Limits.** Screenshots can still show PII on screen; today they are treated as
 sensitive evidence — the production answer is masked capture and a restricted
-evidence store. The allowlist is URL/action-shaped, not semantic (it can't tell
-"transfer $1" from "transfer $1M"); value-level policy (limits, dual control on
-amounts) is the next layer. Risk classification is keyword+action heuristic and
-should become an explicit per-step review gate before approval.
+evidence store. Value rules are per-parameter and stateless: they bound a single
+invocation, not a velocity — ten $999 deposits in a minute pass every check — so
+aggregate and rate limits are the next layer. The benign-submit list is a curated
+regex: short and reviewable by design, but still a list someone maintains per
+vendor. Dual control is enforced in-process against an honour-system identifier;
+production would bind it to authenticated operator identity rather than a CLI
+string.
 
 ## 7. Cuts
 
@@ -279,9 +299,18 @@ seams:
   offline reproduction via the `bridge` provider (`scripts/run_discovery.sh`)
   drives the same real loop from a recorded decision trace.
 
+Since the first pass, four of the gaps this section previously named as future
+work are **built and evidenced**: value-level policy with amount ceilings and
+dual control on money movement (§6, evidence 11–13); a layered risk model with a
+per-step human review gate before approval (§6); fill verification, closing the
+one action whose effect no page checkpoint could see (§3, evidence 10); and
+`surfaces_outputs`, so a business outcome can return the data it does have (§3,
+evidence 03).
+
 **What I'd build next, in order:** (1) a second `Surface` (desktop accessibility
-tree) to prove the seam against a genuinely non-DOM target; (2) value-level
-(semantic) policy for amounts and dual control on money movement; (3) a real
-co-browsing operator console over the existing CDP seam; (4) an artifact
-auto-repair loop that proposes locator/override updates when drift crosses a
-threshold, gated by the approval workflow.
+tree) to prove the seam against a genuinely non-DOM target — the one remaining
+claim that is argued rather than demonstrated; (2) aggregate and velocity limits
+on the value layer, plus binding dual control to authenticated operator identity
+rather than a supplied string; (3) a real co-browsing operator console over the
+existing CDP seam; (4) an artifact auto-repair loop that proposes locator/override
+updates when drift crosses a threshold, gated by the approval workflow.

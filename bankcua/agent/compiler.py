@@ -7,7 +7,9 @@ compiler:
   * parameterises values/URLs by matching them against the run's input params
     (so a concrete member id 12345 becomes {member_id}),
   * synthesises per-step checkpoints from the observed next state (the
-    "did it actually work" guards that make replay deterministic),
+    "did it actually work" guards that make replay deterministic), and turns on
+    value verification for fills, whose effect is on the control rather than the
+    page,
   * declares typed outputs with the right transform,
   * attaches the vendor's shared KnownConditions (error taxonomy),
   * scrubs run-specific values (both extracted outputs and supplied inputs)
@@ -204,11 +206,14 @@ def _compile_step(rec: TranscriptStep, next_url: str, pv: dict, secret: set,
                             description="navigation after click succeeded")
         return Step(index=0, intent=intent, action=ActionType.CLICK,
                     target=rec.locator, wait=WaitSpec(strategy="load"),
-                    checkpoint=cp, risk=rec.risk,
+                    checkpoint=cp, risk=rec.risk, risk_reason=rec.risk_reason,
                     requires_confirmation=(rec.risk.value == "risky"))
     if kind == "fill":
+        # A fill has no page-state consequence to checkpoint, so it gets the one
+        # verification that is meaningful for it: read the control back and
+        # confirm the write landed (see Step.verify_value).
         return Step(index=0, intent=intent, action=ActionType.FILL,
-                    target=rec.locator,
+                    target=rec.locator, verify_value=True,
                     value=_value_source(rec.value_raw, pv, secret), risk=rec.risk)
     if kind == "select":
         return Step(index=0, intent=intent, action=ActionType.SELECT,

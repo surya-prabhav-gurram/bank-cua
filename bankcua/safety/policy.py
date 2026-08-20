@@ -17,7 +17,15 @@ before it happens. Three concerns:
      case they are gated behind a human confirmation (which, unattended, becomes
      an escalation -- see escalation/handoff.py).
 
-  3. It is advisory-free: a violation raises, it does not warn-and-continue.
+  3. Value-level (semantic) policy. The allowlist is URL/action-shaped: it can
+     tell "may I click here" but not "is this amount sane." So a third layer
+     inspects the *inputs* a capability is invoked with, before the browser opens:
+     per-parameter ceilings (a hard refusal) and dual-control thresholds (a second
+     named approver, or an escalation). This is the layer that distinguishes
+     transferring $1 from transferring $1M -- the limit the first version of this
+     system explicitly did not have.
+
+  4. It is advisory-free: a violation raises, it does not warn-and-continue.
 
 Why this shape: in a bank, "accidentally created a sub-account" is far worse
 than "refused to create one." Failing closed on the irreversible class is the
@@ -26,6 +34,7 @@ correct default; the write-up (section 6) covers the limits.
 from __future__ import annotations
 
 import fnmatch
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
@@ -49,6 +58,24 @@ class Decision(str, Enum):
 class PolicyDecision:
     decision: Decision
     reason: str = ""
+    # for value-level decisions: which input parameters drove it
+    params: tuple[str, ...] = ()
+
+
+@dataclass
+class ValueRule:
+    """Semantic limits on one input parameter's value.
+
+    `max` is a hard ceiling -- exceeding it is refused outright, never escalated,
+    because no operator standing at a browser should be able to wave through an
+    amount the institution has already said is out of bounds.
+
+    `dual_control_above` is the softer band: permitted, but not by one person
+    acting alone. It resolves to a second named approver or, unattended, to an
+    intervention."""
+    max: Optional[float] = None
+    dual_control_above: Optional[float] = None
+    unit: str = ""
 
 
 # Action types that mutate irreversible state by default.
@@ -66,6 +93,8 @@ class Policy:
     allow_risky: bool = False
     # Risky steps flagged requires_confirmation become NEEDS_CONFIRMATION.
     require_confirmation_for_risky: bool = True
+    # Per-parameter semantic limits, keyed by input parameter name.
+    value_rules: dict[str, ValueRule] = field(default_factory=dict)
 
     @classmethod
     def from_yaml(cls, path: str) -> "Policy":
@@ -78,6 +107,12 @@ class Policy:
                                              [a.value for a in ActionType])),
             allow_risky=raw.get("allow_risky", False),
             require_confirmation_for_risky=raw.get("require_confirmation_for_risky", True),
+            value_rules={
+                name: ValueRule(max=rule.get("max"),
+                                dual_control_above=rule.get("dual_control_above"),
+                                unit=rule.get("unit", ""))
+                for name, rule in (raw.get("value_rules") or {}).items()
+            },
         )
 
 
@@ -95,10 +130,7 @@ class PolicyEngine:
     # ---- allowlist -------------------------------------------------------
     @staticmethod
     def _matches_any(url: str, patterns: list[str]) -> bool:
-        for p in patterns:
-            if p in url or fnmatch.fnmatch(url, p):
-                return True
-        return False
+        return any(p in url or fnmatch.fnmatch(url, p) for p in patterns)
 
     def check_url(self, url: str) -> None:
         if self._matches_any(url, self.policy.blocked_url_patterns):
@@ -130,6 +162,57 @@ class PolicyEngine:
                     "irreversible step blocked; run without --allow-risky approval")
             return PolicyDecision(Decision.ALLOW, "risky step approved for this run")
         return PolicyDecision(Decision.ALLOW)
+
+    # ---- value-level (semantic) policy ----------------------------------
+    @staticmethod
+    def _as_number(raw) -> Optional[float]:
+        """Parse a money-ish input ("$1,500.00", "1500") to a float, else None.
+
+        A parameter we cannot parse is NOT silently allowed: the caller gets an
+        explicit refusal, because a limit you cannot evaluate is not a limit."""
+        if raw is None:
+            return None
+        try:
+            return float(re.sub(r"[^0-9.\-]", "", str(raw)) or "nan")
+        except ValueError:
+            return None
+
+    def evaluate_inputs(self, params: dict) -> PolicyDecision:
+        """Check a capability's invocation arguments before anything is opened.
+
+        Returns ALLOW, NEEDS_CONFIRMATION (dual control required, naming the
+        parameters), or raises PolicyViolation for a hard ceiling breach.
+        """
+        needs_dual: list[str] = []
+        for name, rule in self.policy.value_rules.items():
+            if name not in params:
+                continue
+            value = self._as_number(params[name])
+            if value is None or value != value:            # unparseable / NaN
+                raise PolicyViolation(
+                    f"value policy: parameter '{name}' is governed by a limit but "
+                    f"its value could not be read as a number")
+            if rule.max is not None and value > rule.max:
+                raise PolicyViolation(
+                    f"value policy: '{name}'={value:g}{rule.unit} exceeds the "
+                    f"permitted maximum of {rule.max:g}{rule.unit}")
+            if rule.dual_control_above is not None and value > rule.dual_control_above:
+                needs_dual.append(name)
+        if needs_dual:
+            return PolicyDecision(
+                Decision.NEEDS_CONFIRMATION,
+                "dual control required: " + ", ".join(
+                    f"'{n}' exceeds {self.policy.value_rules[n].dual_control_above:g}"
+                    f"{self.policy.value_rules[n].unit}" for n in needs_dual),
+                params=tuple(needs_dual))
+        return PolicyDecision(Decision.ALLOW)
+
+    @staticmethod
+    def approver_is_independent(approver: Optional[str], initiator: Optional[str]) -> bool:
+        """Dual control means two *different* people. A run cannot approve itself."""
+        if not approver:
+            return False
+        return approver.strip().lower() != (initiator or "").strip().lower()
 
     # ---- discovery-time guard -------------------------------------------
     def evaluate_discovery_action(self, action_type: ActionType, url: str,

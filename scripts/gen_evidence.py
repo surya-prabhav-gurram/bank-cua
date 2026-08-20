@@ -13,7 +13,10 @@ down. Assumes capabilities/*.json already exist (see scripts/run_discovery.sh).
     02 not-found          07 cross-tenant: Summit WITH override  (clean, no drift)
     03 permission-denied  08 cross-tenant: Summit NO map         (works via fallback, drift)
     04 interstitial       09 stability: N replays -> pass rate
-    05 session-timeout
+    05 session-timeout    10 fill silently discarded (verify_value)
+                          11 value ceiling refused
+                          12 dual control unmet (fails closed)
+                          13 dual control counter-signed
 
 Usage: python scripts/gen_evidence.py
 """
@@ -38,8 +41,13 @@ from bankcua.escalation.handoff import HandoffStore, HandoffCoordinator, Operato
 from bankcua.tenancy import TenantOverride, apply_overrides
 
 POL = Policy.from_yaml("config/policy.yaml")
-LOOKUP = CapabilityArtifact.from_json(open("capabilities/corebank.member_savings_lookup.json").read())
-SUB = CapabilityArtifact.from_json(open("capabilities/corebank.open_subaccount.json").read())
+def _artifact(path):
+    with open(path) as f:
+        return CapabilityArtifact.from_json(f.read())
+
+
+LOOKUP = _artifact("capabilities/corebank.member_savings_lookup.json")
+SUB = _artifact("capabilities/corebank.open_subaccount.json")
 CREDS = {"username": "operator", "password": "password123"}
 _PROCS = []
 
@@ -77,18 +85,19 @@ def reset(base):
     urllib.request.urlopen(f"{base}/_control/reset").read()
 
 
-def run_replay(run_dir, art, params, allow_risky=False):
+def run_replay(run_dir, art, params, allow_risky=False, policy=None, **engine_kw):
     if os.path.exists(run_dir):
         shutil.rmtree(run_dir)
     logger = RunLogger(run_dir, "replay", art.secret_params(),
                        {n: str(params[n]) for n in art.secret_params()
                         if params.get(n)})
-    pe = PolicyEngine(POL, artifact_url_patterns=art.target.allowed_url_patterns,
+    pe = PolicyEngine(policy or POL,
+                      artifact_url_patterns=art.target.allowed_url_patterns,
                       allow_risky_override=allow_risky)
     surf = WebSurface(art.target.base_url, headless=True)
     surf.start()
     try:
-        res = ReplayEngine(surf, pe, logger, None).run(art, params)
+        res = ReplayEngine(surf, pe, logger, None, **engine_kw).run(art, params)
     finally:
         surf.stop()
     logger.finish(res.model_dump())
@@ -99,8 +108,13 @@ def line(tag, res):
     s = f"[{tag}] status={res.status.value}"
     if res.business_outcome:
         s += f" outcome={res.business_outcome.code}"
+        if res.business_outcome.outputs_surfaced:
+            s += f" surfaced={res.business_outcome.outputs_surfaced}"
     if res.failure:
-        s += f" failure={res.failure.code}@step{res.failure.step_index}"
+        # a pre-flight refusal has no step: it happens before anything is opened
+        where = ("@step%d" % res.failure.step_index
+                 if res.failure.step_index is not None else " (pre-flight)")
+        s += f" failure={res.failure.code}{where}"
     if res.outputs:
         s += f" outputs={res.outputs}"
     if res.recoveries:
@@ -137,6 +151,8 @@ def main():
         escalation_handoff()
         cross_tenant()
         stability()
+        fill_not_applied(base)
+        value_policy()
     finally:
         stop_tenants()
 
@@ -204,6 +220,51 @@ def cross_tenant():
     line("08-crosstenant-summit-nomap",
          run_replay("evidence/replay-08-crosstenant-summit-nomap", art2,
                     {**CREDS, "member_id": "12345"}))
+
+
+def fill_not_applied(base):
+    """10: a fill the page silently discards.
+
+    The injected input ACCEPTS the keystrokes and throws them away, so the action
+    reports success and the page looks entirely normal. No page-state checkpoint
+    can see this -- only reading the control back does."""
+    control(base, "inject", "swallow")
+    try:
+        line("10-fill-not-applied",
+             run_replay("evidence/replay-10-fill-not-applied", LOOKUP,
+                        {**CREDS, "member_id": "12345"}))
+    finally:
+        reset(base)
+
+
+def value_policy():
+    """11-13: the semantic layer. The URL/action allowlist cannot tell $1 from
+    $1M; these rules read the invocation's inputs before the browser opens."""
+    from bankcua.safety.policy import ValueRule
+    pol = Policy.from_yaml("config/policy.yaml")
+    pol.value_rules = {"deposit": ValueRule(max=10_000.0, dual_control_above=1_000.0,
+                                            unit=" USD")}
+    base_params = {**CREDS, "member_id": "12345", "acct_type": "Money Market"}
+
+    # 11: hard ceiling -> refused outright, nothing opened
+    line("11-value-limit-exceeded",
+         run_replay("evidence/replay-11-value-limit-exceeded", SUB,
+                    {**base_params, "deposit": "25000.00"},
+                    allow_risky=True, policy=pol))
+
+    # 12: over the dual-control threshold, nobody counter-signs -> fails closed
+    line("12-dual-control-unmet",
+         run_replay("evidence/replay-12-dual-control-unmet", SUB,
+                    {**base_params, "deposit": "1500.00"},
+                    allow_risky=True, policy=pol))
+
+    # 13: independent second approver -> clears the VALUE gate, then is stopped by
+    # the independent STEP gate on the irreversible click. Two layers, both live.
+    line("13-dual-control-countersigned",
+         run_replay("evidence/replay-13-dual-control-countersigned", SUB,
+                    {**base_params, "deposit": "1500.00"},
+                    allow_risky=True, policy=pol,
+                    initiator="alice", approver="bruce"))
 
 
 def stability():

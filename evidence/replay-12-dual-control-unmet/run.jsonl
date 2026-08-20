@@ -1,0 +1,5 @@
+{"ts": 1787186161.154, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-12-dual-control-unmet"}
+{"ts": 1787186161.376, "event": "replay_started", "capability": "corebank.open_subaccount", "version": "1.0.0", "num_steps": 11, "params": {"member_id": "12345", "acct_type": "Money Market", "deposit": "1500.00"}}
+{"ts": 1787186161.377, "event": "dual_control_unmet", "reason": "dual control required: 'deposit' exceeds 1000 USD"}
+{"ts": 1787186161.377, "event": "replay_finished", "status": "failure"}
+{"ts": 1787186161.395, "event": "run_finished", "summary_path": "evidence/replay-12-dual-control-unmet/summary.json"}

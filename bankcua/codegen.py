@@ -12,6 +12,17 @@ from __future__ import annotations
 from .schema import ActionType, CapabilityArtifact, LocatorKind, Locator
 
 
+def _fmt(text: str) -> str:
+    """Emit an f-string only when the value has a {param} to interpolate.
+
+    A templated path becomes f'/member?mid={member_id}'; a literal one stays a
+    plain string. Emitting `f'/login'` would be an f-string with no placeholders
+    -- valid, but it is exactly the kind of noise that makes generated code look
+    machine-written, and the generated script is meant to be read.
+    """
+    return (f"f{text!r}" if "{" in text else repr(text))
+
+
 def _loc_expr(loc: Locator) -> str:
     """Translate the primary locator candidate into a Playwright expression on
     a `ctx` (page or frame)."""
@@ -48,7 +59,7 @@ def generate_playwright_script(art: CapabilityArtifact) -> str:
     a("engine remain the robust executor (they also try locator fallbacks and")
     a("classify runtime conditions); this script is a readable, runnable export.")
     a('"""')
-    a("from playwright.sync_api import sync_playwright, expect")
+    a("from playwright.sync_api import sync_playwright")
     a("")
     a("BASE_URL = " + repr(art.target.base_url))
     a("")
@@ -69,7 +80,8 @@ def generate_playwright_script(art: CapabilityArtifact) -> str:
     for s in art.steps:
         a(f"        # step {s.index}: {s.intent}")
         if s.action == ActionType.NAVIGATE:
-            a(f"        page.goto(BASE_URL + f{s.url_template!r}, wait_until='load')")
+            a(f"        page.goto(BASE_URL + {_fmt(s.url_template or '')}, "
+              f"wait_until='load')")
         elif s.action == ActionType.PRESS:
             a(f"        page.keyboard.press({(s.key or 'Enter')!r})")
         elif s.action == ActionType.EXTRACT and s.extract:
@@ -87,8 +99,8 @@ def generate_playwright_script(art: CapabilityArtifact) -> str:
                 a(f"        {_loc_expr(s.target)}.first.select_option("
                   f"{by}={_value_literal(s)})")
         if s.checkpoint and s.checkpoint.kind == "url_matches":
-            a(f"        assert f{s.checkpoint.value!r} in page.url, 'checkpoint "
-              f"failed at step {s.index}'")
+            a(f"        assert {_fmt(s.checkpoint.value)} in page.url, "
+              f"'checkpoint failed at step {s.index}'")
     # success checkpoint
     if art.success.kind == "text_present":
         ctx = _frame_ctx_from_paths(art.success.frame_path)
@@ -98,7 +110,8 @@ def generate_playwright_script(art: CapabilityArtifact) -> str:
     a("")
     a("")
     a('if __name__ == "__main__":')
-    a("    import sys, json")
+    a("    import json")
+    a("    import sys")
     a("    args = dict(a.split('=', 1) for a in sys.argv[1:])")
     a("    print(json.dumps(run(**args), indent=2))")
     return "\n".join(lines) + "\n"

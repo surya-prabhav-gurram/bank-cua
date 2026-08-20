@@ -9,7 +9,8 @@ and returns the structured result contract.
   GET  /capabilities            -> function-calling manifest (list)
   GET  /capabilities/<id>       -> full artifact (contract + steps)
   POST /invoke/<id>             -> run replay; body: {params, tenant?, allow_risky?,
-                                   allow_unapproved?}; returns ReplayResult
+                                   allow_unapproved?, initiator?, approver?};
+                                   returns ReplayResult
 
 Unapproved capabilities are refused by default (confidence/approval gate),
 mirroring how an unattended agent should behave in production.
@@ -81,7 +82,10 @@ def create_app(catalog_dir="capabilities", policy_path="config/policy.yaml",
         surf.start()
         res = None
         try:
-            res = ReplayEngine(surf, pe, logger, None).run(art, params)
+            res = ReplayEngine(
+                surf, pe, logger, None,
+                initiator=str(body.get("initiator", "")),
+                approver=str(body.get("approver", ""))).run(art, params)
         finally:
             logger.finish(res.model_dump() if res else {})
             surf.stop()

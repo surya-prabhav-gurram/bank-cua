@@ -27,7 +27,7 @@ See **[REPORT.md](REPORT.md)** for the design write-up and trade-offs.
 | Deterministic replay engine + error taxonomy | `bankcua/replay/` |
 | Locator robustness (label-proximity) + drift telemetry | `surface/web_playwright.py`, `replay/result.py` |
 | Bounded, policy-checked assisted recovery | `bankcua/replay/engine.py` |
-| Safety: allowlist, risk, redaction | `bankcua/safety/` |
+| Safety: allowlist, layered risk model, value limits, redaction | `bankcua/safety/` |
 | Escalation & live-session handoff (CDP) | `bankcua/escalation/handoff.py` |
 | Vendor-shared known-condition library | `bankcua/knowledge.py` |
 | Cross-tenant reuse: overrides + canonicalization | `bankcua/tenancy.py` |
@@ -134,6 +134,17 @@ Result is a structured contract distinguishing `success` (+outputs),
 `business_outcome` (e.g. `MEMBER_NOT_FOUND`), and `failure`
 (with step, expected, observed, and evidence).
 
+A business outcome can also carry data. Member `99999` exists but is locked:
+Corebank's denial screen withholds the balance yet still names the member, so
+replay returns `PERMISSION_DENIED` **with** `member_name` populated and
+`outputs_surfaced: ["member_name"]`:
+
+```bash
+python -m bankcua.cli replay \
+  --artifact capabilities/corebank.member_savings_lookup.json \
+  --param username=operator --param password=password123 --param member_id=99999
+```
+
 ### 3. Inject runtime conditions
 
 ```bash
@@ -148,6 +159,36 @@ curl "http://127.0.0.1:5057/_control/set?key=timeout&value=on"
 python -m bankcua.cli replay --artifact capabilities/corebank.member_savings_lookup.json \
   --param username=operator --param password=password123 --param member_id=12345
 curl "http://127.0.0.1:5057/_control/reset"
+
+# a fill the page silently discards: the keystrokes succeed and the page looks
+# normal, so only reading the control back catches it -> FILL_NOT_APPLIED
+curl "http://127.0.0.1:5057/_control/set?key=inject&value=swallow"
+python -m bankcua.cli replay --artifact capabilities/corebank.member_savings_lookup.json \
+  --param username=operator --param password=password123 --param member_id=12345
+curl "http://127.0.0.1:5057/_control/reset"
+```
+
+### 3b. Value-level policy: amount limits and dual control
+
+The URL/action allowlist cannot tell $1 from $1M. `config/policy.yaml` adds
+per-parameter `value_rules`, checked before the browser opens.
+
+```bash
+# over the hard ceiling -> refused outright, nothing is opened
+python -m bankcua.cli replay --artifact capabilities/corebank.open_subaccount.json \
+  --allow-risky --param username=operator --param password=password123 \
+  --param member_id=12345 --param acct_type="Money Market" --param deposit=25000.00
+
+# over the dual-control threshold with nobody counter-signing -> fails closed
+python -m bankcua.cli replay --artifact capabilities/corebank.open_subaccount.json \
+  --allow-risky --param username=operator --param password=password123 \
+  --param member_id=12345 --param acct_type="Money Market" --param deposit=1500.00
+
+# an independent second approver clears the value gate (a run cannot approve itself)
+python -m bankcua.cli replay --artifact capabilities/corebank.open_subaccount.json \
+  --allow-risky --initiator alice --approver bruce \
+  --param username=operator --param password=password123 \
+  --param member_id=12345 --param acct_type="Money Market" --param deposit=1500.00
 ```
 
 ### 4. Escalation & human handoff on the same live session
@@ -208,6 +249,17 @@ python -m bankcua.cli replay --artifact capabilities/corebank.member_savings_loo
 python -m bankcua.cli replay --artifact capabilities/corebank.member_savings_lookup.json \
   --require-approved --param username=operator --param password=password123 --param member_id=12345
 python -m bankcua.cli catalog approve --id corebank.member_savings_lookup
+```
+
+Approval also requires that a human has reviewed every step the risk classifier
+marked irreversible — the heuristic proposes, a person ratifies (and may
+downgrade a false positive, with the justification recorded on the step):
+
+```bash
+python -m bankcua.cli catalog approve --id corebank.open_subaccount     # REFUSED
+python -m bankcua.cli catalog review  --id corebank.open_subaccount --step 9 \
+  --risk risky --note "creates a real sub-account; irreversible"
+python -m bankcua.cli catalog approve --id corebank.open_subaccount     # ok
 ```
 
 ### 7. Agent-facing API + code generation

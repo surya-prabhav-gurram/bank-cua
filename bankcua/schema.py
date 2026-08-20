@@ -16,8 +16,10 @@ Design goals baked into this schema:
   * Explicit error model. `known_conditions` classify runtime states as
     business-outcome / recoverable / hard-failure -- the single most important
     distinction for production replay.
-  * Safety in the schema. Each step carries a risk class; irreversible steps are
-    marked so replay/policy can gate them.
+  * Safety in the schema. Each step carries a risk class, the *reason* it was
+    classified that way, and whether a human has ratified that call. The
+    heuristic proposes; the approval gate requires a person to confirm before
+    a capability may run unattended.
   * Reuse across tenants. `target` separates the *shared flow* from the
     *per-tenant binding* (base_url, tenant_id, vendor/version), and locators
     avoid hard-coding tenant specifics. See REPORT section 4.
@@ -230,8 +232,28 @@ class Step(BaseModel):
         "guard that makes replay deterministic rather than hopeful.",
     )
 
+    # verification of the action itself (as opposed to the resulting page state)
+    verify_value: bool = Field(
+        default=False,
+        description="For FILL: after typing, read the control back and assert the "
+        "value landed. Catches readonly/disabled/JS-managed inputs that silently "
+        "swallow a write. Secret values are asserted non-empty only -- never "
+        "compared or logged.",
+    )
+
     # safety
     risk: RiskClass = RiskClass.SAFE
+    risk_reason: str = Field(
+        default="",
+        description="Why this step was classified at its risk level. Recorded so a "
+        "human reviewer can judge the classification rather than trust it.",
+    )
+    risk_reviewed: bool = Field(
+        default=False,
+        description="A human has reviewed this step's risk classification. The "
+        "catalog refuses to approve a capability while any risky step is "
+        "unreviewed -- the heuristic proposes, a person ratifies.",
+    )
     requires_confirmation: bool = Field(
         default=False,
         description="If true, replay will not perform this step unless running "

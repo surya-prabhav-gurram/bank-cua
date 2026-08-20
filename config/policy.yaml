@@ -29,3 +29,23 @@ allowed_action_types:
 # behind a human confirmation (an escalation when unattended).
 allow_risky: false
 require_confirmation_for_risky: true
+
+# ---------------------------------------------------------------------------
+# Value-level (semantic) policy. The allowlist above is URL/action-shaped: it can
+# answer "may the agent click here" but not "is this amount sane". These rules
+# inspect the INPUTS a capability is invoked with, before the browser opens.
+#
+#   max                -> hard ceiling. Refused outright, never escalated: no
+#                         operator at a browser should be able to wave through an
+#                         amount the institution has already ruled out.
+#   dual_control_above -> permitted, but not by one person alone. Requires an
+#                         independent second approver (--approver), or an
+#                         operator counter-signature. Unattended, it fails closed.
+#
+# Keyed by input parameter name, so a capability declaring `deposit` inherits
+# these without knowing they exist.
+value_rules:
+  deposit:
+    max: 10000.00
+    dual_control_above: 1000.00
+    unit: " USD"

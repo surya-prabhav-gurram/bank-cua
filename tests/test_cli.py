@@ -9,8 +9,8 @@ import shutil
 
 import pytest
 
-from bankcua.cli import main                              # noqa: E402
-from bankcua.schema import CapabilityArtifact             # noqa: E402
+from bankcua.cli import main
+from bankcua.schema import CapabilityArtifact
 
 ROOT = os.path.abspath(os.path.dirname(__file__) + "/..")
 CAPS = os.path.join(ROOT, "capabilities")
@@ -45,7 +45,7 @@ def test_catalog_show(capsys):
     assert "member_savings_lookup" in out
 
 
-def test_catalog_approve_changes_state(tmp_path, capsys):
+def test_catalog_approve_changes_state(tmp_path):
     _skip_if_missing()
     d = tmp_path / "caps"
     shutil.copytree(CAPS, d)

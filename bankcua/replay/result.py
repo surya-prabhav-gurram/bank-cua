@@ -59,6 +59,13 @@ class BusinessOutcome(BaseModel):
     code: str
     message: str = ""
     step_index: Optional[int] = None
+    outputs_surfaced: list[str] = Field(
+        default_factory=list,
+        description="Declared outputs that were readable on the outcome screen "
+        "itself. A legitimate non-success can still carry data the caller needs "
+        "(see KnownCondition.surfaces_outputs); naming them keeps that distinct "
+        "from values captured on the happy path.",
+    )
 
 
 class ReplayResult(BaseModel):

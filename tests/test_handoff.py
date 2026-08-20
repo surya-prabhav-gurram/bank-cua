@@ -11,7 +11,7 @@ import time
 
 import pytest
 
-from bankcua.escalation.handoff import (                # noqa: E402
+from bankcua.escalation.handoff import (
     HandoffStore, HandoffCoordinator, InterventionRequest, InterventionKind,
     InterventionStatus)
 

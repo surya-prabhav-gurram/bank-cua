@@ -6,7 +6,8 @@
   "business_outcome": {
     "code": "MEMBER_NOT_FOUND",
     "message": "No member exists for the supplied ID.",
-    "step_index": 4
+    "step_index": 4,
+    "outputs_surfaced": []
   },
   "failure": null,
   "recoveries": [],
@@ -14,5 +15,5 @@
   "assists": [],
   "intervention_id": null,
   "steps_executed": 5,
-  "duration_s": 0.19
+  "duration_s": 0.15
 }

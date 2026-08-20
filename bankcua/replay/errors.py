@@ -18,5 +18,5 @@ def apply_transform(value: str, transform: Optional[str]):
         cleaned = re.sub(r"[^0-9.]", "", value)
         if not cleaned:
             return 0
-        return int(round(float(cleaned) * 100))
+        return round(float(cleaned) * 100)
     return value

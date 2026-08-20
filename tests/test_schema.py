@@ -1,3 +1,5 @@
+import pytest
+
 from bankcua.schema import (
     CapabilityArtifact, Checkpoint, InputParameter, OutputField, Step,
     ActionType, Target, ValueSource, ValueType, Locator, LocatorCandidate,
@@ -30,11 +32,8 @@ def test_roundtrip_json():
 def test_validate_inputs():
     a = _artifact()
     a.validate_inputs({"member_id": "1", "pw": "x"})
-    try:
+    with pytest.raises(ValueError, match="member_id"):
         a.validate_inputs({"pw": "x"})
-        assert False, "should have raised"
-    except ValueError as e:
-        assert "member_id" in str(e)
 
 
 def test_value_source_resolve():

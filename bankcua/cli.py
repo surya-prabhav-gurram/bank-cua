@@ -142,7 +142,11 @@ def cmd_replay(args):
         try:
             engine = ReplayEngine(surface, engine_policy, logger, coordinator,
                                   assist_provider=assist,
-                                  max_assists=args.max_assists)
+                                  max_assists=args.max_assists,
+                                  escalate_unrecoverable=getattr(
+                                      args, "escalate_unrecoverable", False),
+                                  initiator=getattr(args, "initiator", ""),
+                                  approver=getattr(args, "approver", ""))
             res = engine.run(art, params)
         finally:
             logger.finish(json.loads(res.model_dump_json()) if res else {})
@@ -196,11 +200,19 @@ def cmd_catalog(args):
         print(cat.get(args.id).to_json())
     elif args.action == "manifest":
         print(json.dumps(cat.manifest(), indent=2))
+    elif args.action == "review":
+        art = cat.review_step(args.id, args.step, risk=args.risk, note=args.note)
+        st = next(x for x in art.steps if x.index == args.step)
+        print(f"[catalog] '{args.id}' step {args.step} reviewed -> "
+              f"{st.risk.value} ({st.risk_reason})")
+        pending = cat.unreviewed_risky_steps(art)
+        print(f"[catalog] risky steps still unreviewed: {pending or 'none'}")
     elif args.action == "approve":
-        from .schema import ApprovalState
-        art = cat.get(args.id)
-        art.approval_state = ApprovalState.APPROVED
-        cat.save(art)
+        try:
+            cat.approve(args.id)
+        except ValueError as ex:
+            print(f"[catalog] REFUSED: {ex}")
+            sys.exit(5)
         print(f"[catalog] '{args.id}' -> approved")
 
 
@@ -285,6 +297,14 @@ def build_parser():
     r.add_argument("--headed", action="store_true")
     r.add_argument("--cdp-port", type=int, default=0)
     r.add_argument("--allow-risky", action="store_true")
+    r.add_argument("--initiator", default="",
+                   help="who is running this capability (dual control)")
+    r.add_argument("--approver", default="",
+                   help="independent second approver for value-policy dual "
+                        "control; must differ from --initiator")
+    r.add_argument("--escalate-unrecoverable", action="store_true",
+                   help="route an unrecoverable replay failure to a human "
+                        "operator instead of failing outright")
     r.add_argument("--repeat", type=int, default=1,
                    help="run N times and report a stability/flakiness pass rate")
     r.add_argument("--update-stability", action="store_true",
@@ -302,8 +322,15 @@ def build_parser():
     r.set_defaults(func=cmd_replay)
 
     c = sub.add_parser("catalog", help="list / show / manifest / approve")
-    c.add_argument("action", choices=["list", "show", "manifest", "approve"])
+    c.add_argument("action",
+                   choices=["list", "show", "manifest", "review", "approve"])
     c.add_argument("--id")
+    c.add_argument("--step", type=int,
+                   help="step index to review (catalog review)")
+    c.add_argument("--risk", choices=["safe", "risky"],
+                   help="reclassify the step while reviewing it")
+    c.add_argument("--note", default="",
+                   help="reviewer's justification, recorded on the step")
     c.add_argument("--dir", default="capabilities")
     c.set_defaults(func=cmd_catalog)
 

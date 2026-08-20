@@ -10,14 +10,14 @@ import pytest
 
 pytest.importorskip("playwright")
 
-from bankcua.schema import (CapabilityArtifact, LocatorCandidate, LocatorKind,  # noqa
+from bankcua.schema import (CapabilityArtifact, LocatorCandidate, LocatorKind,
                             Step, ActionType, Extraction, Locator, Checkpoint,
                             Target, InputParameter)
-from bankcua.replay.engine import ReplayEngine            # noqa: E402
-from bankcua.replay.result import ReplayStatus            # noqa: E402
-from bankcua.observability.logging import RunLogger       # noqa: E402
-from bankcua.safety.policy import Policy, PolicyEngine    # noqa: E402
-from bankcua.surface.web_playwright import WebSurface     # noqa: E402
+from bankcua.replay.engine import ReplayEngine
+from bankcua.replay.result import ReplayStatus
+from bankcua.observability.logging import RunLogger
+from bankcua.safety.policy import Policy, PolicyEngine
+from bankcua.surface.web_playwright import WebSurface
 
 ROOT = os.path.abspath(os.path.dirname(__file__) + "/..")
 ART = os.path.join(ROOT, "capabilities", "corebank.member_savings_lookup.json")

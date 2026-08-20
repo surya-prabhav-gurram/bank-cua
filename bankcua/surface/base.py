@@ -45,6 +45,11 @@ class ElementInfo(BaseModel):
     placeholder: str = ""
     near_label: str = ""      # proximate label text (legacy tables w/o <label for>)
     text: str = ""            # trimmed visible text
+    # Structural evidence of an irreversible side effect. A submit control inside
+    # a POST form is far stronger evidence than a word match on the caption, and
+    # the same distinction exists on a desktop a11y tree (invoke vs. navigate).
+    is_submit: bool = False
+    form_method: str = ""     # "", "get", "post"
     css: str = ""             # computed reasonably-stable css path
     xpath: str = ""
     visible: bool = True

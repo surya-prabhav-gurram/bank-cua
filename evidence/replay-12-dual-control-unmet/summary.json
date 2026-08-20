@@ -1,0 +1,20 @@
+{
+  "status": "failure",
+  "capability_id": "corebank.open_subaccount",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": null,
+  "failure": {
+    "code": "DUAL_CONTROL_REQUIRED",
+    "step_index": null,
+    "expected": "an independent second approver",
+    "observed": "dual control required: 'deposit' exceeds 1000 USD",
+    "evidence": {}
+  },
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 0,
+  "duration_s": 0.0
+}

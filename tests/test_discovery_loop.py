@@ -10,15 +10,15 @@ import pytest
 
 pytest.importorskip("playwright")
 
-from bankcua.agent.actions import DiscoveryAction          # noqa: E402
-from bankcua.agent.loop import DiscoveryLoop               # noqa: E402
-from bankcua.agent.task import DiscoveryTask               # noqa: E402
-from bankcua.agent.compiler import compile_artifact        # noqa: E402
-from bankcua.escalation.handoff import HandoffCoordinator, HandoffStore  # noqa: E402
-from bankcua.observability.logging import RunLogger        # noqa: E402
-from bankcua.safety.policy import Policy, PolicyEngine     # noqa: E402
-from bankcua.surface.web_playwright import WebSurface      # noqa: E402
-from bankcua.schema import (Checkpoint, InputParameter, OutputField,       # noqa: E402
+from bankcua.agent.actions import DiscoveryAction
+from bankcua.agent.loop import DiscoveryLoop
+from bankcua.agent.task import DiscoveryTask
+from bankcua.agent.compiler import compile_artifact
+from bankcua.escalation.handoff import HandoffCoordinator, HandoffStore
+from bankcua.observability.logging import RunLogger
+from bankcua.safety.policy import Policy, PolicyEngine
+from bankcua.surface.web_playwright import WebSurface
+from bankcua.schema import (Checkpoint, InputParameter, OutputField,
                             ValueType)
 
 ROOT = os.path.abspath(os.path.dirname(__file__) + "/..")
@@ -128,7 +128,8 @@ def test_discovery_finish_rejected_then_succeeds(mock_app, tmp_path):
     task = _lookup_task(mock_app)
     # finish immediately on /login (success checkpoint not met) -> rejected,
     # then run the real happy path
-    actions = [DiscoveryAction(action="finish", success=True, intent="early")] + _HAPPY
+    actions = [DiscoveryAction(action="finish", success=True, intent="early"),
+               *_HAPPY]
     res = _run(mock_app, tmp_path, task, actions)
     assert res.status == "success"
 

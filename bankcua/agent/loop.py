@@ -31,14 +31,61 @@ _RISKY_WORDS = re.compile(r"\b(confirm|create|submit|delete|remove|transfer|"
                           r"post|approve|authorize|pay|send)\b", re.I)
 
 
-def infer_risk(elem: Optional[ElementInfo], action: str) -> RiskClass:
+# Captions that submit a form but do not mutate business state: authentication,
+# queries, and navigation between screens. Explicit, reviewable, and deliberately
+# short -- anything not on it that POSTs is treated as a state change.
+_BENIGN_SUBMITS = re.compile(
+    r"^\s*(sign\s*on|sign\s*in|log\s*i?n|logon|search|find|go|lookup|look\s*up|"
+    r"next|continue|review|back|cancel|filter|refresh|view|show|close)\b", re.I)
+
+
+def classify_risk(elem: Optional[ElementInfo], action: str) -> tuple[RiskClass, str]:
+    """Classify a proposed action's irreversibility, and record why.
+
+    Two signals, deliberately layered:
+
+      * LEXICAL -- the caption matches create/confirm/submit/delete/transfer/...
+        Cheap and catches link-styled actions and GET-based mutations. On its own
+        this is what the first version shipped, and its weakness is obvious: it
+        only knows the words it was taught.
+      * STRUCTURAL -- the control submits a form, and that form uses POST. This is
+        evidence about what the action *does* rather than what it is called, so it
+        survives relabelling, translation, and per-tenant branding, and it has a
+        direct analogue on a desktop accessibility tree (an Invoke pattern rather
+        than a navigation).
+
+    The structural signal *corroborates* rather than overrides: a POST submit is
+    risky unless its caption is on an explicit benign list (authentication,
+    queries, screen navigation). That ordering matters -- promoting every POST
+    would flag "Sign On" and "Search", and a guardrail that cries wolf gets
+    switched off. What it buys over the caption alone is the unlabelled mutation:
+    "Apply", "Proceed", "Finalise" carry no risky keyword but still change state.
+
+    The reason string is persisted on the Step so a reviewer can judge the call
+    rather than trust it, and the catalog refuses to approve a capability while
+    any risky step is unreviewed -- the heuristic proposes, a person ratifies.
+    """
     if action in ("navigate", "extract", "press", "fill", "select"):
-        return RiskClass.SAFE
+        return RiskClass.SAFE, ""
     if action == "click" and elem is not None:
-        blob = f"{elem.name} {elem.text} {elem.label}".strip()
-        if _RISKY_WORDS.search(blob):
-            return RiskClass.RISKY
-    return RiskClass.SAFE
+        caption = (elem.name or elem.text or elem.label or "").strip()
+        m = _RISKY_WORDS.search(f"{elem.name} {elem.text} {elem.label}".strip())
+        if m:
+            reason = f"lexical: caption contains {m.group(0)!r}"
+            if elem.is_submit and elem.form_method == "post":
+                reason += "; corroborated by POST form submission"
+            return RiskClass.RISKY, reason
+        if elem.is_submit and elem.form_method == "post" \
+                and not _BENIGN_SUBMITS.match(caption):
+            return (RiskClass.RISKY,
+                    f"structural: submit control in a POST form with an "
+                    f"unrecognised caption {caption!r} (assumed state-changing)")
+    return RiskClass.SAFE, ""
+
+
+def infer_risk(elem: Optional[ElementInfo], action: str) -> RiskClass:
+    """Back-compatible wrapper -- risk class only, no reason."""
+    return classify_risk(elem, action)[0]
 
 
 def resolve_placeholders(text: Optional[str], param_values: dict) -> Optional[str]:
@@ -73,6 +120,7 @@ class TranscriptStep(BaseModel):
     attribute: str = "text"
     extracted_value: Optional[str] = None
     risk: RiskClass = RiskClass.SAFE
+    risk_reason: str = ""
     ok: bool = True
     message: str = ""
     candidate_index: Optional[int] = None
@@ -175,7 +223,7 @@ class DiscoveryLoop:
                     rf = next((r for r in obs.readouts if r.ref == action.ref), None)
                     if rf is not None:
                         loc = rf.locator
-            risk = infer_risk(elem, action.action)
+            risk, risk_reason = classify_risk(elem, action.action)
 
             # ---- unresolvable target -> escalate ----------------------
             if action.action in ("click", "fill", "select", "extract") and loc is None:
@@ -212,6 +260,7 @@ class DiscoveryLoop:
             rec = TranscriptStep(index=len(transcript), intent=action.intent,
                                  action_kind=action.action, url=obs.url,
                                  element=elem, locator=loc, risk=risk,
+                                 risk_reason=risk_reason,
                                  select_by=action.select_by, key=action.key,
                                  output_name=action.output_name,
                                  attribute=action.attribute)

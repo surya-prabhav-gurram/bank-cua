@@ -109,7 +109,10 @@
       "extract": null,
       "wait": null,
       "checkpoint": null,
+      "verify_value": true,
       "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
       "requires_confirmation": false
     },
     {
@@ -154,7 +157,10 @@
       "extract": null,
       "wait": null,
       "checkpoint": null,
+      "verify_value": true,
       "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
       "requires_confirmation": false
     },
     {
@@ -204,7 +210,10 @@
         "frame_path": [],
         "description": "navigation after click succeeded"
       },
+      "verify_value": false,
       "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
       "requires_confirmation": false
     },
     {
@@ -249,7 +258,10 @@
       "extract": null,
       "wait": null,
       "checkpoint": null,
+      "verify_value": true,
       "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
       "requires_confirmation": false
     },
     {
@@ -299,7 +311,10 @@
         "frame_path": [],
         "description": "navigation after click succeeded"
       },
+      "verify_value": false,
       "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
       "requires_confirmation": false
     },
     {
@@ -356,7 +371,10 @@
         "frame_path": [],
         "description": "navigation after click succeeded"
       },
+      "verify_value": false,
       "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
       "requires_confirmation": false
     },
     {
@@ -401,7 +419,10 @@
       "extract": null,
       "wait": null,
       "checkpoint": null,
+      "verify_value": false,
       "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
       "requires_confirmation": false
     },
     {
@@ -446,7 +467,10 @@
       "extract": null,
       "wait": null,
       "checkpoint": null,
+      "verify_value": true,
       "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
       "requires_confirmation": false
     },
     {
@@ -496,7 +520,10 @@
         "frame_path": [],
         "description": "navigation after click succeeded"
       },
+      "verify_value": false,
       "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
       "requires_confirmation": false
     },
     {
@@ -546,7 +573,10 @@
         "frame_path": [],
         "description": "navigation after click succeeded"
       },
+      "verify_value": false,
       "risk": "risky",
+      "risk_reason": "lexical: caption contains 'Confirm'; corroborated by POST form submission | reviewed: creates a real sub-account; irreversible. Confirmed.",
+      "risk_reviewed": true,
       "requires_confirmation": true
     },
     {
@@ -585,7 +615,10 @@
       },
       "wait": null,
       "checkpoint": null,
+      "verify_value": false,
       "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
       "requires_confirmation": false
     }
   ],
@@ -618,7 +651,7 @@
       },
       "message": "The signed-in user is not permitted to view this member/account.",
       "recovery": null,
-      "surfaces_outputs": false
+      "surfaces_outputs": true
     },
     {
       "code": "VALIDATION_ERROR",

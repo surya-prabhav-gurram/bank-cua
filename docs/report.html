@@ -91,7 +91,13 @@ deterministic replay is how the agent invokes it in production.</div>
   <tr><td>Session timeout injected</td><td><span class="status-bad">HARD_FAILURE</span> · <code>SESSION_TIMEOUT</code> surfaced w/ screenshot + DOM</td></tr>
   <tr><td>Sub-account creation (irreversible)</td><td><span class="status-ok">HANDOFF</span> · paused → operator confirmed on same session → resumed to SUCCESS</td></tr>
   <tr><td>Same artifact on a 2nd tenant (rebranded labels)</td><td><span class="status-ok">CROSS-TENANT</span> · clean with a ~4-line override; still works via fallback (drift) without one</td></tr>
-  <tr><td>Replayed N times</td><td><span class="status-ok">STABILITY</span> · pass-rate signal feeding the draft→approved gate</td></tr>
+  <tr><td>Fill silently discarded by the page</td>
+    <td><span class="status-bad">HARD_FAILURE</span> · <code>FILL_NOT_APPLIED</code>
+        — caught by reading the control back, not by a page checkpoint</td></tr>
+<tr><td>Deposit over the ceiling / over the dual-control threshold</td>
+    <td><span class="status-bad">REFUSED</span> · <code>VALUE_LIMIT_EXCEEDED</code> /
+        <code>DUAL_CONTROL_REQUIRED</code> — before the browser opens</td></tr>
+<tr><td>Replayed N times</td><td><span class="status-ok">STABILITY</span> · pass-rate signal feeding the draft→approved gate</td></tr>
 </table>
 
 <h3>Design stance</h3>
@@ -104,7 +110,7 @@ prematurely. Stack: Python + Playwright, Pydantic v2 schema, a legacy-style Flas
 mock as the proxy target.</p>
 
 <div class="foot">Full source, artifacts, and evidence in the accompanying public repository.
-99 automated tests pass; the no-secret sweep of every committed artifact is an enforced test
+126 automated tests pass; the no-secret sweep of every committed artifact is an enforced test
 invariant rather than a claim, so it cannot silently regress.</div>
 
 <!-- ===================== FULL REPORT ===================== -->
@@ -173,7 +179,11 @@ into URLs, values, and checkpoints at run time.</p>
 failure) replay runs the artifact's condition detectors and acts on the first match:</p>
 <ul>
 <li><span class="pill g">business_outcome</span> stop and return a code the caller wants —
-"no such member" / "permission denied" are <em>answers</em>, never crashes.</li>
+"no such member" / "permission denied" are <em>answers</em>, never crashes. A condition may also
+declare <code>surfaces_outputs</code>: Corebank's denial screen withholds the balance but still
+names the member, which is what the caller needs to route the request, so that declared output is
+returned alongside the code (listed in <code>outputs_surfaced</code>, so partial data never reads
+as success).</li>
 <li><span class="pill">recoverable</span> run the declared recovery (dismiss interstitial,
 reload transient 500) up to its budget, then re-scan and continue; each recovery is recorded.</li>
 <li><span class="pill r">hard_failure</span> stop with a structured error: step, expected,
@@ -187,6 +197,14 @@ so the condition detectors still get their chance to explain <em>why</em> the va
 (<code>PERMISSION_DENIED</code> is a better answer to the caller than "extraction failed"); the
 contract is then enforced once, at the end of the run, as <code>OUTPUT_EXTRACTION_FAILED</code>
 with the blamed step, expected/observed, and full evidence.</p>
+
+<p><strong>A fill is verified on the control, not the page.</strong> A fill has no page-state
+consequence, so no checkpoint can see one that silently failed — a readonly, disabled or JS-masked
+input accepts the keystrokes, the action reports success, and the flow runs on empty data. Fill
+steps carry <code>verify_value</code>: read the control back and assert the write landed
+(<code>FILL_NOT_APPLIED</code>, with evidence). A sensitive value is asserted <em>non-empty
+only</em> — never compared, never logged, because reading a credential back to diff it would
+reintroduce exactly the leak the observation indexer avoids.</p>
 
 <p>A checkpoint that fails with no matching condition is itself a hard failure with full
 evidence — unrecognised trouble never silently proceeds. UI drift (secondary) is absorbed
@@ -242,6 +260,23 @@ denylist) plus the artifact's own allowlist; a URL must satisfy both, else it is
 create/confirm/submit/delete are risky and <strong>blocked unless explicitly approved</strong>,
 or gated behind human confirmation (an escalation when unattended). Refusing to create a
 sub-account is far cheaper than creating one by mistake.</li>
+<li><strong>Risk classification — heuristic proposes, human ratifies</strong> — two layered
+signals: <em>lexical</em> (caption matches create/confirm/submit/delete) and <em>structural</em>
+(the control submits a POST form — evidence about what the action <em>does</em> rather than what it
+is called, which survives relabelling and ports to a desktop accessibility tree). Structural
+corroborates rather than overrides: a POST submit is risky unless its caption is on a short benign
+list, because promoting every POST would flag "Sign On" and "Search", and a guardrail that cries
+wolf gets switched off. What it buys is the unlabelled mutation — "Apply", "Proceed" carry no
+keyword but still change state. The class and its <em>reason</em> are persisted, and
+<code>catalog approve</code> refuses while any risky step is unreviewed; a reviewer may downgrade a
+false positive with a recorded justification.</li>
+<li><strong>Value-level (semantic) policy</strong> — the allowlist answers "may the agent click
+here", never "is this amount sane". Per-parameter rules read the invocation's <em>inputs</em>
+before the browser opens: <code>max</code> is a hard ceiling, refused outright and never escalated;
+<code>dual_control_above</code> requires an independent second approver or an operator
+counter-signature, and fails closed unattended. A run cannot approve itself, and a governed value
+that will not parse as a number is refused — a limit you cannot evaluate is not a limit. The value
+gate and the irreversible-step gate are independent and compose.</li>
 <li><strong>Never persist secrets or regulated data</strong> — sensitive inputs are stored as
 parameter <em>names</em>, never values; redaction is name-based + pattern-based (SSN, card,
 email) across logs, transcripts, and DOM snapshots. The observation indexer never captures a
@@ -258,9 +293,11 @@ than as corrupted evidence — over-redaction remains the deliberate bias. The r
 (<code>tests/test_artifact_hygiene.py</code>), not a claim.</li>
 </ul>
 <p><strong>Limits.</strong> Screenshots can still show on-screen PII (treated as sensitive
-evidence today; masked capture next). The allowlist is URL/action-shaped, not semantic —
-value-level policy (amount limits, dual control) is the next layer. Risk classification is a
-keyword+action heuristic and should become an explicit per-step review gate before approval.</p>
+evidence today; masked capture next). Value rules are per-parameter and stateless — they bound one
+invocation, not a velocity, so ten $999 deposits in a minute pass every check; aggregate and rate
+limits are the next layer. The benign-submit list is a curated regex, short and reviewable by
+design but still maintained per vendor. Dual control is enforced against an honour-system
+identifier; production would bind it to authenticated operator identity.</p>
 
 <h2>7 · Cuts</h2>
 <p>Most stretch goals are <strong>built</strong>: agent-facing API (<code>serve</code>), code

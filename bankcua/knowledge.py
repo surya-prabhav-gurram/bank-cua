@@ -42,7 +42,13 @@ COREBANK_CONDITIONS: list[KnownCondition] = [
     KnownCondition(
         code="PERMISSION_DENIED", klass=ConditionClass.BUSINESS_OUTCOME,
         detector=ConditionDetector(kind="text_present", value="Access Denied"),
-        message="The signed-in user is not permitted to view this member/account."),
+        message="The signed-in user is not permitted to view this member/account.",
+        # Corebank's denial screen still identifies the member whose account was
+        # refused -- the caller needs that to route the request to someone with
+        # rights. "Not found" has nothing to give, so it stays False. Which of the
+        # two a condition is, is a property of the vendor's UI, so it is declared
+        # here rather than guessed at runtime.
+        surfaces_outputs=True),
     KnownCondition(
         code="VALIDATION_ERROR", klass=ConditionClass.BUSINESS_OUTCOME,
         detector=ConditionDetector(kind="text_present", value="Validation error"),

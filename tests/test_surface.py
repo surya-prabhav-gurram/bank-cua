@@ -9,8 +9,8 @@ import pytest
 
 pytest.importorskip("playwright")
 
-from bankcua.surface.web_playwright import WebSurface     # noqa: E402
-from bankcua.schema import (Checkpoint, ConditionDetector, Locator,           # noqa
+from bankcua.surface.web_playwright import WebSurface
+from bankcua.schema import (Checkpoint, ConditionDetector, Locator,
                             LocatorCandidate, LocatorKind)
 
 

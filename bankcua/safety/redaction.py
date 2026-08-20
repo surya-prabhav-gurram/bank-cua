@@ -103,14 +103,6 @@ def redact_text(text: str,
     return out
 
 
-def redact_value_by_name(name: str, value: Any, secret_names: set[str]) -> Any:
-    if name in secret_names:
-        return REDACTED
-    if isinstance(value, str):
-        return redact_text(value)
-    return value
-
-
 def redact_mapping(data: dict[str, Any], secret_names: set[str]) -> dict[str, Any]:
     """Return a copy with sensitive keys masked and free-text PII scrubbed."""
     clean: dict[str, Any] = {}

@@ -14,11 +14,15 @@ error-handling can be exercised without flakiness:
 
   Special member IDs (business outcomes):
     00000  -> "no member found"        (BUSINESS: MEMBER_NOT_FOUND)
-    99999  -> member exists but locked (BUSINESS: PERMISSION_DENIED)
+    99999  -> member exists but locked (BUSINESS: PERMISSION_DENIED; the denial
+              screen still shows the member NAME but withholds the balance)
 
   Injection via /_control/set (test-only, documented) OR ?inject= query param:
     interstitial -> an unexpected "System Maintenance Notice" gate page
     timeout      -> force the session to be expired (redirect to login)
+    swallow      -> the member-search input accepts a fill then discards it
+                    (legacy input-masking); the keystroke succeeds and the page
+                    looks normal, so only Step.verify_value catches it
     slow         -> add a multi-second delay before responding
     error500     -> return an HTTP 500 application error page
 
@@ -27,7 +31,9 @@ Login: username 'operator', password 'password123' (fake, for the demo only).
 """
 from __future__ import annotations
 
+import os
 import time
+
 from flask import (
     Flask,
     request,
@@ -46,8 +52,6 @@ app = Flask(__name__)
 # the flow and page structure are identical; the visible strings differ.
 # Select with MOCKBANK_VARIANT=corebank|summit.
 # ---------------------------------------------------------------------------
-import os as _os
-
 VARIANTS = {
     "corebank": {
         "brand": "Corebank&nbsp;Servicing&nbsp;Console", "header_bg": "#1f3a5f",
@@ -63,7 +67,7 @@ VARIANTS = {
         "footer": "Summit CU Console v3.4 (powered by Corebank) &mdash; internal use only",
     },
 }
-VARIANT = VARIANTS.get(_os.environ.get("MOCKBANK_VARIANT", "corebank"),
+VARIANT = VARIANTS.get(os.environ.get("MOCKBANK_VARIANT", "corebank"),
                        VARIANTS["corebank"])
 
 # ---------------------------------------------------------------------------
@@ -243,12 +247,20 @@ def home():
     guard = _require_session()
     if guard:
         return guard
+    # `swallow` injection: a legacy input-masking handler that accepts the write
+    # and then discards it. Chosen deliberately over `readonly`, which the
+    # automation layer already refuses to type into: this one SUCCEEDS at the
+    # keystroke level and leaves the page looking entirely normal, so neither the
+    # action result nor a page-state checkpoint can see it. That is precisely the
+    # blind spot Step.verify_value exists to close.
+    swallow = (' oninput="this.value=\'\'"'
+               if _CONTROL.get("inject") == "swallow" else "")
     body = f"""
     <font face="Arial" size="3"><b>Member Search</b></font>
     <form method="GET" action="/member">
     <table cellpadding="4" cellspacing="0" border="0"><tr>
       <td><font face="Arial">{VARIANT['mid_label']}</font></td>
-      <td><input type="text" name="mid" size="18"></td>
+      <td><input type="text" name="mid" size="18"{swallow}></td>
       <td><input type="submit" value="{VARIANT['search']}"></td>
     </tr></table>
     </form>
@@ -284,10 +296,20 @@ def member():
         return _page("No member found", body)
 
     if rec["status"] == "locked":
+        # A real servicing console still says WHOSE account was refused, so the
+        # operator can route the request -- it withholds the balance, not the
+        # identity. That asymmetry is what KnownCondition.surfaces_outputs models:
+        # a legitimate non-success that still carries some declared data.
         body = f"""
         <font face="Arial" color="#b00020" size="3"><b>Access Denied</b></font>
-        <p><font face="Arial">You do not have permission to view member
-        {mid}. This account is restricted.</font></p>"""
+        <table cellpadding="4" cellspacing="0" border="0" width="100%">
+          <tr><td width="120"><font face="Arial">Member ID</font></td>
+              <td><font face="Arial"><b>{mid}</b></font></td></tr>
+          <tr><td><font face="Arial">Name</font></td>
+              <td><font face="Arial">{rec['name']}</font></td></tr>
+        </table>
+        <p><font face="Arial">You do not have permission to view this member's
+        accounts. This account is restricted.</font></p>"""
         return Response(_page("Access denied", body), status=403)
 
     # Normal detail page. Balance lives in an IFRAME (legacy sub-pane).
@@ -429,6 +451,5 @@ def subaccount_confirm():
 
 
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("MOCKBANK_PORT", "5057"))
     app.run(host="127.0.0.1", port=port, debug=False, threaded=True)

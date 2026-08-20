@@ -2,11 +2,16 @@
   "status": "business_outcome",
   "capability_id": "corebank.member_savings_lookup",
   "version": "1.0.0",
-  "outputs": {},
+  "outputs": {
+    "member_name": "Restricted Account"
+  },
   "business_outcome": {
     "code": "PERMISSION_DENIED",
     "message": "The signed-in user is not permitted to view this member/account.",
-    "step_index": 4
+    "step_index": 4,
+    "outputs_surfaced": [
+      "member_name"
+    ]
   },
   "failure": null,
   "recoveries": [],
@@ -14,5 +19,5 @@
   "assists": [],
   "intervention_id": null,
   "steps_executed": 5,
-  "duration_s": 0.19
+  "duration_s": 0.15
 }

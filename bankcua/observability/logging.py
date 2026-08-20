@@ -39,6 +39,9 @@ class RunLogger:
             self.secret_literals = list(self.secret_values)
         os.makedirs(run_dir, exist_ok=True)
         self._events: list[dict] = []
+        # Deliberately long-lived and flushed per event, not a context manager:
+        # a run's log has to survive the run crashing, so events must already be
+        # on disk when it does. Closed in finish().
         self._fh = open(os.path.join(run_dir, "run.jsonl"), "w")
         self.event("run_started", kind=kind, run_dir=run_dir)
 

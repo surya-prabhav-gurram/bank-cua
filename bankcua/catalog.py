@@ -29,16 +29,67 @@ class Catalog:
         return p
 
     def get(self, cap_id: str) -> CapabilityArtifact:
-        return CapabilityArtifact.from_json(open(self._path(cap_id)).read())
+        with open(self._path(cap_id)) as f:
+            return CapabilityArtifact.from_json(f.read())
 
     def list(self) -> list[CapabilityArtifact]:
         out = []
         for p in sorted(glob.glob(os.path.join(self.root, "*.json"))):
             try:
-                out.append(CapabilityArtifact.from_json(open(p).read()))
+                with open(p) as f:
+                    out.append(CapabilityArtifact.from_json(f.read()))
             except Exception:
                 pass
         return out
+
+    # ---- approval gate ---------------------------------------------------
+    @staticmethod
+    def unreviewed_risky_steps(art: CapabilityArtifact) -> list[int]:
+        """Risky steps a human has not ratified.
+
+        Risk classification is a heuristic (see agent.loop.classify_risk). A
+        heuristic may promote a capability to draft, but it may not promote it to
+        approved: approval is the point where unattended replay of an
+        irreversible action becomes possible, so a person has to have looked at
+        every risky step first."""
+        return [st.index for st in art.steps
+                if st.risk.value == "risky" and not st.risk_reviewed]
+
+    def approve(self, cap_id: str) -> CapabilityArtifact:
+        """Promote draft -> approved. Refuses while any risky step is unreviewed."""
+        from .schema import ApprovalState
+        art = self.get(cap_id)
+        pending = self.unreviewed_risky_steps(art)
+        if pending:
+            raise ValueError(
+                f"cannot approve '{cap_id}': risky steps {pending} have not been "
+                f"reviewed. Run `catalog review --id {cap_id} --step N "
+                f"--risk safe|risky --note ...` for each.")
+        art.approval_state = ApprovalState.APPROVED
+        self.save(art)
+        return art
+
+    def review_step(self, cap_id: str, index: int, risk: str | None = None,
+                    note: str = "") -> CapabilityArtifact:
+        """Record a human's ratification of one step's risk classification.
+
+        The reviewer may also *change* the class -- that is the point of a review
+        gate rather than a checkbox. An over-eager structural signal being
+        downgraded (with a reason) is the system working, not failing."""
+        from .schema import RiskClass
+        art = self.get(cap_id)
+        step = next((st for st in art.steps if st.index == index), None)
+        if step is None:
+            raise ValueError(f"no step {index} in '{cap_id}'")
+        if risk is not None:
+            step.risk = RiskClass(risk)
+            step.requires_confirmation = (step.risk == RiskClass.RISKY)
+        step.risk_reviewed = True
+        if note:
+            step.risk_reason = (f"{step.risk_reason} | reviewed: {note}"
+                                if step.risk_reason else f"reviewed: {note}")
+        self.save(art)
+        return art
 
     def manifest(self) -> list[dict]:
         """Function-calling style manifest an agent can discover + invoke from."""

@@ -90,6 +90,17 @@ _INDEX_JS = r"""
       if (ty==='checkbox'||ty==='radio') return el.checked?'checked':'unchecked'; }
     return '';
   }
+  function submitInfo(el){
+    // Irreversibility signal: is this control a form submit, and does its form
+    // use POST? Structural, not lexical -- it does not care what the button says.
+    const t = el.tagName.toLowerCase();
+    const ty = (el.getAttribute('type')||'').toLowerCase();
+    const isSubmit = (t==='button' && (ty===''||ty==='submit')) ||
+                     (t==='input' && ty==='submit');
+    const form = el.closest('form');
+    const method = form ? (form.getAttribute('method')||'get').toLowerCase() : '';
+    return {is_submit: isSubmit, form_method: method};
+  }
   function nearLabel(el){
     // legacy tables rarely use <label for>; infer a proximate label from the
     // enclosing table cell's preceding sibling, or the row's first cell.
@@ -148,6 +159,8 @@ _INDEX_JS = r"""
       placeholder: el.getAttribute('placeholder')||'',
       near_label: nearLabel(el),
       text: (valueHint(el) || (el.innerText||'').trim()).slice(0,80),
+      is_submit: submitInfo(el).is_submit,
+      form_method: submitInfo(el).form_method,
       css: cssPath(el),
       xpath: xPath(el),
       visible: visible(el),
