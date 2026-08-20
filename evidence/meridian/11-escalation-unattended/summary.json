@@ -1,0 +1,21 @@
+{
+  "status": "escalated",
+  "capability_id": "meridian.place_hold",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": null,
+  "refusal": null,
+  "failure": {
+    "code": "ESCALATION_UNRESOLVED",
+    "step_index": 10,
+    "expected": "a human reviewer to approve or perform the step",
+    "observed": "aborted",
+    "evidence": {}
+  },
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": "replay-meridian.place_hold-step10",
+  "steps_executed": 11,
+  "duration_s": 9.08
+}

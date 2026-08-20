@@ -1,0 +1,90 @@
+{
+  "capability_id": "meridian.transfer_funds",
+  "name": "Transfer funds between a member's shares",
+  "description": "Move money from one share to another for a member, walking the review screen and posting the transfer. The post is irreversible and is gated accordingly.",
+  "goal": "Sign on, open member {member_id}, start a Funds Transfer from {from_share} to {to_share} for {amount} with memo {memo}, review it, and post it.",
+  "app_id": "meridian-core",
+  "surface_type": "web",
+  "base_url": "https://web-sample.interface-hiring.com",
+  "entry_path": "/signon",
+  "tenant_id": "interface-demo",
+  "vendor_product": "Meridian",
+  "version": "4.2.1",
+  "inputs": [
+    {
+      "name": "operator",
+      "type": "string",
+      "required": true,
+      "description": "Operator ID to sign on with (e.g. teller1, super1).",
+      "example": "teller1"
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "sensitive": true,
+      "description": "Operator password. Supplied at invocation and never persisted."
+    },
+    {
+      "name": "branch",
+      "type": "string",
+      "required": true,
+      "description": "Branch code to sign on against.",
+      "example": "MAIN-001"
+    },
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "example": "100987"
+    },
+    {
+      "name": "from_share",
+      "type": "string",
+      "required": true,
+      "description": "Source share id."
+    },
+    {
+      "name": "to_share",
+      "type": "string",
+      "required": true,
+      "description": "Destination share id."
+    },
+    {
+      "name": "amount",
+      "type": "money",
+      "required": true,
+      "description": "Amount to move."
+    },
+    {
+      "name": "memo",
+      "type": "string",
+      "required": false,
+      "description": "Free-text memo."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "confirmation",
+      "type": "string",
+      "description": "Confirmation number issued by the host for the posted transfer."
+    }
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "TRANSFER POSTED",
+    "description": "host posted the transfer"
+  },
+  "max_steps": 22,
+  "max_seconds": 300.0,
+  "param_values": {
+    "operator": "teller1",
+    "password": "password",
+    "branch": "MAIN-001",
+    "member_id": "100234",
+    "from_share": "100234-S0070",
+    "to_share": "100234-S0001-3",
+    "amount": "1.00",
+    "memo": "capability recording"
+  }
+}

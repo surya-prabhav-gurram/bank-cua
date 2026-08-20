@@ -1,0 +1,43 @@
+{"ts": 1787260175.979, "event": "run_started", "kind": "discovery", "run_dir": "evidence/meridian/discovery-meridian.member_search-anthropic"}
+{"ts": 1787260176.531, "event": "discovery_started", "goal": "Sign on, open Member Inquiry, search by Last Name for Turing, and read the results list.", "provider": "anthropic", "entry": "/signon"}
+{"ts": 1787260176.572, "event": "evidence_captured", "label": "step00", "screenshot": "evidence/meridian/discovery-meridian.member_search-anthropic/step00.png"}
+{"ts": 1787260176.572, "event": "observation", "step": 0, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787260179.85, "event": "model_decided", "step": 0, "action": "fill", "intent": "Enter operator ID", "ref": 0, "value": "{operator}"}
+{"ts": 1787260179.874, "event": "action_executed", "step": 0, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260179.897, "event": "evidence_captured", "label": "step01", "screenshot": "evidence/meridian/discovery-meridian.member_search-anthropic/step01.png"}
+{"ts": 1787260179.897, "event": "observation", "step": 1, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787260185.876, "event": "model_decided", "step": 1, "action": "fill", "intent": "Fill ***REDACTED:password*** field", "ref": 1, "value": "{***REDACTED:password***}"}
+{"ts": 1787260185.926, "event": "action_executed", "step": 1, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260185.947, "event": "evidence_captured", "label": "step02", "screenshot": "evidence/meridian/discovery-meridian.member_search-anthropic/step02.png"}
+{"ts": 1787260185.947, "event": "observation", "step": 2, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787260188.315, "event": "model_decided", "step": 2, "action": "click", "intent": "Sign on with filled credentials", "ref": 3, "value": null}
+{"ts": 1787260188.567, "event": "action_executed", "step": 2, "kind": "click", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787260188.616, "event": "evidence_captured", "label": "step03", "screenshot": "evidence/meridian/discovery-meridian.member_search-anthropic/step03.png"}
+{"ts": 1787260188.616, "event": "observation", "step": 3, "url": "https://web-sample.interface-hiring.com/menu", "status": 200, "num_elements": 11}
+{"ts": 1787260192.488, "event": "model_decided", "step": 3, "action": "click", "intent": "Open Member Inquiry / Selection", "ref": 4, "value": null}
+{"ts": 1787260192.572, "event": "action_executed", "step": 3, "kind": "click", "ok": true, "message": "clicked link: Member Inquiry / Selection", "candidate_index": 0}
+{"ts": 1787260192.605, "event": "evidence_captured", "label": "step04", "screenshot": "evidence/meridian/discovery-meridian.member_search-anthropic/step04.png"}
+{"ts": 1787260192.605, "event": "observation", "step": 4, "url": "https://web-sample.interface-hiring.com/members", "status": 200, "num_elements": 7}
+{"ts": 1787260195.024, "event": "model_decided", "step": 4, "action": "select", "intent": "Select search by Last Name", "ref": 4, "value": "Last Name"}
+{"ts": 1787260195.03, "event": "action_executed", "step": 4, "kind": "select", "ok": true, "message": "selected Last Name", "candidate_index": 0}
+{"ts": 1787260195.055, "event": "evidence_captured", "label": "step05", "screenshot": "evidence/meridian/discovery-meridian.member_search-anthropic/step05.png"}
+{"ts": 1787260195.055, "event": "observation", "step": 5, "url": "https://web-sample.interface-hiring.com/members", "status": 200, "num_elements": 7}
+{"ts": 1787260197.556, "event": "model_decided", "step": 5, "action": "fill", "intent": "Enter last name Turing in search value field", "ref": 5, "value": "{last_name}"}
+{"ts": 1787260197.57, "event": "action_executed", "step": 5, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260197.599, "event": "evidence_captured", "label": "step06", "screenshot": "evidence/meridian/discovery-meridian.member_search-anthropic/step06.png"}
+{"ts": 1787260197.599, "event": "observation", "step": 6, "url": "https://web-sample.interface-hiring.com/members", "status": 200, "num_elements": 7}
+{"ts": 1787260199.884, "event": "model_decided", "step": 6, "action": "click", "intent": "Submit search for last name Turing", "ref": 6, "value": null}
+{"ts": 1787260200.156, "event": "action_executed", "step": 6, "kind": "click", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787260200.197, "event": "evidence_captured", "label": "step07", "screenshot": "evidence/meridian/discovery-meridian.member_search-anthropic/step07.png"}
+{"ts": 1787260200.197, "event": "observation", "step": 7, "url": "https://web-sample.interface-hiring.com/members?by=name&q=Turing", "status": 200, "num_elements": 8}
+{"ts": 1787260204.492, "event": "model_decided", "step": 7, "action": "extract", "intent": "Extract the search results table for Turing", "ref": 9, "value": null}
+{"ts": 1787260204.506, "event": "action_executed", "step": 7, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787260204.53, "event": "evidence_captured", "label": "step08", "screenshot": "evidence/meridian/discovery-meridian.member_search-anthropic/step08.png"}
+{"ts": 1787260204.53, "event": "observation", "step": 8, "url": "https://web-sample.interface-hiring.com/members?by=name&q=Turing", "status": 200, "num_elements": 8}
+{"ts": 1787260207.552, "event": "model_decided", "step": 8, "action": "extract", "intent": "Extract the search results table for Turing", "ref": 9, "value": null}
+{"ts": 1787260207.559, "event": "action_executed", "step": 8, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787260207.591, "event": "evidence_captured", "label": "step09", "screenshot": "evidence/meridian/discovery-meridian.member_search-anthropic/step09.png"}
+{"ts": 1787260207.591, "event": "observation", "step": 9, "url": "https://web-sample.interface-hiring.com/members?by=name&q=Turing", "status": 200, "num_elements": 8}
+{"ts": 1787260210.53, "event": "model_decided", "step": 9, "action": "finish", "intent": "", "ref": null, "value": null}
+{"ts": 1787260210.532, "event": "finish_requested", "success_checkpoint": true, "model_success": true}
+{"ts": 1787260210.537, "event": "run_finished", "summary_path": "evidence/meridian/discovery-meridian.member_search-anthropic/summary.json"}

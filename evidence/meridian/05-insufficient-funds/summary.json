@@ -1,0 +1,20 @@
+{
+  "status": "business_outcome",
+  "capability_id": "meridian.transfer_funds",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": {
+    "code": "INSUFFICIENT_FUNDS",
+    "message": "The source share does not hold enough available balance.",
+    "step_index": 12,
+    "outputs_surfaced": []
+  },
+  "refusal": null,
+  "failure": null,
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 13,
+  "duration_s": 2.99
+}

@@ -1,0 +1,19 @@
+{"ts": 1787253609.298, "event": "run_started", "kind": "discovery", "run_dir": "evidence/meridian/discovery-meridian.signon-anthropic"}
+{"ts": 1787253610.3, "event": "discovery_started", "goal": "Sign on to the console as teller1 at branch MAIN-001 and reach the main menu.", "provider": "anthropic", "entry": "/signon"}
+{"ts": 1787253610.34, "event": "evidence_captured", "label": "step00", "screenshot": "evidence/meridian/discovery-meridian.signon-anthropic/step00.png"}
+{"ts": 1787253610.341, "event": "observation", "step": 0, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787253613.071, "event": "model_decided", "step": 0, "action": "fill", "intent": "Enter operator ID", "ref": 0, "value": "{operator}"}
+{"ts": 1787253613.089, "event": "action_executed", "step": 0, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787253613.112, "event": "evidence_captured", "label": "step01", "screenshot": "evidence/meridian/discovery-meridian.signon-anthropic/step01.png"}
+{"ts": 1787253613.112, "event": "observation", "step": 1, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787253616.136, "event": "model_decided", "step": 1, "action": "fill", "intent": "Enter ***REDACTED:password***", "ref": 1, "value": "{***REDACTED:password***}"}
+{"ts": 1787253616.175, "event": "action_executed", "step": 1, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787253616.197, "event": "evidence_captured", "label": "step02", "screenshot": "evidence/meridian/discovery-meridian.signon-anthropic/step02.png"}
+{"ts": 1787253616.197, "event": "observation", "step": 2, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787253618.356, "event": "model_decided", "step": 2, "action": "click", "intent": "Sign on with teller1 credentials at MAIN-001 branch", "ref": 3, "value": null}
+{"ts": 1787253618.531, "event": "action_executed", "step": 2, "kind": "click", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787253618.573, "event": "evidence_captured", "label": "step03", "screenshot": "evidence/meridian/discovery-meridian.signon-anthropic/step03.png"}
+{"ts": 1787253618.573, "event": "observation", "step": 3, "url": "https://web-sample.interface-hiring.com/menu", "status": 200, "num_elements": 11}
+{"ts": 1787253621.074, "event": "model_decided", "step": 3, "action": "finish", "intent": "", "ref": null, "value": null}
+{"ts": 1787253621.079, "event": "finish_requested", "success_checkpoint": true, "model_success": true}
+{"ts": 1787253621.092, "event": "run_finished", "summary_path": "evidence/meridian/discovery-meridian.signon-anthropic/summary.json"}

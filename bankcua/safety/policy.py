@@ -84,10 +84,6 @@ class ValueRule:
     window_seconds: int = 3600
 
 
-# Action types that mutate irreversible state by default.
-_DEFAULT_RISKY_ACTIONS = {ActionType.CLICK}  # refined per-step by RiskClass
-
-
 @dataclass
 class Policy:
     """Loaded guardrail configuration."""
@@ -107,6 +103,11 @@ class Policy:
     # institution's directory; the shape of the check does not change.
     approvers: set[str] = field(default_factory=set)
     strict_approvers: bool = False
+    # Recovery is a retry. On a step that already changed state, retrying is how
+    # a single transfer becomes two -- and the error page cannot tell us whether
+    # the post landed before the fault. Off by default; a deployment that knows
+    # its target is idempotent can name the risk and turn it on.
+    allow_recovery_on_risky_steps: bool = False
 
     @classmethod
     def from_yaml(cls, path: str) -> "Policy":
@@ -121,6 +122,8 @@ class Policy:
             require_confirmation_for_risky=raw.get("require_confirmation_for_risky", True),
             approvers=set(raw.get("approvers") or []),
             strict_approvers=raw.get("strict_approvers", False),
+            allow_recovery_on_risky_steps=raw.get(
+                "allow_recovery_on_risky_steps", False),
             value_rules={
                 name: ValueRule(max=rule.get("max"),
                                 dual_control_above=rule.get("dual_control_above"),

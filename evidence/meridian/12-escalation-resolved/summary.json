@@ -1,0 +1,17 @@
+{
+  "status": "success",
+  "capability_id": "meridian.place_hold",
+  "version": "1.0.0",
+  "outputs": {
+    "confirmation": "CN480131"
+  },
+  "business_outcome": null,
+  "refusal": null,
+  "failure": null,
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": "replay-meridian.place_hold-step10",
+  "steps_executed": 12,
+  "duration_s": 2.84
+}

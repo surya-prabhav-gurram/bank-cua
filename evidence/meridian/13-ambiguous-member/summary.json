@@ -1,0 +1,20 @@
+{
+  "status": "business_outcome",
+  "capability_id": "meridian.member_lookup",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": {
+    "code": "AMBIGUOUS_MEMBER_MATCH",
+    "message": "Several member records matched. Supply the full member number, or search by last name to list the candidates.",
+    "step_index": 5,
+    "outputs_surfaced": []
+  },
+  "refusal": null,
+  "failure": null,
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 6,
+  "duration_s": 0.57
+}

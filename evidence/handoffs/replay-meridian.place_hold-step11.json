@@ -1,0 +1,19 @@
+{
+  "id": "replay-meridian.place_hold-step11",
+  "kind": "risky_confirmation",
+  "reason": "irreversible step 'Apply the hold as required by the goal' needs human confirmation",
+  "capability_id": "meridian.place_hold",
+  "goal": null,
+  "current_step_index": 11,
+  "state_url": "https://web-sample.interface-hiring.com/members/100987/hold/review",
+  "screenshot_path": "evidence/meridian/12-escalation-resolved/confirm_step11.png",
+  "dom_path": "evidence/meridian/12-escalation-resolved/confirm_step11.dom.html",
+  "cdp_endpoint": "http://127.0.0.1:9223",
+  "controller": "agent",
+  "status": "aborted",
+  "created_at": 1787251354.934401,
+  "resolved_at": null,
+  "resolution_note": "timed out after 90s waiting for a human reviewer",
+  "resume": true,
+  "human_actions": []
+}

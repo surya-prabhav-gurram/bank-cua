@@ -1,12 +1,12 @@
-{"ts": 1787196597.837, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-10-fill-not-applied"}
-{"ts": 1787196598.063, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "12345"}}
-{"ts": 1787196598.072, "event": "replay_navigated_entry", "entry": "/login"}
-{"ts": 1787196598.091, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided {username} credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
-{"ts": 1787196598.107, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
-{"ts": 1787196598.144, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
-{"ts": 1787196598.16, "event": "step_executed", "index": 3, "action": "fill", "intent": "Enter the member ID {member_id} into the search field to search for the member's account", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
-{"ts": 1787196598.182, "event": "evidence_captured", "label": "step03_fill_not_applied", "screenshot": "evidence/replay-10-fill-not-applied/step03_fill_not_applied.png", "dom": "evidence/replay-10-fill-not-applied/step03_fill_not_applied.dom.html"}
-{"ts": 1787196598.182, "event": "fill_not_applied", "step": 3, "secret": false}
-{"ts": 1787196598.182, "event": "hard_failure", "step": 3, "code": "FILL_NOT_APPLIED", "expected": "the control to hold '12345'", "observed": "read-back was empty or different (control may be readonly, disabled, or JS-managed)"}
-{"ts": 1787196598.182, "event": "replay_finished", "status": "failure", "outputs": {}}
-{"ts": 1787196598.202, "event": "run_finished", "summary_path": "evidence/replay-10-fill-not-applied/summary.json"}
+{"ts": 1787243323.412, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-10-fill-not-applied"}
+{"ts": 1787243323.675, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "12345"}}
+{"ts": 1787243323.685, "event": "replay_navigated_entry", "entry": "/login"}
+{"ts": 1787243323.705, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided {username} credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787243323.738, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787243323.771, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787243323.788, "event": "step_executed", "index": 3, "action": "fill", "intent": "Enter the member ID {member_id} into the search field to search for the member's account", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787243323.81, "event": "evidence_captured", "label": "step03_fill_not_applied", "screenshot": "evidence/replay-10-fill-not-applied/step03_fill_not_applied.png", "dom": "evidence/replay-10-fill-not-applied/step03_fill_not_applied.dom.html"}
+{"ts": 1787243323.81, "event": "fill_not_applied", "step": 3, "secret": false}
+{"ts": 1787243323.81, "event": "hard_failure", "step": 3, "code": "FILL_NOT_APPLIED", "expected": "the control to hold '12345'", "observed": "read-back was empty or different (control may be readonly, disabled, or JS-managed)"}
+{"ts": 1787243323.81, "event": "replay_finished", "status": "failure", "outputs": {}}
+{"ts": 1787243323.83, "event": "run_finished", "summary_path": "evidence/replay-10-fill-not-applied/summary.json"}

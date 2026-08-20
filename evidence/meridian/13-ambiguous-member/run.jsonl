@@ -1,0 +1,13 @@
+{"ts": 1787260425.835, "event": "run_started", "kind": "replay", "run_dir": "evidence/meridian/13-ambiguous-member"}
+{"ts": 1787260426.243, "event": "replay_started", "capability": "meridian.member_lookup", "version": "1.0.0", "num_steps": 11, "params": {"operator": "teller1", "branch": "MAIN-001", "member_id": "100"}}
+{"ts": 1787260426.371, "event": "replay_navigated_entry", "entry": "/signon"}
+{"ts": 1787260426.404, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill operator ID", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260426.455, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill {***REDACTED:password***} field", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260426.597, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on with filled credentials and branch", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787260426.688, "event": "step_executed", "index": 3, "action": "click", "intent": "Go to Member Inquiry / Selection to search for member", "ok": true, "message": "clicked link: Member Inquiry / Selection", "candidate_index": 0}
+{"ts": 1787260426.713, "event": "step_executed", "index": 4, "action": "fill", "intent": "Enter member number to search", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260426.776, "event": "step_executed", "index": 5, "action": "click", "intent": "Search for member {member_id}", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787260426.792, "event": "condition_detected", "step": 5, "code": "AMBIGUOUS_MEMBER_MATCH", "klass": "business_outcome"}
+{"ts": 1787260426.814, "event": "evidence_captured", "label": "business_AMBIGUOUS_MEMBER_MATCH", "screenshot": "evidence/meridian/13-ambiguous-member/business_AMBIGUOUS_MEMBER_MATCH.png"}
+{"ts": 1787260426.814, "event": "replay_finished", "status": "business_outcome", "outputs": {}}
+{"ts": 1787260426.815, "event": "run_finished", "summary_path": "evidence/meridian/13-ambiguous-member/summary.json"}

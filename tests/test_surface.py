@@ -48,6 +48,27 @@ def test_index_elements_and_locator_ordering(surf):
     assert 'User ID' in uloc.candidates[0].value
 
 
+def test_readout_locators_lead_with_the_portable_candidate(surf):
+    """An extraction target must be addressable on a surface with no DOM.
+
+    A read-only value carries no accessible name of its own -- "$4,213.55" is not
+    called anything -- so proximity to its label is both the durable handle and
+    the only strategy a non-DOM surface can honour. Recording the XPath first
+    would make every extract step unportable, which would be a property of how we
+    recorded it rather than of the flow. That failure is invisible at record time
+    and only shows up as an unreachable step mid-run, so it is pinned here.
+    """
+    _login(surf)
+    surf.navigate("/member?mid=12345")
+    savings = next(r for r in surf.observe().readouts if r.label == "Savings")
+    kinds = [c.kind for c in savings.locator.candidates]
+    assert kinds[0] == LocatorKind.NEAR_LABEL
+    assert savings.locator.candidates[0].value == "Savings"
+    assert LocatorKind.XPATH in kinds          # DOM-bound form still recorded
+    # and it must actually resolve on THIS surface, not merely be recorded
+    assert surf.read(savings.locator, "text").value == "$4,213.55"
+
+
 def test_readouts_and_frame_read(surf):
     _login(surf)
     surf.navigate("/member?mid=12345")
@@ -126,3 +147,59 @@ def test_unresolvable_locator_reports_failure(surf):
         kind=LocatorKind.CSS, value="button#does-not-exist")])
     res = surf.click(loc)
     assert not res.ok and "resolve" in res.message
+
+
+SELECT_PAGE = """
+<html><body><table>
+<tr><td>From Share:</td><td><select name="from">
+  <option value="100234-S0001">100234-S0001 - Regular Shares ($1,499.00)</option>
+  <option value="100234-S0001-3">100234-S0001-3 - Regular Shares ($10.00)</option>
+  <option value="100234-S0070">100234-S0070 - Share Draft (Checking) ($226.55)</option>
+</select></td></tr></table></body></html>
+"""
+
+SELECT_LOC = Locator(description="from share", candidates=[
+    LocatorCandidate(kind=LocatorKind.NEAR_LABEL, value="From Share:")])
+
+
+@pytest.fixture
+def select_surface(surf):
+    surf._page.set_content(SELECT_PAGE)
+    return surf
+
+
+def _selected(s):
+    return s._page.eval_on_selector("select", "el => el.value")
+
+
+def test_an_option_resolves_by_value_even_when_the_recording_said_label(select_surface):
+    """Whether the recorded string is the option's value or its visible label is
+    a property of the markup, not of the intent -- and a live model records
+    `select_by=label` by default while naming a code."""
+    res = select_surface.select_option(SELECT_LOC, "100234-S0070", by="label")
+    assert res.ok and _selected(select_surface) == "100234-S0070"
+    assert "matched on value" in res.message, (
+        "a fallback that resolved must say so, or a recording that only works "
+        "via the fallback looks indistinguishable from one that is correct")
+
+
+def test_a_leading_code_matches_the_full_label(select_surface):
+    """Legacy selects render "CODE - Long Description" over a bare code."""
+    select_surface._page.set_content(SELECT_PAGE.replace(
+        'value="100234-S0070"', 'value="ignored-0070"'))
+    res = select_surface.select_option(SELECT_LOC, "100234-S0070", by="value")
+    assert res.ok and "leading code" in res.message
+
+
+def test_an_exact_match_always_beats_a_prefix_match(select_surface):
+    """"100234-S0001" must never select "100234-S0001-3" while the exact option
+    exists -- on this target those are two different member shares."""
+    res = select_surface.select_option(SELECT_LOC, "100234-S0001", by="value")
+    assert res.ok and _selected(select_surface) == "100234-S0001"
+
+
+def test_no_matching_option_fails_and_names_what_was_offered(select_surface):
+    """An eight-second timeout tells an operator nothing. The options do."""
+    res = select_surface.select_option(SELECT_LOC, "NO_SUCH_OPTION", by="value")
+    assert res.ok is False
+    assert "NO_SUCH_OPTION" in res.message and "Regular Shares" in res.message

@@ -28,8 +28,16 @@ ignore = [
 "scripts/gen_evidence.py" = ["E402"]
 # Integration tests call pytest.importorskip("playwright") before importing the
 # modules that need it, so they skip cleanly rather than erroring on collection.
-"tests/*" = ["E402", "ARG001", "ARG002", "SIM115"]
+"tests/*" = ["E402", "ARG001", "ARG002", "ARG005", "SIM115"]
 # The run log's file handle is deliberately long-lived and flushed per event: a
 # run's log has to survive the run crashing, so events must already be on disk
 # when it does. It is closed in finish().
 "bankcua/observability/logging.py" = ["SIM115"]
+# These modules embed an HTML/JS template as a module-level string. The
+# line-length rule exists to keep PYTHON readable; wrapping markup and script
+# lines to satisfy it makes the template harder to read, not easier, and
+# introduces whitespace bugs in <pre> content. RUF001 fires on a multiplication
+# sign used as display text.
+"bankcua/dashboard.py" = ["E501", "RUF001"]
+"bankcua/chat/app.py" = ["E501"]
+"bankcua/escalation/console.py" = ["E501"]

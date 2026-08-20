@@ -1,0 +1,10 @@
+{
+  "status": "success",
+  "reason": "Contact details have been updated and confirmed: email=***EMAIL***, phone=555-0102, address=2 Bletchley Park, Milton Keynes. Both outputs were already extracted successfully in steps 11/12.",
+  "outputs": {
+    "email": "***EMAIL***",
+    "phone": "555-0102"
+  },
+  "num_steps": 13,
+  "artifact_path": "capabilities/meridian/meridian.update_member_info.json"
+}

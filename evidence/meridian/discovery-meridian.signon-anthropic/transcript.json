@@ -1,0 +1,205 @@
+[
+  {
+    "index": 0,
+    "intent": "Enter operator ID",
+    "action_kind": "fill",
+    "url": "https://web-sample.interface-hiring.com/signon",
+    "url_template": null,
+    "element": {
+      "ref": 0,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "text",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Operator ID:",
+      "text": "empty",
+      "is_submit": false,
+      "form_method": "post",
+      "css": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: empty",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "near_label",
+          "value": "Operator ID:",
+          "role": "textbox",
+          "exact": false,
+          "reasoning": "Label-proximity: the control adjacent to 'Operator ID:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+        },
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Operator ID:\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "The same proximity bound to this DOM: the input in the row labelled 'Operator ID:'."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "teller1",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "filled textbox: empty",
+    "candidate_index": 0
+  },
+  {
+    "index": 1,
+    "intent": "Enter ***REDACTED***",
+    "action_kind": "fill",
+    "url": "https://web-sample.interface-hiring.com/signon",
+    "url_template": null,
+    "element": {
+      "ref": 1,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "***REDACTED***",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Password:",
+      "text": "empty",
+      "is_submit": false,
+      "form_method": "post",
+      "css": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: empty",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "near_label",
+          "value": "Password:",
+          "role": "textbox",
+          "exact": false,
+          "reasoning": "Label-proximity: the control adjacent to 'Password:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+        },
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Password:\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "The same proximity bound to this DOM: the input in the row labelled 'Password:'."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "***REDACTED***",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "filled textbox: empty",
+    "candidate_index": 0
+  },
+  {
+    "index": 2,
+    "intent": "Sign on with teller1 credentials at MAIN-001 branch",
+    "action_kind": "click",
+    "url": "https://web-sample.interface-hiring.com/signon",
+    "url_template": null,
+    "element": {
+      "ref": 3,
+      "frame_path": [],
+      "tag": "input",
+      "role": "button",
+      "name": "Sign On",
+      "type_attr": "submit",
+      "label": "",
+      "placeholder": "",
+      "near_label": "",
+      "text": "",
+      "is_submit": true,
+      "form_method": "post",
+      "css": "table > tbody > tr:nth-of-type(4) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[4]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "button: Sign On",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "role",
+          "value": "Sign On",
+          "role": "button",
+          "exact": false,
+          "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(4) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[4]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "clicked button: Sign On",
+    "candidate_index": 0
+  }
+]

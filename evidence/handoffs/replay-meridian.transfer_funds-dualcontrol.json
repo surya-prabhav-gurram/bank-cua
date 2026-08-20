@@ -1,0 +1,21 @@
+{
+  "id": "replay-meridian.transfer_funds-dualcontrol",
+  "kind": "dual_control",
+  "reason": "dual control required: 'amount' exceeds 1000 USD",
+  "capability_id": "meridian.transfer_funds",
+  "goal": "Counter-sign meridian.transfer_funds: dual control required: 'amount' exceeds 1000 USD. This pause asks for a SECOND PERSON's approval, not for anyone to drive the screen -- the value check runs before the browser is sent anywhere, so there is nothing on it yet.",
+  "current_step_index": null,
+  "state_url": "",
+  "screenshot_path": null,
+  "dom_path": null,
+  "cdp_endpoint": null,
+  "controller": "agent",
+  "initiator": "teller1",
+  "resolved_by": "super1",
+  "status": "resolved",
+  "created_at": 1787267880.139126,
+  "resolved_at": 1787267901.2542112,
+  "resolution_note": "counter-signed in the console by super1",
+  "resume": true,
+  "human_actions": []
+}

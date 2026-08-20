@@ -1,0 +1,1039 @@
+{
+  "schema_version": 1,
+  "id": "meridian.open_share",
+  "name": "Open a new share for a member",
+  "description": "Establish a new share of a given type with an initial deposit, through the review screen. Creating the share is irreversible and is gated accordingly.",
+  "version": "1.0.0",
+  "target": {
+    "app_id": "meridian-core",
+    "surface_type": "web",
+    "base_url": "https://web-sample.interface-hiring.com",
+    "entry_path": "/signon",
+    "tenant_id": "interface-demo",
+    "vendor_product": "Meridian",
+    "version": "4.2.1",
+    "allowed_url_patterns": [
+      "https://web-sample.interface-hiring.com/*",
+      "https://web-sample.interface-hiring.com"
+    ]
+  },
+  "inputs": [
+    {
+      "name": "operator",
+      "type": "string",
+      "required": true,
+      "description": "Operator ID to sign on with (e.g. teller1, super1).",
+      "example": "teller1",
+      "sensitive": false
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "description": "Operator password. Supplied at invocation and never persisted.",
+      "example": null,
+      "sensitive": true
+    },
+    {
+      "name": "branch",
+      "type": "string",
+      "required": true,
+      "description": "Branch code to sign on against.",
+      "example": "MAIN-001",
+      "sensitive": false
+    },
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "description": "",
+      "example": "100987",
+      "sensitive": false
+    },
+    {
+      "name": "share_type",
+      "type": "string",
+      "required": true,
+      "description": "Share product code, as it appears in the Share Type list: S0001 (Regular Shares), S0070 (Share Draft), MMKT (Money Market) or CERT (Certificate).",
+      "example": "MMKT",
+      "sensitive": false
+    },
+    {
+      "name": "initial_deposit",
+      "type": "money",
+      "required": true,
+      "description": "Opening deposit amount.",
+      "example": null,
+      "sensitive": false
+    }
+  ],
+  "outputs": [
+    {
+      "name": "confirmation",
+      "type": "string",
+      "description": "Confirmation number for the newly established share.",
+      "cardinality": "scalar",
+      "columns": []
+    }
+  ],
+  "steps": [
+    {
+      "index": 0,
+      "intent": "Fill operator ID",
+      "action": "fill",
+      "target": {
+        "description": "textbox: empty",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "near_label",
+            "value": "Operator ID:",
+            "role": "textbox",
+            "exact": false,
+            "reasoning": "Label-proximity: the control adjacent to 'Operator ID:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+          },
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Operator ID:\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "The same proximity bound to this DOM: the input in the row labelled 'Operator ID:'."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "param",
+        "literal": null,
+        "param": "operator"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "verify_value": true,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 1,
+      "intent": "Fill {password} field",
+      "action": "fill",
+      "target": {
+        "description": "textbox: empty",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "near_label",
+            "value": "Password:",
+            "role": "textbox",
+            "exact": false,
+            "reasoning": "Label-proximity: the control adjacent to 'Password:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+          },
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Password:\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "The same proximity bound to this DOM: the input in the row labelled 'Password:'."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "secret_param",
+        "literal": null,
+        "param": "password"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "verify_value": true,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 2,
+      "intent": "Sign on with filled credentials and selected branch",
+      "action": "click",
+      "target": {
+        "description": "button: Sign On",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Sign On",
+            "role": "button",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(4) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[4]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/menu",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "verify_value": false,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 3,
+      "intent": "Go to Member Inquiry / Selection to find member {member_id}",
+      "action": "click",
+      "target": {
+        "description": "link: Member Inquiry / Selection",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Member Inquiry / Selection",
+            "role": "link",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "text",
+            "value": "Member Inquiry / Selection",
+            "role": null,
+            "exact": false,
+            "reasoning": "Visible link text."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > a",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/table[1]/tbody[1]/tr[1]/td[2]/a[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/members",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "verify_value": false,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 4,
+      "intent": "Enter member number {member_id} for search",
+      "action": "fill",
+      "target": {
+        "description": "textbox: empty",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "near_label",
+            "value": "Value:",
+            "role": "textbox",
+            "exact": false,
+            "reasoning": "Label-proximity: the control adjacent to 'Value:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+          },
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Value:\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "The same proximity bound to this DOM: the input in the row labelled 'Value:'."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input:nth-of-type(1)",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "param",
+        "literal": null,
+        "param": "member_id"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "verify_value": true,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 5,
+      "intent": "Search for member {member_id}",
+      "action": "click",
+      "target": {
+        "description": "button: Search",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Search",
+            "role": "button",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input:nth-of-type(2)",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[2]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/members?by=number&q={member_id}",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "verify_value": false,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 6,
+      "intent": "Select member {member_id} to open their account",
+      "action": "click",
+      "target": {
+        "description": "link: Select",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Select",
+            "role": "link",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "text",
+            "value": "Select",
+            "role": null,
+            "exact": false,
+            "reasoning": "Visible link text."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(4) > a",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/table[1]/tbody[1]/tr[2]/td[4]/a[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/members/{member_id}",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "verify_value": false,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 7,
+      "intent": "Open New Share for member {member_id}",
+      "action": "click",
+      "target": {
+        "description": "link: Open New Share",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Open New Share",
+            "role": "link",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "text",
+            "value": "Open New Share",
+            "role": null,
+            "exact": false,
+            "reasoning": "Visible link text."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(3) > td > a:nth-of-type(2)",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/a[2]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/members/{member_id}/open-share",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "verify_value": false,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 8,
+      "intent": "Select {share_type} share type",
+      "action": "select_option",
+      "target": {
+        "description": "combobox: selected: S0001 - Regular Shares",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "near_label",
+            "value": "Share Type:",
+            "role": "combobox",
+            "exact": false,
+            "reasoning": "Label-proximity: the control adjacent to 'Share Type:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+          },
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Share Type:\"]]//select",
+            "role": null,
+            "exact": false,
+            "reasoning": "The same proximity bound to this DOM: the select in the row labelled 'Share Type:'."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > select",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/select[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "param",
+        "literal": null,
+        "param": "share_type"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "verify_value": false,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 9,
+      "intent": "Enter initial deposit amount",
+      "action": "fill",
+      "target": {
+        "description": "textbox: empty",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "near_label",
+            "value": "Initial Deposit:",
+            "role": "textbox",
+            "exact": false,
+            "reasoning": "Label-proximity: the control adjacent to 'Initial Deposit:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+          },
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Initial Deposit:\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "The same proximity bound to this DOM: the input in the row labelled 'Initial Deposit:'."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "param",
+        "literal": null,
+        "param": "initial_deposit"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "verify_value": true,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 10,
+      "intent": "Continue to review the new share details",
+      "action": "click",
+      "target": {
+        "description": "button: Continue",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Continue",
+            "role": "button",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/table[1]/tbody[1]/tr[3]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/members/{member_id}/open-share/review",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "verify_value": false,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 11,
+      "intent": "Establish the new share by clicking Open Share",
+      "action": "click",
+      "target": {
+        "description": "button: Open Share",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Open Share",
+            "role": "button",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "css",
+            "value": "tbody > tr:nth-of-type(3) > td > form > input:nth-of-type(4)",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/input[4]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": {
+        "kind": "url_matches",
+        "value": "/members/{member_id}/open-share/post",
+        "frame_path": [],
+        "description": "navigation after click succeeded"
+      },
+      "verify_value": false,
+      "risk": "risky",
+      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Open Share' (assumed state-changing)",
+      "risk_reviewed": false,
+      "requires_confirmation": true
+    },
+    {
+      "index": 12,
+      "intent": "Extract confirmation number for the newly established share.",
+      "action": "extract",
+      "target": null,
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": {
+        "output": "confirmation",
+        "locator": {
+          "description": "value for Confirmation:",
+          "frame_path": [],
+          "candidates": [
+            {
+              "kind": "near_label",
+              "value": "Confirmation:",
+              "role": null,
+              "exact": false,
+              "reasoning": "Label-proximity: the value adjacent to 'Confirmation:'. A read-only value carries no name of its own, so proximity is the durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially."
+            },
+            {
+              "kind": "xpath",
+              "value": "//td[normalize-space(.)=\"Confirmation:\"]/following-sibling::td[1]",
+              "role": null,
+              "exact": false,
+              "reasoning": "The same proximity bound to this DOM: the cell immediately following 'Confirmation:'; robust to table reflow, and correct on rows that pack more than one label/value pair."
+            },
+            {
+              "kind": "css",
+              "value": "td > div > table > tbody > tr:nth-of-type(1) > td:nth-of-type(2)",
+              "role": null,
+              "exact": false,
+              "reasoning": "Structural CSS of the value cell; fallback."
+            }
+          ]
+        },
+        "attribute": "text",
+        "transform": "strip"
+      },
+      "wait": null,
+      "checkpoint": null,
+      "verify_value": false,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    }
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "SHARE OPENED",
+    "frame_path": [],
+    "description": "new share established"
+  },
+  "known_conditions": [
+    {
+      "code": "INSUFFICIENT_FUNDS",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "Insufficient available balance",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The source share does not hold enough available balance.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "SOURCE_SHARE_ON_HOLD",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "Source share is HOLD",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The source share is restricted by a hold and cannot be debited.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "MEMBER_NOT_ON_FILE",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "RECORD NOT FOUND",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "No member record exists for the supplied member number.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "AMBIGUOUS_MEMBER_MATCH",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "element_count_at_least",
+        "value": "Select",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "Several member records matched. Supply the full member number, or search by last name to list the candidates.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [
+        "click",
+        "press_key"
+      ],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "MEMBER_NUMBER_NOT_EXACT",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_absent",
+        "value": "{member_id}",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "No member record exactly matches that number. The search matched on a partial number and landed on a different member, so nothing was read. Supply the full member number.",
+      "recovery": null,
+      "also_requires": [
+        {
+          "kind": "text_present",
+          "value": "MEMBER RECORD",
+          "min_count": 2,
+          "frame_path": []
+        }
+      ],
+      "applies_to_actions": [
+        "click"
+      ],
+      "applies_to_urls": [
+        "/members/"
+      ],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "NO_SEARCH_MATCHES",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "No member records matched",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The search returned no member records.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "SUPERVISOR_OVERRIDE_REQUIRED",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "is not authorized to perform this",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "This function requires a supervisor profile; a teller cannot complete it.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "TRANSACTION_REJECTED",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "TRANSACTION REJECTED",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The application rejected the transaction as entered.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [
+        "click",
+        "press_key"
+      ],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "INJECTED_FAULT",
+      "klass": "recoverable",
+      "detector": {
+        "kind": "text_present",
+        "value": "TRANSACTION REJECTED",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "Fault injected on a non-submitting step; retry.",
+      "recovery": {
+        "kind": "reload",
+        "target": null,
+        "max_attempts": 3,
+        "backoff_ms": 1500
+      },
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "MAINTENANCE_WINDOW",
+      "klass": "recoverable",
+      "detector": {
+        "kind": "text_present",
+        "value": "SCHEDULED MAINTENANCE IN PROGRESS",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "Host temporarily unavailable during batch posting; retry.",
+      "recovery": {
+        "kind": "reload",
+        "target": null,
+        "max_attempts": 3,
+        "backoff_ms": 2000
+      },
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "APPLICATION_ERROR",
+      "klass": "recoverable",
+      "detector": {
+        "kind": "text_present",
+        "value": "APPLICATION ERROR",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "Transient host error; reload and retry.",
+      "recovery": {
+        "kind": "reload",
+        "target": null,
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      },
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "SESSION_TIMED_OUT",
+      "klass": "hard_failure",
+      "detector": {
+        "kind": "text_present",
+        "value": "YOUR SESSION HAS TIMED OUT",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "Operator session expired mid-flow; re-authentication required.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    }
+  ],
+  "approval_state": "draft",
+  "provenance": {
+    "recorded_at": null,
+    "recorded_by": "anthropic",
+    "discovery_run_id": "discovery-meridian.open_share-anthropic",
+    "transcript_ref": "evidence/meridian/discovery-meridian.open_share-anthropic/transcript.json",
+    "transcript_sha256": "47dfc19f366a1f481cc5848cfb1ad31bf0991d7ea3c2ac63b314d648c1fc5a2e",
+    "notes": "Compiled from a successful discovery run."
+  },
+  "stability": null
+}

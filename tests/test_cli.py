@@ -98,3 +98,67 @@ def test_replay_cli_end_to_end(mock_app, tmp_path, capsys):
     out = capsys.readouterr().out
     assert '"status": "success"' in out
     assert '"savings_balance": 421355' in out
+
+
+CREDS = ["--param", "username=operator", "--param", "password=password123",
+         "--param", "member_id=12345"]
+
+
+def _artifact_pointing_at(mock_app, dest):
+    """Copy the committed artifact and rebind it to the test's mock instance."""
+    art = CapabilityArtifact.from_json(open(ART).read())
+    art.target.base_url = mock_app
+    art.target.allowed_url_patterns = [f"{mock_app}/*", mock_app]
+    dest.write_text(art.to_json())
+    return art
+
+
+def test_stability_write_back_refuses_a_tenant_bound_run(mock_app, tmp_path, capsys):
+    """A tenant-bound run must never write back to the shared artifact.
+
+    `--tenant` rebases the in-memory artifact: new base_url, new allowlist,
+    locator strings remapped to that tenant's wording. Persisting that object to
+    the path it was loaded from silently converts the shared, multi-tenant
+    capability into a single-tenant one -- and the next reader has no way to tell,
+    because the file still validates and still replays cleanly against Summit.
+
+    Refusing is also the honest answer on the merits: a pass rate measured on one
+    tenant is not evidence about the capability.
+    """
+    _skip_if_missing()
+    art_path = tmp_path / "cap.json"
+    _artifact_pointing_at(mock_app, art_path)
+    before = art_path.read_text()
+
+    tenant = tmp_path / "summit.json"
+    tenant.write_text(json.dumps({
+        "tenant_id": "summit-cu", "base_url": mock_app,
+        "label_map": {"Member ID": "Member Number", "Search": "Find"}}))
+
+    main(["replay", "--artifact", str(art_path), "--tenant", str(tenant),
+          "--repeat", "2", "--update-stability",
+          "--evidence", str(tmp_path / "ev"), *CREDS])
+
+    out = capsys.readouterr().out
+    assert "NOT writing stability" in out
+    assert "summit-cu" in out
+    assert art_path.read_text() == before, "the shared artifact was modified"
+
+
+def test_stability_write_back_records_only_the_signal(mock_app, tmp_path):
+    """Without a tenant override the write-back is allowed -- but it must carry
+    ONLY the stability signal, re-read from disk, never whatever the run left on
+    the in-memory object."""
+    _skip_if_missing()
+    art_path = tmp_path / "cap.json"
+    original = _artifact_pointing_at(mock_app, art_path)
+
+    main(["replay", "--artifact", str(art_path), "--repeat", "2",
+          "--update-stability", "--evidence", str(tmp_path / "ev"), *CREDS])
+
+    after = CapabilityArtifact.from_json(art_path.read_text())
+    assert after.stability is not None and after.stability.runs == 2
+    # everything else is byte-identical to what was there before
+    a, b = after.model_dump(), original.model_dump()
+    a.pop("stability"), b.pop("stability")
+    assert a == b

@@ -1,0 +1,85 @@
+{
+  "capability_id": "meridian.update_member_info",
+  "name": "Update a member's contact information",
+  "description": "Change the e-mail, phone and mailing address held for a member, then read the values back off the member record and return them. The host's acknowledgement banner only says a write was accepted; returning the stored state proves it landed, which is the same reason a fill is verified by reading the control rather than by trusting the keystroke.",
+  "goal": "Sign on, open member {member_id}, update their contact details to email {email}, phone {phone}, address {address}, then confirm the stored record shows the new values.",
+  "app_id": "meridian-core",
+  "surface_type": "web",
+  "base_url": "https://web-sample.interface-hiring.com",
+  "entry_path": "/signon",
+  "tenant_id": "interface-demo",
+  "vendor_product": "Meridian",
+  "version": "4.2.1",
+  "inputs": [
+    {
+      "name": "operator",
+      "type": "string",
+      "required": true,
+      "description": "Operator ID to sign on with (e.g. teller1, super1).",
+      "example": "teller1"
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "sensitive": true,
+      "description": "Operator password. Supplied at invocation and never persisted."
+    },
+    {
+      "name": "branch",
+      "type": "string",
+      "required": true,
+      "description": "Branch code to sign on against.",
+      "example": "MAIN-001"
+    },
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "example": "100987"
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "phone",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "address",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "email",
+      "type": "string",
+      "description": "E-mail as it now stands on the member record, read back after saving."
+    },
+    {
+      "name": "phone",
+      "type": "string",
+      "description": "Phone as it now stands on the member record, read back after saving."
+    }
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "MEMBER RECORD",
+    "description": "back on the member record with the saved values"
+  },
+  "max_steps": 22,
+  "max_seconds": 300.0,
+  "param_values": {
+    "operator": "teller1",
+    "password": "password",
+    "branch": "MAIN-001",
+    "member_id": "100987",
+    "email": "alan.turing@example.com",
+    "phone": "555-0102",
+    "address": "2 Bletchley Park, Milton Keynes"
+  }
+}

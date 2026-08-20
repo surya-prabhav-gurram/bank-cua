@@ -1,0 +1,85 @@
+{
+  "capability_id": "meridian.member_lookup",
+  "name": "Look up a member record and balances",
+  "description": "Retrieve a member's contact details and the full share grid -- id, type, balance and status for every share. The row count varies per member, so the shares come back as typed rows rather than a fixed set of fields.",
+  "goal": "Sign on, search for member number {member_id}, select that member, and read their record and share balances.",
+  "app_id": "meridian-core",
+  "surface_type": "web",
+  "base_url": "https://web-sample.interface-hiring.com",
+  "entry_path": "/signon",
+  "tenant_id": "interface-demo",
+  "vendor_product": "Meridian",
+  "version": "4.2.1",
+  "inputs": [
+    {
+      "name": "operator",
+      "type": "string",
+      "required": true,
+      "description": "Operator ID to sign on with (e.g. teller1, super1).",
+      "example": "teller1"
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "sensitive": true,
+      "description": "Operator password. Supplied at invocation and never persisted."
+    },
+    {
+      "name": "branch",
+      "type": "string",
+      "required": true,
+      "description": "Branch code to sign on against.",
+      "example": "MAIN-001"
+    },
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "description": "Member number to look up.",
+      "example": "100234"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "member_name",
+      "type": "string",
+      "description": "Member name as filed."
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "description": "Member e-mail on record."
+    },
+    {
+      "name": "phone",
+      "type": "string",
+      "description": "Member phone on record."
+    },
+    {
+      "name": "shares",
+      "type": "table",
+      "cardinality": "rows",
+      "columns": [
+        "Share ID",
+        "Type",
+        "Balance",
+        "Status"
+      ],
+      "description": "Every share on the member, with balance and status."
+    }
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "MEMBER RECORD",
+    "description": "on the member record"
+  },
+  "max_steps": 22,
+  "max_seconds": 300.0,
+  "param_values": {
+    "operator": "teller1",
+    "password": "password",
+    "branch": "MAIN-001",
+    "member_id": "100234"
+  }
+}

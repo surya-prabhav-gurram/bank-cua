@@ -149,3 +149,48 @@ def test_discovery_unresolvable_target_escalates(mock_app, tmp_path):
                [DiscoveryAction(action="click", ref=999, intent="ghost")])
     assert res.status == "escalated"
     assert "unresolvable" in res.reason.lower()
+
+
+def test_a_failed_action_never_reaches_the_transcript(mock_app, tmp_path):
+    """The invariant the whole design rests on.
+
+    A recorded step is supposed to be one that already worked, against the same
+    locators replay will use -- that is why discovery acts THROUGH the locators
+    it records. A failed action reaching the transcript breaks that silently: a
+    real run once compiled a `select` that had timed out and still reported
+    SUCCESS, because the final checkpoint happened to pass anyway. The capability
+    shipped with a step that had never worked, and nothing said so.
+    """
+    task = _lookup_task(mock_app)
+    actions = [
+        # a select against an option that does not exist, then the real flow
+        DiscoveryAction(action="select", ref=0, value="NO_SUCH_OPTION",
+                        intent="choose a nonexistent option"),
+        DiscoveryAction(action="fill", ref=0, value="operator", intent="user"),
+        DiscoveryAction(action="fill", ref=1, value="password123", intent="pass"),
+        DiscoveryAction(action="click", ref=2, intent="sign on"),
+        DiscoveryAction(action="escalate", reason="enough for this test"),
+    ]
+    res = _run(mock_app, tmp_path, task, actions)
+    assert all(step.ok for step in res.transcript), (
+        f"a failed action was recorded: "
+        f"{[(s.action_kind, s.message) for s in res.transcript if not s.ok]}")
+    assert [s.action_kind for s in res.transcript] == ["fill", "fill", "click"]
+
+
+def test_the_compiler_refuses_a_transcript_containing_a_failed_step():
+    """Enforced in two places on purpose. The loop is what prevents it; this is
+    what catches a regression in the loop, because the resulting artifact looks
+    entirely normal until it is replayed against a real account."""
+    import pytest as _pytest
+
+    from bankcua.agent.compiler import compile_artifact
+    from bankcua.agent.loop import DiscoveryResult, TranscriptStep
+
+    task = _lookup_task("http://127.0.0.1:1")
+    bad = DiscoveryResult(status="success", transcript=[
+        TranscriptStep(index=0, action_kind="select", ok=False,
+                       message="select failed: Timeout 8000ms exceeded")])
+    with _pytest.raises(ValueError, match="did not succeed"):
+        compile_artifact(task, bad, evidence_dir="/tmp/unused",
+                         recorded_by="test", discovery_run_id="test")

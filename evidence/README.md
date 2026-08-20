@@ -6,8 +6,9 @@ is redacted (no secrets/PII); screenshots are treated as sensitive evidence.
 ## Discovery (GENUINE live LLM run via the Anthropic API)
 - `discovery-member_savings_lookup-anthropic-live/` — member + balance lookup
   (recorded_by: anthropic):
-  `run.jsonl`, `transcript.json` (redacted), `step00..07.png`, `summary.json`,
-  and `bridge_trace/` (the exact per-step model decision requests/responses).
+  `run.jsonl` (the redacted structured event log), `transcript.json` (the
+  redacted per-step decision trace the artifact was compiled from),
+  `step00..07.png`, and `summary.json`.
 - `discovery-open_subaccount-anthropic-live/` — sub-account creation via the live
   API (incl. the irreversible confirm step).
 
@@ -39,6 +40,16 @@ invocation's *inputs* before the browser opens.
 - `replay-12-dual-control-unmet/` — `DUAL_CONTROL_REQUIRED`: $1,500 is over the
   dual-control threshold and nobody counter-signed. Unattended is precisely when a
   second pair of eyes cannot be assumed, so it fails closed.
+- `replay-15-velocity-limit/` — `VALUE_LIMIT_EXCEEDED` from *history*, not from
+  the request. A $900 deposit is legal against the $10,000 ceiling; it is refused
+  because $4,500 was already spent in the trailing hour, taking the window total
+  to $5,400 over a $5,000 budget. A per-invocation ceiling cannot see this: ten
+  $999 deposits clear a $1,000 limit ten times over. The prior spend is seeded
+  under a *different* capability, because the budget belongs to the parameter,
+  not to one flow. The ledger itself is deliberately not committed — it is
+  regenerable run state, and a checked-in ledger would silently spend a reader's
+  budget before they ran anything — so the refusal `reason` in `summary.json`
+  carries the arithmetic.
 - `replay-13-dual-control-countersigned/` — the same $1,500 with an independent
   approver (`--initiator alice --approver bruce`) clears the *value* gate
   (`dual_control_satisfied` in `run.jsonl`) and is then stopped by the *step* gate

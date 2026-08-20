@@ -1,0 +1,20 @@
+{
+  "status": "business_outcome",
+  "capability_id": "meridian.member_lookup",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": {
+    "code": "MEMBER_NUMBER_NOT_EXACT",
+    "message": "No member record exactly matches that number. The search matched on a partial number and landed on a different member, so nothing was read. Supply the full member number.",
+    "step_index": 6,
+    "outputs_surfaced": []
+  },
+  "refusal": null,
+  "failure": null,
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 7,
+  "duration_s": 0.64
+}

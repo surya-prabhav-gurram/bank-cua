@@ -3,15 +3,257 @@
 An LLM figures out how to accomplish a task in a legacy UI **once** (discovery),
 the run is compiled into a **typed, versioned, reviewable capability artifact**,
 and that artifact is then **replayed deterministically with no model in the
-loop** — the path an AI agent triggers in production. Replay handles real
-runtime conditions (validation errors, not-found, permission denials,
-interstitials, timeouts), enforces safety guardrails, and escalates to a human
-who can take control of the *same live session* when it can't safely proceed.
+loop** — the path an AI agent triggers in production. Replay handles real runtime
+conditions (validation errors, not-found, permission denials, interstitials,
+timeouts), enforces safety guardrails, and escalates to a human who can take
+control of the *same live session* when it can't safely proceed.
 
 > The model discovers → the artifact becomes a reusable capability →
 > deterministic replay is how the agent invokes it in production.
 
-See **[REPORT.md](REPORT.md)** for the design write-up and trade-offs.
+The system runs against two targets:
+
+| Target | What it is | Docs |
+|---|---|---|
+| **MERIDIAN CORE** | The hosted legacy console at `web-sample.interface-hiring.com`. Seven recorded capabilities, exposed as an API, driven by a chatbot, watchable on a dashboard. | [ADAPTATION.md](ADAPTATION.md) |
+| **Corebank** (`mockbank/`) | The local mock the core was originally built against, including a second rebranded tenant. | [REPORT.md](REPORT.md) |
+
+**Every design decision, with the alternatives that lost and what would make each
+one wrong, is in [docs/DECISIONS.md](docs/DECISIONS.md).**
+
+---
+
+## Quick start — MERIDIAN CORE demo
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python -m playwright install chromium
+```
+
+**1. Configure operator credentials.** The API never accepts a password over the
+wire; it resolves an operator *alias* from a store you configure.
+
+```bash
+cp config/credentials.example.json config/credentials.json
+```
+
+(The example file already carries the assignment's public demo operators. The
+real file is gitignored.)
+
+**2. Record the seven capabilities** against the live target. A real model drives
+a real browser through the real discovery loop, and the successful run is
+compiled into a typed artifact:
+
+```bash
+export ANTHROPIC_API_KEY=sk-...
+python scripts/record_meridian.py --provider anthropic --model claude-sonnet-5
+```
+
+The committed capabilities were recorded exactly this way — every one carries
+`provenance.recorded_by: anthropic`. Without a key, `--provider scripted`
+(the default) replays recorded decision traces through the same loop, same
+browser, same compiler; only *who chooses the action* differs.
+
+**3. Review and approve them.** Capabilities ship as `draft` — approval is a
+human act performed against a deployment, and the API refuses to invoke a draft.
+This script walks the review gate for real, ratifying each irreversible step with
+a recorded justification:
+
+```bash
+python scripts/approve_meridian.py
+```
+
+**4. Start the three surfaces**, each in its own terminal:
+
+```bash
+python -m bankcua.cli serve          # capability API   -> http://127.0.0.1:8080
+```
+```bash
+python -m bankcua.cli chat --router llm   # chatbot     -> http://127.0.0.1:8081
+```
+
+(`--router llm` routes with a live model over the published manifest and needs
+the key; the default `--router rule` is deterministic and needs nothing.)
+```bash
+python -m bankcua.cli dashboard      # run dashboard    -> http://127.0.0.1:8082
+```
+
+Those three come up open, with the operator chosen from a dropdown — the
+single-operator demo path. To run them **behind a sign-in**, with what each
+person may do decided by who they are, start the console instead:
+
+```bash
+python -m bankcua.cli portal init                    # writes the sign-in files
+```
+```bash
+python -m bankcua.cli serve --require-session        # API, sessions enforced
+```
+```bash
+python -m bankcua.cli portal                         # console -> http://127.0.0.1:8083
+```
+
+See [Signing in](#signing-in--one-console-two-tabs-one-identity) below.
+
+**5. Drive it from the dashboard** — pick a capability, fill its typed inputs,
+choose an operator, and press Run. The dashboard calls the same public API any
+agent would, holds no credentials, and gets no special treatment; every run
+appears below with its status, outputs, redacted event log and screenshots.
+
+![dashboard](docs/img/dashboard.png)
+
+Note what the invoke form asks for: `member_id` and nothing else. The manifest
+deliberately omits credentials and the identity the service supplies, so a
+caller is never invited to send a password.
+
+**Or drive it from the chatbot**, which is a thin front door over the same API:
+
+| Ask | What you should see |
+|---|---|
+| `what are the balances for member 100234?` | `success` with a typed share grid — note one share is on `HOLD` |
+| `find members named Turing` | `success` with candidate rows; it selects nobody |
+| `balances for member 999999` | `business_outcome` — an answer, not an error |
+| `transfer 1.00 from 100234-S0070 to 100234-S0001-3` | `success` with the host's confirmation number |
+| `transfer 9000 from 100234-S0070 to 100234-S0001-3` | `refused` — over the ceiling, nothing opened |
+| `transfer 2000 from 100234-S0070 to 100234-S0001-3` | pauses over the dual-control threshold rather than failing closed. **A second supervisor counter-signs it** — in the console, the *Paused* panel offers `Counter-sign`, and the run resumes on the spot. Unattended it is `escalated`; shorten the wait with `serve --handoff-timeout 15`, or clear the gate non-interactively by passing an independent `approver` to `POST /invoke` |
+| `place a fraud hold on 100234-S0070` (as **teller1**) | `refused` before a browser opens — the service refuses on identity, so nothing is driven |
+| the same, as **super1** | `escalated` — paused on a live session for a person, with a CDP endpoint to attach to |
+
+Rows that escalate hold the session open for `--handoff-timeout` seconds (90 by
+default) waiting for an operator. That default suits a person who has to be
+fetched; pass a smaller value when demonstrating.
+
+Watch each run land on the dashboard with its status, typed outputs, redacted
+event log, and screenshots.
+
+**6. Take control of the escalated run.** While the `super1` hold is paused:
+
+```bash
+python -m bankcua.cli operator list
+python -m bankcua.cli operator console --id replay-meridian.place_hold-step9
+```
+
+The console serves the live page as a picture; click it, and every action is
+recorded into the intervention before control returns to the automation.
+
+### Signing in — one console, two tabs, one identity
+
+`python -m bankcua.cli portal` serves a sign-in page with the dashboard and the
+assistant mounted behind it, on one origin so a single session covers both. What
+a person can see and do is decided by **who signed in**.
+
+| Sign-in | Password | Is |
+|---|---|---|
+| `super1` | `password` | Supervisor — the Meridian operator of the same name |
+| `teller1` | `password` | Teller — likewise |
+| `100234`, `100987`, `101555`, `102777`, `103001` | `member123` | Members, one per member number |
+
+Staff sign in with the operator credentials the target itself uses
+(`https://web-sample.interface-hiring.com/signon`). The five member sign-ins are
+new: a member is *not* a Meridian operator, so their work runs **delegated** as
+the deployment's least-privileged staff alias (`default_operator`, a teller) and
+is bound to their own member number on every call.
+
+What each sign-in reaches is declared per capability in `config/service.yaml`:
+
+| Capability | supervisor | teller | member |
+|---|:--:|:--:|:--:|
+| `meridian.member_lookup` | ✓ | ✓ | ✓ own record only |
+| `meridian.transfer_funds` | ✓ | ✓ | ✓ between their own shares |
+| `meridian.update_member_info` | ✓ | ✓ | ✓ own record only |
+| `meridian.member_search` | ✓ | ✓ | — |
+| `meridian.open_share` | ✓ | ✓ | — |
+| `meridian.signon` | ✓ | ✓ | — |
+| `meridian.place_hold` | ✓ | — | — |
+
+Capabilities with no `allowed_principal_roles` line default to **staff only**, so
+a new capability cannot become member-reachable by omission.
+
+Try it:
+
+| Signed in as | Ask | What you should see |
+|---|---|---|
+| `100234` | `what are my balances?` | runs — no member number was typed; it came from the sign-in |
+| `100234` | `balances for member 100987` | `refused` · `MEMBER_SCOPE_VIOLATION` — refused, not silently retargeted |
+| `100234` | `transfer 50 from 100234-S0070 to 100987-S0001` | `refused` · `MEMBER_SCOPE_VIOLATION` — the share names another member |
+| `100234` | `place a fraud hold on 100234-S0070` | not in their action space at all; refused again at the API if asked directly |
+| `teller1` | `place a fraud hold on 100234-S0070` | `refused` · `CAPABILITY_NOT_PERMITTED_FOR_ROLE`, before a browser opens |
+| `super1` | the same | `escalated` — paused on a live session for a person |
+
+**Where this is enforced.** Not in the page. The console mints a signed session
+token; the capability API re-resolves it against the principal store on every
+call and applies the role and member-scope rules itself
+(`bankcua/auth.py`, `bankcua/service.py`). Deleting the console would cost the
+system its sign-in page and none of its authorisation. Three properties follow,
+each asserted in `tests/test_auth.py`, `tests/test_session_authz.py` and
+`tests/test_portal.py`:
+
+* **the token carries an identity, never a permission** — a username and an
+  expiry, nothing else, so role and scope are read live and a demotion takes
+  effect on the next request rather than at the next sign-in;
+* **a signed-in caller cannot choose its operator** — the alias comes from the
+  sign-in, so a teller's session naming `super1` is refused
+  (`OPERATOR_NOT_SESSION`);
+* **the projection is filtered before it is serialised** — a member's run list,
+  run detail and evidence are scoped server-side, and a run id they do not own
+  is a 404 rather than a hidden row.
+
+**Two kinds of pause, two different answers.** A gated *irreversible step*
+pauses on a live session and needs someone to **drive** it — that is the
+*Take control* flow. A *dual-control* threshold pauses **before the browser has
+been sent anywhere** and needs a second person to **approve**; the panel offers
+`Counter-sign` instead, and the identity comes from the sign-in rather than from
+a request field. The run's initiator cannot counter-sign their own run, and the
+engine re-checks that independently of whatever the console posts — so start the
+$2,000 transfer as `teller1` and approve it as `super1`.
+
+**One thing the sign-in does not cover.** The co-browsing operator console
+(`bankcua/escalation/console.py`, port 8090) is started by the dashboard but
+serves on its own port and carries no session of its own — anyone who can reach
+that port on the host can drive a paused session. The *button* is now
+supervisor-only, which is the change this console makes; putting the console
+itself behind the same session is the obvious next step and is not done here.
+
+Two request fields are refused outright from a member sign-in: `approver`
+(which clears the dual-control gate — and a member's work is *initiated* by the
+delegated teller alias, so naming a supervisor would look independent) and
+`tenant` (which re-points a capability at another deployment). Both were always
+caller-supplied, which was defensible while every caller was the institution.
+
+Managing sign-ins:
+
+```bash
+python -m bankcua.cli portal init                       # session key + principals file
+python -m bankcua.cli portal hash --password 'new one'  # paste into config/principals.json
+```
+
+`config/principals.json` is gitignored and holds **no Meridian credential** — a
+sign-in names an operator alias, and the alias's secret still comes from
+`config/credentials.json` at invocation time.
+
+### Regenerate the evidence
+
+```bash
+python scripts/gen_meridian_evidence.py   # 14 scenarios, live
+```
+
+See [evidence/meridian/README.md](evidence/meridian/README.md) for what each one
+demonstrates.
+
+### A note on the shared target
+
+`web-sample.interface-hiring.com` has a **global** fault-injection setting any
+visitor can change, and it was repeatedly found at 100% failure during
+development. If runs fail inexplicably, check and reset it:
+
+```bash
+python scripts/meridian_control.py show
+python scripts/meridian_control.py reset
+```
+
+The agent itself is blocked from that screen by `config/policy.meridian.yaml` —
+an automation that can switch off its own error conditions can hide its own
+failures. The harness may set up the world; the automation may not.
 
 ---
 
@@ -36,13 +278,23 @@ See **[REPORT.md](REPORT.md)** for the design write-up and trade-offs.
 | Vendor-shared known-condition library | `bankcua/knowledge.py` |
 | Cross-tenant reuse: overrides + canonicalization | `bankcua/tenancy.py` |
 | Capability catalog + agent-facing HTTP API | `bankcua/catalog.py`, `bankcua/service.py` |
+| Server-side authorisation (risk, approval, roles) | `config/service.yaml` |
+| Operator credential resolution (alias -> secret) | `bankcua/safety/credentials.py` |
+| Vendor error taxonomies, as data | `config/knowledge/*.yaml`, `bankcua/knowledge.py` |
+| Chatbot: routing seam + result presentation | `bankcua/chat/` |
+| Run dashboard (read-only projection of evidence) | `bankcua/dashboard.py` |
+| Sign-in: principals, sessions, role gate, member scoping | `bankcua/auth.py` |
+| Signed-in console (login + dashboard/assistant tabs) | `bankcua/portal/app.py` |
+| Who may sign in (hashed, gitignored) | `config/principals.json` |
+| MERIDIAN capabilities + recording | `capabilities/meridian/`, `scripts/record_meridian.py` |
+| Target fault-state control (harness only) | `scripts/meridian_control.py` |
 | Code generation (artifact → Playwright script) | `bankcua/codegen.py` |
 | CLI | `bankcua/cli.py` |
 | Mock legacy bank app (proxy target) | `mockbank/app.py` |
 | Saved artifacts | `capabilities/` |
 | Discovery + replay + handoff evidence | `evidence/` |
 
-## The proxy target
+## The local mock target (round 1)
 
 `mockbank/` is a deliberately **legacy-style** web app: server-rendered,
 table-based markup, **no test IDs**, the savings balance rendered inside an
@@ -53,7 +305,7 @@ Login (fake, demo only): `operator` / `password123`.
 
 ---
 
-## Setup
+## Setup — Corebank / local mock
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate     # optional
@@ -67,7 +319,7 @@ real API provider. Replay and the offline discovery reproduction need no key.
 
 ---
 
-## Verify everything (one command)
+## Verify the Corebank path (one command)
 
 On a machine with internet (e.g. your Mac Terminal):
 
@@ -85,7 +337,7 @@ clear per-step PASS/FAIL and a final `VERIFICATION PASSED`. Takes a few minutes
 
 ---
 
-## Demo path (exact commands)
+## Corebank demo path (the local mock, round 1)
 
 Start the mock app in one terminal:
 
@@ -101,7 +353,7 @@ Reproduce discovery offline from the recorded model decisions (no key):
 bash scripts/run_discovery.sh
 # -> capabilities/corebank.member_savings_lookup.json
 # -> capabilities/corebank.open_subaccount.json
-# -> evidence/discovery-*/  (screenshots, transcript, run.jsonl, bridge_trace)
+# -> evidence/discovery-*/  (screenshots, transcript.json, run.jsonl, summary.json)
 ```
 
 Or run a **genuinely live** discovery with your own key:
@@ -308,8 +560,9 @@ python -m bankcua.cli catalog approve --id corebank.open_subaccount     # ok
 ### 7. Agent-facing API + code generation
 
 ```bash
-# expose capabilities as callable-by-name HTTP endpoints
-python -m bankcua.cli serve            # http://127.0.0.1:8080
+# expose capabilities as callable-by-name HTTP endpoints. `serve` publishes the
+# MERIDIAN catalog by default, so name this one explicitly to reach corebank.
+python -m bankcua.cli serve --dir capabilities   # http://127.0.0.1:8080
 #   GET  /capabilities            -> function-calling manifest
 #   POST /invoke/<id>             -> runs replay, returns the result contract
 
@@ -324,7 +577,7 @@ policy-checked LLM decision to recover a single failed step (never open-ended).
 ### 8. Regenerate all evidence at once
 
 ```bash
-python scripts/gen_evidence.py     # starts both tenants; runs scenarios 01–09
+python scripts/gen_evidence.py     # starts both tenants; runs scenarios 01–15
 ```
 
 ---

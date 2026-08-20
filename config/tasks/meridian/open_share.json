@@ -1,0 +1,77 @@
+{
+  "capability_id": "meridian.open_share",
+  "name": "Open a new share for a member",
+  "description": "Establish a new share of a given type with an initial deposit, through the review screen. Creating the share is irreversible and is gated accordingly.",
+  "goal": "Sign on, open member {member_id}, open a new share of type {share_type} with an initial deposit of {initial_deposit}, review it, and establish it.",
+  "app_id": "meridian-core",
+  "surface_type": "web",
+  "base_url": "https://web-sample.interface-hiring.com",
+  "entry_path": "/signon",
+  "tenant_id": "interface-demo",
+  "vendor_product": "Meridian",
+  "version": "4.2.1",
+  "inputs": [
+    {
+      "name": "operator",
+      "type": "string",
+      "required": true,
+      "description": "Operator ID to sign on with (e.g. teller1, super1).",
+      "example": "teller1"
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "sensitive": true,
+      "description": "Operator password. Supplied at invocation and never persisted."
+    },
+    {
+      "name": "branch",
+      "type": "string",
+      "required": true,
+      "description": "Branch code to sign on against.",
+      "example": "MAIN-001"
+    },
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "example": "100987"
+    },
+    {
+      "name": "share_type",
+      "type": "string",
+      "required": true,
+      "description": "Share product code, as it appears in the Share Type list: S0001 (Regular Shares), S0070 (Share Draft), MMKT (Money Market) or CERT (Certificate).",
+      "example": "MMKT"
+    },
+    {
+      "name": "initial_deposit",
+      "type": "money",
+      "required": true,
+      "description": "Opening deposit amount."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "confirmation",
+      "type": "string",
+      "description": "Confirmation number for the newly established share."
+    }
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "SHARE OPENED",
+    "description": "new share established"
+  },
+  "max_steps": 22,
+  "max_seconds": 300.0,
+  "param_values": {
+    "operator": "teller1",
+    "password": "password",
+    "branch": "MAIN-001",
+    "member_id": "100987",
+    "share_type": "MMKT",
+    "initial_deposit": "5.00"
+  }
+}

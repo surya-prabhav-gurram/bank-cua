@@ -105,7 +105,13 @@ class ReplayResult(BaseModel):
     recoveries: list[RecoveryEvent] = Field(default_factory=list)
     drifts: list[DriftSignal] = Field(default_factory=list)
     assists: list[AssistEvent] = Field(default_factory=list)
-    intervention_id: Optional[str] = None
+    intervention_id: Optional[str] = Field(
+        default=None,
+        description="The human intervention this run raised, whether it was "
+        "resolved and the run continued or left the run escalated. Present on a "
+        "SUCCESS too: a run a person had to authorise is a different event from "
+        "an unattended one, and 'who approved this?' is the first question asked "
+        "about an irreversible action.")
     steps_executed: int = 0
     duration_s: float = 0.0
 

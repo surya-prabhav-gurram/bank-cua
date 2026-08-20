@@ -1,0 +1,21 @@
+{"ts": 1787260418.489, "event": "run_started", "kind": "replay", "run_dir": "evidence/meridian/04-transfer-posted"}
+{"ts": 1787260418.898, "event": "replay_started", "capability": "meridian.transfer_funds", "version": "1.0.0", "num_steps": 15, "params": {"operator": "teller1", "branch": "MAIN-001", "member_id": "100234", "from_share": "100234-S0070", "to_share": "100234-S0001-3", "amount": "1.00", "memo": "evidence scenario"}}
+{"ts": 1787260419.032, "event": "replay_navigated_entry", "entry": "/signon"}
+{"ts": 1787260419.064, "event": "step_executed", "index": 0, "action": "fill", "intent": "Enter operator ID", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260419.117, "event": "step_executed", "index": 1, "action": "fill", "intent": "Enter {***REDACTED:password***} for sign on", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260419.261, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on with entered credentials", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787260419.349, "event": "step_executed", "index": 3, "action": "click", "intent": "Go to Member Inquiry / Selection to open member {member_id}", "ok": true, "message": "clicked link: Member Inquiry / Selection", "candidate_index": 0}
+{"ts": 1787260419.374, "event": "step_executed", "index": 4, "action": "fill", "intent": "Enter member number to search", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260419.446, "event": "step_executed", "index": 5, "action": "click", "intent": "Search for member {member_id}", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787260419.6, "event": "step_executed", "index": 6, "action": "click", "intent": "Select member {member_id} to open member record", "ok": true, "message": "clicked link: Select", "candidate_index": 0}
+{"ts": 1787260419.749, "event": "step_executed", "index": 7, "action": "click", "intent": "Start Funds Transfer for member {member_id}", "ok": true, "message": "clicked link: Funds Transfer", "candidate_index": 0}
+{"ts": 1787260419.776, "event": "step_executed", "index": 8, "action": "select_option", "intent": "Select From Share as {member_id}-S0070", "ok": true, "message": "selected 100234-S0070", "candidate_index": 0}
+{"ts": 1787260421.793, "event": "step_executed", "index": 9, "action": "select_option", "intent": "Select To Share as {member_id}-S0001-3", "ok": true, "message": "selected 100234-S0001-3 (recorded by=label; matched on value)", "candidate_index": 0}
+{"ts": 1787260421.812, "event": "step_executed", "index": 10, "action": "fill", "intent": "Fill amount field with {amount}", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260421.824, "event": "step_executed", "index": 11, "action": "fill", "intent": "Fill memo field with '{memo}'", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260421.894, "event": "step_executed", "index": 12, "action": "click", "intent": "Continue to review the transfer details", "ok": true, "message": "clicked button: Continue", "candidate_index": 0}
+{"ts": 1787260421.966, "event": "step_executed", "index": 13, "action": "click", "intent": "Post the reviewed transfer as required by the goal", "ok": true, "message": "clicked button: Post Transfer", "candidate_index": 0}
+{"ts": 1787260421.992, "event": "step_executed", "index": 14, "action": "extract", "intent": "Extract the confirmation number for the posted transfer", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787260421.998, "event": "value_recorded", "param": "amount", "value": 1.0, "capability": "meridian.transfer_funds"}
+{"ts": 1787260421.998, "event": "replay_finished", "status": "success", "outputs": {"confirmation": "CN480130"}}
+{"ts": 1787260421.998, "event": "run_finished", "summary_path": "evidence/meridian/04-transfer-posted/summary.json"}

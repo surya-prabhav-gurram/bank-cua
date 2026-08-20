@@ -1,13 +1,13 @@
-{"ts": 1787196590.743, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-03-permission-denied"}
-{"ts": 1787196590.969, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "99999"}}
-{"ts": 1787196590.98, "event": "replay_navigated_entry", "entry": "/login"}
-{"ts": 1787196591.0, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided {username} credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
-{"ts": 1787196591.015, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
-{"ts": 1787196591.053, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
-{"ts": 1787196591.071, "event": "step_executed", "index": 3, "action": "fill", "intent": "Enter the member ID {member_id} into the search field to search for the member's account", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
-{"ts": 1787196591.101, "event": "step_executed", "index": 4, "action": "click", "intent": "Submit the member search form to retrieve member {member_id}'s account information", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
-{"ts": 1787196591.103, "event": "condition_detected", "step": 4, "code": "PERMISSION_DENIED", "klass": "business_outcome"}
-{"ts": 1787196591.122, "event": "evidence_captured", "label": "business_PERMISSION_DENIED", "screenshot": "evidence/replay-03-permission-denied/business_PERMISSION_DENIED.png"}
-{"ts": 1787196591.125, "event": "outcome_outputs_surfaced", "outputs": ["member_name"]}
-{"ts": 1787196591.125, "event": "replay_finished", "status": "business_outcome", "outputs": {"member_name": "Restricted Account"}}
-{"ts": 1787196591.142, "event": "run_finished", "summary_path": "evidence/replay-03-permission-denied/summary.json"}
+{"ts": 1787243315.534, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-03-permission-denied"}
+{"ts": 1787243315.798, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "99999"}}
+{"ts": 1787243315.808, "event": "replay_navigated_entry", "entry": "/login"}
+{"ts": 1787243315.828, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided {username} credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787243315.861, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787243315.895, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787243315.914, "event": "step_executed", "index": 3, "action": "fill", "intent": "Enter the member ID {member_id} into the search field to search for the member's account", "ok": true, "message": "filled textbox: textbox", "candidate_index": 0}
+{"ts": 1787243315.949, "event": "step_executed", "index": 4, "action": "click", "intent": "Submit the member search form to retrieve member {member_id}'s account information", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787243315.952, "event": "condition_detected", "step": 4, "code": "PERMISSION_DENIED", "klass": "business_outcome"}
+{"ts": 1787243315.972, "event": "evidence_captured", "label": "business_PERMISSION_DENIED", "screenshot": "evidence/replay-03-permission-denied/business_PERMISSION_DENIED.png"}
+{"ts": 1787243315.974, "event": "outcome_outputs_surfaced", "outputs": ["member_name"]}
+{"ts": 1787243315.974, "event": "replay_finished", "status": "business_outcome", "outputs": {"member_name": "Restricted Account"}}
+{"ts": 1787243315.993, "event": "run_finished", "summary_path": "evidence/replay-03-permission-denied/summary.json"}

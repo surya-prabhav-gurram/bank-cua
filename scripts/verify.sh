@@ -43,11 +43,11 @@ fi
 kill "$MOCK_PID" 2>/dev/null
 
 step "4/6  Deterministic replay + all runtime scenarios"
-# gen_evidence starts its own tenants and runs 9 scenarios
+# gen_evidence starts its own tenants and runs scenarios 01-15
 if python scripts/gen_evidence.py > /tmp/bankcua_evidence.log 2>&1; then
   grep -E "^\[" /tmp/bankcua_evidence.log
   passes=$(grep -cE "^\[[0-9]" /tmp/bankcua_evidence.log)
-  [ "$passes" -ge 14 ] && ok "scenarios ran ($passes reported)" || bad "scenarios ($passes)"
+  [ "$passes" -ge 15 ] && ok "scenarios ran ($passes reported)" || bad "scenarios ($passes)"
 else
   bad "gen_evidence.py (see /tmp/bankcua_evidence.log)"
 fi
@@ -59,11 +59,26 @@ if python -c "import ast,sys; ast.parse(open('$SCRATCH/gen.py').read())" 2>/dev/
   ok "codegen produced valid Python"; else bad "codegen"; fi
 python - <<'PY' 2>/dev/null && ok "capability API (manifest + approval gate)" || bad "capability API"
 from bankcua.service import create_app
+
+# The DEFAULT catalog is the one `cli serve` publishes -- assert against that,
+# so this check follows the deployment rather than a path it used to have.
 c = create_app().test_client()
 caps = c.get("/capabilities").get_json()
-assert any(x["name"]=="corebank.member_savings_lookup" for x in caps)
-r = c.post("/invoke/corebank.member_savings_lookup", json={"params":{}})
-assert r.status_code in (409, 422, 400)   # unapproved / bad params -> gated, not a crash
+assert any(x["name"].startswith("meridian.") for x in caps), [x["name"] for x in caps]
+# Nothing in the manifest asks a caller for a credential.
+assert not any("password" in t["input_schema"]["properties"] for t in caps)
+
+# Capabilities ship as draft, and a fresh clone has no credential store, so the
+# exact refusal depends on the machine. What must hold everywhere: an invocation
+# is REFUSED with the result contract -- never a 200, never an unstructured 500.
+r = c.post("/invoke/meridian.member_lookup", json={"params": {}})
+assert r.status_code in (400, 403, 409), r.status_code
+assert r.get_json().get("refusal", {}).get("code"), r.get_json()
+
+# The corebank catalog is still serveable when named explicitly.
+c2 = create_app(catalog_dir="capabilities").test_client()
+assert any(x["name"] == "corebank.member_savings_lookup"
+           for x in c2.get("/capabilities").get_json())
 PY
 
 step "6/6  Safety sweeps"

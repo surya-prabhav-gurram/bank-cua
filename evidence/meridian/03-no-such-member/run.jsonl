@@ -1,0 +1,13 @@
+{"ts": 1787260417.456, "event": "run_started", "kind": "replay", "run_dir": "evidence/meridian/03-no-such-member"}
+{"ts": 1787260417.863, "event": "replay_started", "capability": "meridian.member_lookup", "version": "1.0.0", "num_steps": 11, "params": {"operator": "teller1", "branch": "MAIN-001", "member_id": "999999"}}
+{"ts": 1787260418.033, "event": "replay_navigated_entry", "entry": "/signon"}
+{"ts": 1787260418.061, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill operator ID", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260418.111, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill {***REDACTED:password***} field", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260418.208, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on with filled credentials and branch", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787260418.299, "event": "step_executed", "index": 3, "action": "click", "intent": "Go to Member Inquiry / Selection to search for member", "ok": true, "message": "clicked link: Member Inquiry / Selection", "candidate_index": 0}
+{"ts": 1787260418.324, "event": "step_executed", "index": 4, "action": "fill", "intent": "Enter member number to search", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260418.412, "event": "step_executed", "index": 5, "action": "click", "intent": "Search for member {member_id}", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787260418.429, "event": "condition_detected", "step": 5, "code": "NO_SEARCH_MATCHES", "klass": "business_outcome"}
+{"ts": 1787260418.458, "event": "evidence_captured", "label": "business_NO_SEARCH_MATCHES", "screenshot": "evidence/meridian/03-no-such-member/business_NO_SEARCH_MATCHES.png"}
+{"ts": 1787260418.458, "event": "replay_finished", "status": "business_outcome", "outputs": {}}
+{"ts": 1787260418.458, "event": "run_finished", "summary_path": "evidence/meridian/03-no-such-member/summary.json"}

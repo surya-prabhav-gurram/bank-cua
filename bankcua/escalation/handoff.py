@@ -76,6 +76,17 @@ class InterventionRequest(BaseModel):
         description="Attach here to take control of the SAME live session.",
     )
     controller: str = "operator"          # who holds control right now
+    #: Who asked for the run. Carried across the handoff because a
+    #: counter-signature is only meaningful relative to it: the one identity
+    #: that must NOT be able to resolve a dual-control pause is the person who
+    #: started it, and the resolver cannot be trusted to check that about
+    #: itself.
+    initiator: str = ""
+    #: Who resolved it, recorded at resolution. For a dual-control pause this is
+    #: the counter-signature itself, so the engine re-checks independence
+    #: against `initiator` before it proceeds -- the decision belongs to the
+    #: engine, not to whichever console happened to post the resolution.
+    resolved_by: str = ""
     status: InterventionStatus = InterventionStatus.OPEN
     created_at: float = 0.0
     resolved_at: Optional[float] = None
@@ -156,10 +167,17 @@ class HandoffCoordinator:
         for triage exactly as a timeout would.
         """
         first = self.store.read(req_id)
+        # ...and only for a request that is resolved BY TAKING CONTROL. A
+        # dual-control pause is resolved by a decision -- a second person
+        # counter-signs -- and happens before the browser has been sent
+        # anywhere, so it exposes no session by design. Aborting it for want of
+        # a CDP port would mean no large transfer could ever be approved.
+        needs_live_session = first.kind != InterventionKind.DUAL_CONTROL
         # Only for a request still awaiting someone. One that has already been
         # resolved -- by an operator, or by a test, or out of band -- must be
         # returned as it stands, not overwritten.
-        if first.status == InterventionStatus.OPEN and not first.cdp_endpoint:
+        if (first.status == InterventionStatus.OPEN and needs_live_session
+                and not first.cdp_endpoint):
             first.status = InterventionStatus.ABORTED
             first.resolution_note = (
                 "no live session was exposed (the run was started without a CDP "

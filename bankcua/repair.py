@@ -94,11 +94,6 @@ class DriftLedger:
                 out.append(o)
         return out
 
-    def runs_seen(self, capability_id: str) -> int:
-        """Distinct run timestamps -- the denominator for a drift rate."""
-        return len({round(o.ts, 3) for o in self.observations(capability_id)})
-
-
 class StepRepair(BaseModel):
     step_index: int
     description: str

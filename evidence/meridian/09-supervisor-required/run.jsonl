@@ -1,0 +1,17 @@
+{"ts": 1787260437.48, "event": "run_started", "kind": "replay", "run_dir": "evidence/meridian/09-supervisor-required"}
+{"ts": 1787260437.877, "event": "replay_started", "capability": "meridian.place_hold", "version": "1.0.0", "num_steps": 12, "params": {"operator": "teller1", "branch": "MAIN-001", "member_id": "100234", "share_id": "100234-S0070", "reason_code": "FRAUD", "notes": "evidence scenario"}}
+{"ts": 1787260438.132, "event": "replay_navigated_entry", "entry": "/signon"}
+{"ts": 1787260438.164, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill operator ID", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260438.218, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill {***REDACTED:password***} field", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260438.326, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on with filled credentials", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787260438.422, "event": "step_executed", "index": 3, "action": "click", "intent": "Navigate to Place Account Hold screen", "ok": true, "message": "clicked link: Place Account Hold", "candidate_index": 0}
+{"ts": 1787260438.448, "event": "step_executed", "index": 4, "action": "fill", "intent": "Enter member number to search", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260438.519, "event": "step_executed", "index": 5, "action": "click", "intent": "Search for member {member_id}", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787260438.649, "event": "step_executed", "index": 6, "action": "click", "intent": "Select member {member_id} to proceed to hold placement", "ok": true, "message": "clicked link: Select", "candidate_index": 0}
+{"ts": 1787260438.675, "event": "step_executed", "index": 7, "action": "select_option", "intent": "Select share {member_id}-S0070 for hold", "ok": true, "message": "selected 100234-S0070", "candidate_index": 0}
+{"ts": 1787260438.685, "event": "step_executed", "index": 8, "action": "fill", "intent": "Enter notes {notes}", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260438.75, "event": "step_executed", "index": 9, "action": "click", "intent": "Continue to review the hold before applying", "ok": true, "message": "clicked button: Continue", "candidate_index": 0}
+{"ts": 1787260438.768, "event": "condition_detected", "step": 9, "code": "SUPERVISOR_OVERRIDE_REQUIRED", "klass": "business_outcome"}
+{"ts": 1787260438.787, "event": "evidence_captured", "label": "business_SUPERVISOR_OVERRIDE_REQUIRED", "screenshot": "evidence/meridian/09-supervisor-required/business_SUPERVISOR_OVERRIDE_REQUIRED.png"}
+{"ts": 1787260438.788, "event": "replay_finished", "status": "business_outcome", "outputs": {}}
+{"ts": 1787260438.788, "event": "run_finished", "summary_path": "evidence/meridian/09-supervisor-required/summary.json"}

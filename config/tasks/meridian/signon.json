@@ -1,0 +1,49 @@
+{
+  "capability_id": "meridian.signon",
+  "name": "Sign on to Meridian Core",
+  "description": "Authenticate an operator against Meridian Core and confirm a session can be established. Returns no data by design: capabilities are stateless, so a session cannot be handed to a later invocation, and the verdict -- success, or a typed business outcome such as a bad credential -- is the whole answer.",
+  "goal": "Sign on to the console as {operator} at branch {branch} and reach the main menu.",
+  "app_id": "meridian-core",
+  "surface_type": "web",
+  "base_url": "https://web-sample.interface-hiring.com",
+  "entry_path": "/signon",
+  "tenant_id": "interface-demo",
+  "vendor_product": "Meridian",
+  "version": "4.2.1",
+  "inputs": [
+    {
+      "name": "operator",
+      "type": "string",
+      "required": true,
+      "description": "Operator ID to sign on with (e.g. teller1, super1).",
+      "example": "teller1"
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "sensitive": true,
+      "description": "Operator password. Supplied at invocation and never persisted."
+    },
+    {
+      "name": "branch",
+      "type": "string",
+      "required": true,
+      "description": "Branch code to sign on against.",
+      "example": "MAIN-001"
+    }
+  ],
+  "outputs": [],
+  "success": {
+    "kind": "text_present",
+    "value": "MAIN MENU",
+    "description": "reached the main menu"
+  },
+  "max_steps": 22,
+  "max_seconds": 300.0,
+  "param_values": {
+    "operator": "teller1",
+    "password": "password",
+    "branch": "MAIN-001"
+  }
+}

@@ -18,6 +18,22 @@ def _frame(page, ident):
     return page
 
 
+def _near(ctx, label):
+    """The thing adjacent to `label` in this legacy table layout: the form
+    control in the labelled row, or -- when the row holds no control, which
+    is what a read-only value looks like -- that row's value cell.
+
+    The two branches are mutually exclusive rather than a union: a union
+    matches the cell AND the input inside it, and .first takes document
+    order, so a fill would type into the <td>.
+    """
+    row = '//tr[td[normalize-space(.)="%s"]]' % label
+    control = row + '//*[self::input or self::select or self::textarea]'
+    cell = ('//tr[td[normalize-space(.)="%s"] and '
+            'not(.//input or .//select or .//textarea)]/td[last()]' % label)
+    return ctx.locator('xpath=' + control + ' | ' + cell)
+
+
 def run(username: str, password: str, member_id: str) -> dict:
     outputs = {}
     with sync_playwright() as p:
@@ -26,27 +42,27 @@ def run(username: str, password: str, member_id: str) -> dict:
         page.goto(BASE_URL + '/login', wait_until='load')
         # step 0: Fill in the username field with the provided {username} credentials
         ctx = page
-        ctx.locator("xpath=" + '//tr[td[normalize-space(.)="User ID"]]//input').first.fill(username)
+        _near(ctx, 'User ID').first.fill(username)
         # step 1: Fill in the password field to complete the login credentials
         ctx = page
-        ctx.locator("xpath=" + '//tr[td[normalize-space(.)="Password"]]//input').first.fill(password)
+        _near(ctx, 'Password').first.fill(password)
         # step 2: Sign on to the system by clicking the Sign On button after credentials have been filled in
         ctx = page
         ctx.get_by_role('button', name='Sign On').first.click()
         assert '/home' in page.url, 'checkpoint failed at step 2'
         # step 3: Enter the member ID {member_id} into the search field to search for the member's account
         ctx = page
-        ctx.locator("xpath=" + '//tr[td[normalize-space(.)="Member ID"]]//input').first.fill(member_id)
+        _near(ctx, 'Member ID').first.fill(member_id)
         # step 4: Submit the member search form to retrieve member {member_id}'s account information
         ctx = page
         ctx.get_by_role('button', name='Search').first.click()
         assert f'/member?mid={member_id}' in page.url, 'checkpoint failed at step 4'
         # step 5: Extract the member's name as required by the goal
         ctx = page
-        outputs['member_name'] = ctx.locator("xpath=" + '//tr[td[normalize-space(.)="Name"]]/td[last()]').first.inner_text().strip()
+        outputs['member_name'] = _near(ctx, 'Name').first.inner_text().strip()
         # step 6: Extract the savings balance as required by the goal. The balance is <savings_balance> which needs to be normalized to integer cents (<savings_balance>).
         ctx = _frame(page, 'balancepane')
-        outputs['savings_balance'] = ctx.locator("xpath=" + '//tr[td[normalize-space(.)="Savings"]]/td[last()]').first.inner_text().strip()
+        outputs['savings_balance'] = _near(ctx, 'Savings').first.inner_text().strip()
         assert 'Savings' in _frame(page, 'balancepane').content(), 'success checkpoint failed'
         browser.close()
     return outputs

@@ -18,6 +18,22 @@ def _frame(page, ident):
     return page
 
 
+def _near(ctx, label):
+    """The thing adjacent to `label` in this legacy table layout: the form
+    control in the labelled row, or -- when the row holds no control, which
+    is what a read-only value looks like -- that row's value cell.
+
+    The two branches are mutually exclusive rather than a union: a union
+    matches the cell AND the input inside it, and .first takes document
+    order, so a fill would type into the <td>.
+    """
+    row = '//tr[td[normalize-space(.)="%s"]]' % label
+    control = row + '//*[self::input or self::select or self::textarea]'
+    cell = ('//tr[td[normalize-space(.)="%s"] and '
+            'not(.//input or .//select or .//textarea)]/td[last()]' % label)
+    return ctx.locator('xpath=' + control + ' | ' + cell)
+
+
 def run(username: str, password: str, member_id: str, acct_type: str, deposit: str) -> dict:
     outputs = {}
     with sync_playwright() as p:
@@ -26,17 +42,17 @@ def run(username: str, password: str, member_id: str, acct_type: str, deposit: s
         page.goto(BASE_URL + '/login', wait_until='load')
         # step 0: Fill in the User ID field with the provided username credential
         ctx = page
-        ctx.locator("xpath=" + '//tr[td[normalize-space(.)="User ID"]]//input').first.fill(username)
+        _near(ctx, 'User ID').first.fill(username)
         # step 1: Fill in the password field with the provided password credential
         ctx = page
-        ctx.locator("xpath=" + '//tr[td[normalize-space(.)="Password"]]//input').first.fill(password)
+        _near(ctx, 'Password').first.fill(password)
         # step 2: Click the Sign On button to authenticate with the credentials that have already been filled in.
         ctx = page
         ctx.get_by_role('button', name='Sign On').first.click()
         assert '/home' in page.url, 'checkpoint failed at step 2'
         # step 3: Fill in the Member ID field with the provided member_id parameter to search for member {member_id}
         ctx = page
-        ctx.locator("xpath=" + '//tr[td[normalize-space(.)="Member ID"]]//input').first.fill(member_id)
+        _near(ctx, 'Member ID').first.fill(member_id)
         # step 4: Click the Search button to search for member {member_id} whose ID has already been filled in from the previous step.
         ctx = page
         ctx.get_by_role('button', name='Search').first.click()
@@ -47,10 +63,10 @@ def run(username: str, password: str, member_id: str, acct_type: str, deposit: s
         assert f'/subaccount/new?mid={member_id}' in page.url, 'checkpoint failed at step 5'
         # step 6: Select '{acct_type}' as the account type from the dropdown menu using the provided acct_type parameter.
         ctx = page
-        ctx.locator("xpath=" + '//tr[td[normalize-space(.)="Account Type"]]//select').first.select_option(label=acct_type)
+        _near(ctx, 'Account Type').first.select_option(label=acct_type)
         # step 7: Fill in the Initial Deposit field with the provided deposit amount of {deposit}
         ctx = page
-        ctx.locator("xpath=" + '//tr[td[normalize-space(.)="Initial Deposit"]]//input').first.fill(deposit)
+        _near(ctx, 'Initial Deposit').first.fill(deposit)
         # step 8: Click the Review button to proceed to the review screen for the new sub-account with the already-filled details ({acct_type} account type and {deposit} initial deposit).
         ctx = page
         ctx.get_by_role('button', name='Review').first.click()
@@ -61,7 +77,7 @@ def run(username: str, password: str, member_id: str, acct_type: str, deposit: s
         assert '/subaccount/confirm' in page.url, 'checkpoint failed at step 9'
         # step 10: Extract the confirmation number <confirmation_number> as required by the goal.
         ctx = page
-        outputs['confirmation_number'] = ctx.locator("xpath=" + '//tr[td[normalize-space(.)="Confirmation"]]/td[last()]').first.inner_text().strip()
+        outputs['confirmation_number'] = _near(ctx, 'Confirmation').first.inner_text().strip()
         assert 'Sub-Account Created' in page.main_frame.content(), 'success checkpoint failed'
         browser.close()
     return outputs

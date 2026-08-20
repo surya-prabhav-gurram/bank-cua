@@ -1,0 +1,14 @@
+{"ts": 1787260426.845, "event": "run_started", "kind": "replay", "run_dir": "evidence/meridian/14-member-number-not-exact"}
+{"ts": 1787260427.312, "event": "replay_started", "capability": "meridian.member_lookup", "version": "1.0.0", "num_steps": 11, "params": {"operator": "teller1", "branch": "MAIN-001", "member_id": "1002"}}
+{"ts": 1787260427.453, "event": "replay_navigated_entry", "entry": "/signon"}
+{"ts": 1787260427.483, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill operator ID", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260427.532, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill {***REDACTED:password***} field", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260427.651, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on with filled credentials and branch", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787260427.737, "event": "step_executed", "index": 3, "action": "click", "intent": "Go to Member Inquiry / Selection to search for member", "ok": true, "message": "clicked link: Member Inquiry / Selection", "candidate_index": 0}
+{"ts": 1787260427.762, "event": "step_executed", "index": 4, "action": "fill", "intent": "Enter member number to search", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260427.832, "event": "step_executed", "index": 5, "action": "click", "intent": "Search for member {member_id}", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787260427.907, "event": "step_executed", "index": 6, "action": "click", "intent": "Select member {member_id} to view their record", "ok": true, "message": "clicked link: Select", "candidate_index": 0}
+{"ts": 1787260427.924, "event": "condition_detected", "step": 6, "code": "MEMBER_NUMBER_NOT_EXACT", "klass": "business_outcome"}
+{"ts": 1787260427.95, "event": "evidence_captured", "label": "business_MEMBER_NUMBER_NOT_EXACT", "screenshot": "evidence/meridian/14-member-number-not-exact/business_MEMBER_NUMBER_NOT_EXACT.png"}
+{"ts": 1787260427.95, "event": "replay_finished", "status": "business_outcome", "outputs": {}}
+{"ts": 1787260427.951, "event": "run_finished", "summary_path": "evidence/meridian/14-member-number-not-exact/summary.json"}

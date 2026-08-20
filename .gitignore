@@ -13,8 +13,28 @@ secrets/
 .pytest_cache/
 # transient test/service run outputs
 evidence/service/
+# Ad-hoc CLI run outputs. `replay` names its run directory after the capability
+# id, which always contains a dot (corebank.open_subaccount); the curated
+# scenarios in evidence/README.md are numbered (replay-01-success) and never do.
+# Without this, every demo command a reader runs lands in `git status` and the
+# curated evidence gets buried in timestamped debris.
+evidence/replay-*.*/
+evidence/**/replay-*.*/
+evidence/**/repairs/
+# Cross-run state written by runs, not evidence of one: a committed ledger would
+# silently spend a reader's velocity budget before they ran anything.
+evidence/**/*ledger*.jsonl
+evidence/*ledger*.jsonl
+evidence/repairs/
 .DS_Store
 .coverage
 .ruff_cache/
 _to_delete/
 bank-cua-technical-document.docx
+
+# Operator secrets. The .example file is the template; the real one never lands here.
+config/credentials.json
+
+# Console sign-ins. The .example file is the template; the real one never lands here.
+config/principals.json
+config/session.key

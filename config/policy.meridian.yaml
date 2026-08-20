@@ -1,0 +1,58 @@
+# Guardrails for MERIDIAN CORE (web-sample.interface-hiring.com).
+#
+# A separate file from config/policy.yaml rather than a widened one: the round-1
+# mock and this target are different institutions with different limits, and a
+# single policy that permits both would let an artifact recorded for one be
+# replayed against the other. Pointing at a new target is a --policy flag.
+
+allowed_url_patterns:
+  - "https://web-sample.interface-hiring.com/*"
+  - "https://web-sample.interface-hiring.com"
+
+blocked_url_patterns:
+  # Signing the operator out mid-flow would strand every subsequent step, and no
+  # recorded capability has any reason to reach it.
+  - "*/signoff*"
+  # The fault-injection control plane. An automation that can change the target's
+  # error behaviour can hide its own failures, so it is off limits to the agent
+  # even though it is reachable for a human operator.
+  - "*/settings*"
+
+allowed_action_types:
+  - navigate
+  - click
+  - fill
+  - select_option
+  - press_key
+  - wait_for
+  - extract
+  - assert_checkpoint
+
+# Irreversible steps (Post Transfer, Post Hold, Open Share) are blocked unless a
+# run is explicitly approved. Steps flagged requires_confirmation escalate to a
+# human instead -- which is how the supervisor override is satisfied.
+allow_risky: false
+require_confirmation_for_risky: true
+
+# Recovery is a retry; retrying a posted transfer posts it twice. MERIDIAN
+# injects transient 500s at a configurable rate, which makes this the difference
+# between "resilient" and "duplicates money under load".
+allow_recovery_on_risky_steps: false
+
+# Value-level policy. MERIDIAN's transfer and open-share flows both take an
+# `amount`/`deposit`, and the URL allowlist cannot tell $1 from $1M.
+value_rules:
+  amount:
+    max: 5000.00
+    dual_control_above: 1000.00
+    max_per_window: 10000.00
+    window_seconds: 3600
+    unit: " USD"
+  initial_deposit:
+    max: 5000.00
+    dual_control_above: 1000.00
+    unit: " USD"
+
+approvers:
+  - super1
+strict_approvers: true

@@ -123,10 +123,15 @@ def _build_assist_provider(args):
 
 def cmd_replay(args):
     art = _load_artifact(args.artifact)
+    # `art` is about to become the RUN-BOUND artifact -- rebased onto a tenant,
+    # with locator strings remapped. That object must never be written back to
+    # the shared file it came from, so the on-disk one is kept separately.
+    tenant_bound = None
     if getattr(args, "tenant", None):
         from .tenancy import TenantOverride, apply_overrides
         ov = TenantOverride.load(args.tenant)
         art = apply_overrides(art, ov)
+        tenant_bound = ov.tenant_id
         print(f"[replay] tenant override: {ov.tenant_id} -> {art.target.base_url}")
 
     # approval gate: unattended replay of an unapproved capability is refused
@@ -150,6 +155,13 @@ def cmd_replay(args):
               f"NOT be able to take control of the live session. Re-run with "
               f"--cdp-port 9222 to enable the operator console.")
 
+    # The velocity budget is memory, so it has to outlive the run that spends it.
+    # One ledger for the whole invocation (including every --repeat run), living
+    # beside the other cross-run state in evidence/, so a rolling-window ceiling
+    # is enforced across runs rather than being config nobody reads.
+    from .safety.ledger import Ledger
+    ledger = Ledger(os.path.join(args.evidence, "value_ledger.jsonl"))
+
     def one_run(tag=""):
         run_id = f"replay-{art.id}-{_ts()}{tag}"
         run_dir = os.path.join(args.evidence, run_id)
@@ -172,7 +184,8 @@ def cmd_replay(args):
                                   escalate_unrecoverable=getattr(
                                       args, "escalate_unrecoverable", False),
                                   initiator=getattr(args, "initiator", ""),
-                                  approver=getattr(args, "approver", ""))
+                                  approver=getattr(args, "approver", ""),
+                                  ledger=ledger)
             res = engine.run(art, params)
             # Drift is only meaningful as a trend, so every run contributes to the
             # history the repair loop reasons over.
@@ -207,9 +220,26 @@ def cmd_replay(args):
     print(f"[replay] STABILITY: {passes}/{repeat} success  pass_rate={rate:.2f}")
     print(f"[replay] statuses: {statuses}")
     if args.update_stability:
+        if tenant_bound:
+            # Two reasons, and either alone is enough. `art` is now the rebased
+            # object -- writing it back would silently replace the shared
+            # artifact's base_url, allowlist and remapped locator strings with
+            # one tenant's. And even a clean write would be wrong: a pass rate
+            # measured against Summit is not evidence about the capability, it is
+            # evidence about the capability ON SUMMIT, and the artifact has one
+            # field to hold it. Refuse rather than record a number under a label
+            # that misstates what was measured.
+            print(f"[replay] NOT writing stability: this run was bound to tenant "
+                  f"'{tenant_bound}', so the pass rate describes that tenant, not "
+                  f"the shared capability. Re-run without --tenant to record a "
+                  f"stability signal for {args.artifact}.")
+            return
         from .schema import StabilitySignal
-        art.stability = StabilitySignal(runs=repeat, passes=passes)
-        _save_artifact(args.artifact, art)
+        # reload from disk: `art` has been through a run and must not carry any
+        # run-time mutation back into the catalog.
+        on_disk = _load_artifact(args.artifact)
+        on_disk.stability = StabilitySignal(runs=repeat, passes=passes)
+        _save_artifact(args.artifact, on_disk)
         print(f"[replay] wrote stability to {args.artifact}")
 
 
@@ -240,12 +270,27 @@ def cmd_catalog(args):
         for name in sorted(SURFACES):
             print(portability_report(art, SURFACES[name], name).summary())
     elif args.action == "review":
-        art = cat.review_step(args.id, args.step, risk=args.risk, note=args.note)
+        confirm = None
+        if args.no_confirmation:
+            confirm = False
+        elif args.require_confirmation:
+            confirm = True
+        art = cat.review_step(args.id, args.step, risk=args.risk, note=args.note,
+                              requires_confirmation=confirm)
         st = next(x for x in art.steps if x.index == args.step)
         print(f"[catalog] '{args.id}' step {args.step} reviewed -> "
               f"{st.risk.value} ({st.risk_reason})")
         pending = cat.unreviewed_risky_steps(art)
         print(f"[catalog] risky steps still unreviewed: {pending or 'none'}")
+    elif args.action == "refresh-conditions":
+        targets = [args.id] if args.id else [a.id for a in cat.list()]
+        for cap_id in targets:
+            art, diff = cat.refresh_conditions(cap_id)
+            churn = ", ".join(f"{k}={v}" for k, v in diff.items() if v) or "no change"
+            print(f"[catalog] {cap_id} -> v{art.version} "
+                  f"[{art.approval_state.value}]  {churn}")
+        print("[catalog] refreshed capabilities are DRAFT; a human approves them "
+              "before unattended replay")
     elif args.action == "approve":
         try:
             cat.approve(args.id)
@@ -339,12 +384,94 @@ def cmd_repair(args):
 def cmd_serve(args):
     from .service import create_app
     app = create_app(catalog_dir=args.dir, policy_path=args.policy,
-                     evidence_dir=args.evidence)
+                     service_config_path=args.service_config,
+                     evidence_dir=args.evidence, cdp_port=args.cdp_port,
+                     handoff_timeout_s=args.handoff_timeout,
+                     require_session=args.require_session or None)
     print(f"[serve] capability API on http://{args.host}:{args.port}")
     print("  GET  /capabilities            list (agent manifest)")
     print("  GET  /capabilities/<id>       full contract")
-    print("  POST /invoke/<id>             {params, tenant?, allow_risky?}")
+    print("  GET  /operators               aliases + roles (never secrets)")
+    print("  POST /invoke/<id>             {params, operator}")
+    print("  GET  /runs, /runs/<id>        run history + evidence")
+    if args.require_session:
+        print("[serve] every invocation must carry a console session; the "
+              "operator alias comes from the sign-in, not the request")
+    print(f"[serve] authorisation from {args.service_config} "
+          f"(risk, approval and roles are server-side, never request-supplied)")
     app.run(host=args.host, port=args.port, threaded=True)
+
+
+def cmd_chat(args):
+    from .chat.app import create_app
+    app = create_app(api_url=args.api, router=_chat_router(args),
+                     default_operator=args.operator)
+    print(f"[chat] assistant on http://{args.host}:{args.port} -> API {args.api}")
+    app.run(host=args.host, port=args.port, threaded=True)
+
+
+def cmd_dashboard(args):
+    from .dashboard import create_app
+    app = create_app(catalog_dir=args.dir,
+                     evidence_dirs=tuple(args.evidence), api_url=args.api)
+    print(f"[dashboard] on http://{args.host}:{args.port}")
+    print(f"[dashboard] reading evidence from {list(args.evidence)} (read-only)")
+    app.run(host=args.host, port=args.port, threaded=True)
+
+
+def cmd_portal(args):
+    """The signed-in console: one origin, two tabs, one identity.
+
+    Starts the sign-in page with the dashboard and the assistant mounted behind
+    it. It does NOT start the capability API -- that is a separate process on
+    purpose, because the console is a client of it like any other, and running
+    them together would make it easy to believe the console has a private way in.
+    """
+    from .portal.app import create_app, init_files
+
+    if args.action == "init":
+        created = init_files(principals_path=args.principals,
+                             session_key_path=args.session_key)
+        print("[portal] " + ("created " + ", ".join(created) if created
+                             else "nothing to do; both files already exist"))
+        print(f"[portal] edit {args.principals} to change who may sign in; "
+              f"`portal hash <password>` prints a hash to paste in")
+        return
+    if args.action == "hash":
+        from .auth import hash_password
+        if not args.password:
+            print("[portal] usage: portal hash --password <password>")
+            return
+        print(hash_password(args.password))
+        return
+
+    init_files(principals_path=args.principals, session_key_path=args.session_key)
+    app = create_app(api_url=args.api, catalog_dir=args.dir,
+                     evidence_dirs=tuple(args.evidence),
+                     handoff_dir=args.handoffs,
+                     principals_path=args.principals,
+                     session_key_path=args.session_key,
+                     router=_chat_router(args))
+    print(f"[portal] console on http://{args.host}:{args.port} -> API {args.api}")
+    print(f"[portal] sign-ins from {args.principals}; roles and member scope are "
+          f"enforced by the API, not by the page")
+    print("[portal] start the API with --require-session so nothing reaches it "
+          "without a signed-in person behind it")
+    app.run(host=args.host, port=args.port, threaded=True)
+
+
+def _chat_router(args):
+    """The assistant's router, shared by `chat` and `portal`."""
+    from .chat.router import LLMRouter, RuleRouter
+    if getattr(args, "router", "rule") != "llm":
+        return RuleRouter()
+    try:
+        router = LLMRouter(model=getattr(args, "model", None))
+        print("[chat] routing with a live model over the published manifest")
+        return router
+    except Exception as ex:
+        print(f"[chat] no model router ({ex}); falling back to rule routing")
+        return RuleRouter()
 
 
 def cmd_codegen(args):
@@ -424,7 +551,7 @@ def build_parser():
     c = sub.add_parser("catalog", help="list / show / manifest / approve")
     c.add_argument("action",
                    choices=["list", "show", "manifest", "portability",
-                            "review", "approve"])
+                            "review", "approve", "refresh-conditions"])
     c.add_argument("--id")
     c.add_argument("--step", type=int,
                    help="step index to review (catalog review)")
@@ -432,6 +559,12 @@ def build_parser():
                    help="reclassify the step while reviewing it")
     c.add_argument("--note", default="",
                    help="reviewer's justification, recorded on the step")
+    c.add_argument("--no-confirmation", action="store_true",
+                   help="reviewed: this irreversible step may run in an "
+                        "explicitly approved unattended run, because other "
+                        "limits bound it. Recorded on the step.")
+    c.add_argument("--require-confirmation", action="store_true",
+                   help="reviewed: this step must always stop for a person")
     c.add_argument("--dir", default="capabilities")
     c.set_defaults(func=cmd_catalog)
 
@@ -462,10 +595,68 @@ def build_parser():
     s = sub.add_parser("serve", help="agent-facing capability API")
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8080)
-    s.add_argument("--dir", default="capabilities")
-    s.add_argument("--policy", default="config/policy.yaml")
+    s.add_argument("--dir", default="capabilities/meridian")
+    s.add_argument("--policy", default="config/policy.meridian.yaml")
+    s.add_argument("--service-config", default="config/service.yaml",
+                   help="server-side authorisation; never request-supplied")
     s.add_argument("--evidence", default="evidence/service")
+    s.add_argument("--cdp-port", type=int, default=9222,
+                   help="expose each run's browser here so an operator can take "
+                        "control of a paused session")
+    s.add_argument("--require-session", action="store_true",
+                   help="refuse invocations that carry no console sign-in; the "
+                        "role and member scope then come from the person, not "
+                        "from the request body")
+    s.add_argument("--handoff-timeout", type=float, default=90.0,
+                   help="seconds a gated run holds the live session open for a "
+                        "human before aborting")
     s.set_defaults(func=cmd_serve)
+
+    ch = sub.add_parser("chat", help="conversational front door over the API")
+    ch.add_argument("--host", default="127.0.0.1")
+    ch.add_argument("--port", type=int, default=8081)
+    ch.add_argument("--api", default="http://127.0.0.1:8080")
+    ch.add_argument("--router", choices=["rule", "llm"], default="rule",
+                    help="'llm' routes with a model over the published manifest; "
+                         "'rule' is deterministic and needs no key")
+    ch.add_argument("--model", default=None)
+    ch.add_argument("--operator", default="teller1",
+                    help="operator ALIAS to act as; the secret is resolved "
+                         "server-side and never reaches the chatbot")
+    ch.set_defaults(func=cmd_chat)
+
+    db = sub.add_parser("dashboard", help="watch capabilities, runs and evidence")
+    db.add_argument("--host", default="127.0.0.1")
+    db.add_argument("--port", type=int, default=8082)
+    db.add_argument("--dir", default="capabilities/meridian")
+    db.add_argument("--evidence", action="append",
+                    default=None, help="evidence root to read (repeatable)")
+    db.add_argument("--api", default="http://127.0.0.1:8080",
+                    help="capability API the dashboard invokes through; it is "
+                         "an ordinary client and gets no special treatment")
+    db.set_defaults(func=cmd_dashboard)
+
+    pt = sub.add_parser("portal", help="signed-in console: dashboard + assistant "
+                                       "behind one sign-in")
+    pt.add_argument("action", nargs="?", default="serve",
+                    choices=["serve", "init", "hash"],
+                    help="serve the console; init writes the sign-in files; "
+                         "hash prints a password hash to paste into them")
+    pt.add_argument("--host", default="127.0.0.1")
+    pt.add_argument("--port", type=int, default=8083)
+    pt.add_argument("--api", default="http://127.0.0.1:8080")
+    pt.add_argument("--dir", default="capabilities/meridian")
+    pt.add_argument("--evidence", action="append", default=None,
+                    help="evidence root to read (repeatable)")
+    pt.add_argument("--handoffs", default="evidence/handoffs")
+    pt.add_argument("--principals", default="config/principals.json",
+                    help="who may sign in; never holds a Meridian credential")
+    pt.add_argument("--session-key", default="config/session.key",
+                    help="HMAC key the console and the API both read")
+    pt.add_argument("--password", default=None, help="for `portal hash`")
+    pt.add_argument("--router", choices=["rule", "llm"], default="rule")
+    pt.add_argument("--model", default=None)
+    pt.set_defaults(func=cmd_portal)
 
     g = sub.add_parser("codegen", help="emit a runnable Playwright script from an artifact")
     g.add_argument("--artifact", required=True)
@@ -476,6 +667,9 @@ def build_parser():
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    if getattr(args, "cmd", None) in ("dashboard", "portal") and \
+            not getattr(args, "evidence", None):
+        args.evidence = ["evidence/service", "evidence/meridian"]
     args.func(args)
 
 

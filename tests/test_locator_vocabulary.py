@@ -32,6 +32,7 @@ PAGE = """
     <td><span class="bal">$1.00</span></td>
   </tr>
   <tr><td>User ID</td><td><input id="i3" type="text"></td></tr>
+  <tr><td>Savings</td><td>$4,213.55</td></tr>
   </table>
 </body></html>
 """
@@ -92,6 +93,34 @@ def test_coordinates_resolve_through_the_mouse_path(surface):
     resolved, _index = surface._resolve(loc)
     assert isinstance(resolved, str) and resolved.startswith("__coords__:")
     assert surface.click(loc).ok is True
+
+
+def test_near_label_resolves_a_read_only_value_not_only_a_control(surface):
+    """Adjacency has two shapes and a legacy form has both.
+
+    "The box next to 'User ID'" is writeable; "the amount next to 'Savings'" is
+    not. Both are the same recorded intent, and the non-DOM surface resolves
+    either, so this one must too -- otherwise every extract step silently
+    resolves one candidate further down its list on the surface it was recorded
+    on, and the primary strategy is decorative.
+    """
+    loc = Locator(description="probe:readonly",
+                  candidates=[LocatorCandidate(kind=LocatorKind.NEAR_LABEL,
+                                               value="Savings")])
+    resolved, index = surface._resolve(loc)
+    assert resolved is not None and index == 0
+    assert surface.read(loc).value == "$4,213.55"
+
+
+def test_near_label_still_prefers_the_control_when_the_row_has_one(surface):
+    """The read-only path must not cost us the writeable one: a row holding an
+    input still resolves to the input, so a fill targets the box and not the cell
+    around it."""
+    loc = Locator(description="probe:writeable",
+                  candidates=[LocatorCandidate(kind=LocatorKind.NEAR_LABEL,
+                                               value="User ID", role="textbox")])
+    assert surface.fill(loc, "operator").ok is True
+    assert surface.read(loc, "value").value == "operator"
 
 
 def test_first_resolvable_candidate_wins_and_reports_its_index(surface):

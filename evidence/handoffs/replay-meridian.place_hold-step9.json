@@ -1,0 +1,19 @@
+{
+  "id": "replay-meridian.place_hold-step9",
+  "kind": "risky_confirmation",
+  "reason": "irreversible step 'Apply the hold to the share' needs human confirmation",
+  "capability_id": "meridian.place_hold",
+  "goal": null,
+  "current_step_index": 9,
+  "state_url": "https://web-sample.interface-hiring.com/members/100234/hold/review",
+  "screenshot_path": "/private/var/folders/nv/dz8tm4350lgclymv90rnv90m0000gn/T/pytest-of-suryaprabhavgurram/pytest-45/test_a_request_cannot_grant_it0/ev/meridian.place_hold-20260820-111944-882/confirm_step09.png",
+  "dom_path": "/private/var/folders/nv/dz8tm4350lgclymv90rnv90m0000gn/T/pytest-of-suryaprabhavgurram/pytest-45/test_a_request_cannot_grant_it0/ev/meridian.place_hold-20260820-111944-882/confirm_step09.dom.html",
+  "cdp_endpoint": "http://127.0.0.1:9222",
+  "controller": "agent",
+  "status": "aborted",
+  "created_at": 1787249985.883401,
+  "resolved_at": null,
+  "resolution_note": "timed out after 90s waiting for a human reviewer",
+  "resume": true,
+  "human_actions": []
+}

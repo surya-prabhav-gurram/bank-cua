@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "reason": "Transfer completed successfully; confirmation number CN480129 was already extracted per history, and success condition is visible on screen.",
+  "outputs": {
+    "confirmation": "CN480129"
+  },
+  "num_steps": 15,
+  "artifact_path": "capabilities/meridian/meridian.transfer_funds.json"
+}

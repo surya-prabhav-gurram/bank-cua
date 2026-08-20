@@ -1,0 +1,12 @@
+{
+  "http_status": 403,
+  "note": "allow_risky was sent in the request body and ignored; authorisation is server-side in config/service.yaml",
+  "status": "refused",
+  "capability_id": "meridian.place_hold",
+  "outputs": {},
+  "refusal": {
+    "code": "OPERATOR_NOT_PERMITTED",
+    "requirement": "an operator on this capability's allow list (['super1'])",
+    "reason": "'teller1' is not permitted to invoke meridian.place_hold"
+  }
+}

@@ -1,0 +1,5 @@
+{"ts": 1787243325.636, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-15-velocity-limit"}
+{"ts": 1787243325.901, "event": "replay_started", "capability": "corebank.open_subaccount", "version": "1.0.0", "num_steps": 11, "params": {"member_id": "12345", "acct_type": "Money Market", "deposit": "900.00"}}
+{"ts": 1787243325.901, "event": "value_policy_block", "reason": "value policy: 'deposit' would take the trailing 3600s total to 5400 USD, over the permitted 5000 USD (4500 USD already spent)"}
+{"ts": 1787243325.901, "event": "replay_refused", "code": "VALUE_LIMIT_EXCEEDED", "requirement": "inputs within policy limits"}
+{"ts": 1787243325.92, "event": "run_finished", "summary_path": "evidence/replay-15-velocity-limit/summary.json"}

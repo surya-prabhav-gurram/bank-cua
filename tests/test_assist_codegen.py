@@ -90,3 +90,55 @@ def test_codegen_produces_valid_python():
     ast.parse(code)                       # must be syntactically valid
     assert "def run(" in code
     assert "get_by_role" in code or "locator(" in code
+
+
+def test_every_locator_kind_emits_a_distinct_expression():
+    """A kind with no case in `_loc_expr` falls through to `ctx.locator(value)`,
+    which Playwright reads as CSS. That does not raise, does not fail to parse,
+    and does not fail to import -- it produces a script that runs and silently
+    matches nothing until it times out. Asserting "it parses" cannot see that, so
+    assert the vocabulary is covered instead."""
+    from bankcua.codegen import _loc_expr
+    from bankcua.schema import Locator
+
+    fallthrough = set()
+    for kind in LocatorKind:
+        if kind == LocatorKind.COORDINATES:
+            continue                      # resolved by the mouse, not a query
+        if kind == LocatorKind.CSS:
+            continue                      # a bare ctx.locator() IS its correct form
+        loc = Locator(description="probe", candidates=[
+            LocatorCandidate(kind=kind, role="textbox", value="Probe Value")])
+        expr = _loc_expr(loc)
+        if expr == "ctx.locator('Probe Value')":
+            fallthrough.add(kind.value)
+    assert not fallthrough, (
+        f"kinds fall through to a bare CSS selector and would generate a script "
+        f"that silently matches nothing: {sorted(fallthrough)}")
+
+
+def test_generated_script_actually_runs(mock_app, tmp_path):
+    """The claim is a *runnable* export, so run it.
+
+    Parsing proves the generator emitted Python; only executing proves it emitted
+    the right selectors. The two came apart once already: every unlabelled-input
+    step compiled to `ctx.locator('User ID')`, a valid CSS query for a nonexistent
+    <User> element, and the script hung on its first fill."""
+    if not os.path.exists(ART):
+        pytest.skip("artifact missing")
+    art = CapabilityArtifact.from_json(open(ART).read())
+    art.target.base_url = mock_app
+    script = tmp_path / "generated_lookup.py"
+    script.write_text(generate_playwright_script(art))
+
+    import subprocess
+    import sys
+    proc = subprocess.run(
+        [sys.executable, str(script), "username=operator",
+         "password=password123", "member_id=12345"],
+        capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, f"generated script failed:\n{proc.stderr[-2000:]}"
+    import json
+    outputs = json.loads(proc.stdout)
+    assert outputs["member_name"] == "Jane A. Doe"
+    assert "4,213.55" in outputs["savings_balance"]

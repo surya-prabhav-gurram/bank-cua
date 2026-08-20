@@ -1,0 +1,69 @@
+{
+  "capability_id": "meridian.member_search",
+  "name": "Search members by last name",
+  "description": "Find member records by last name and return the candidate list. Selects nothing and changes nothing: with several matches, choosing one is the caller's decision, and acting on a guessed member is the worst error this system could make.",
+  "goal": "Sign on, open Member Inquiry, search by Last Name for {last_name}, and read the results list.",
+  "app_id": "meridian-core",
+  "surface_type": "web",
+  "base_url": "https://web-sample.interface-hiring.com",
+  "entry_path": "/signon",
+  "tenant_id": "interface-demo",
+  "vendor_product": "Meridian",
+  "version": "4.2.1",
+  "inputs": [
+    {
+      "name": "operator",
+      "type": "string",
+      "required": true,
+      "description": "Operator ID to sign on with (e.g. teller1, super1).",
+      "example": "teller1"
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "sensitive": true,
+      "description": "Operator password. Supplied at invocation and never persisted."
+    },
+    {
+      "name": "branch",
+      "type": "string",
+      "required": true,
+      "description": "Branch code to sign on against.",
+      "example": "MAIN-001"
+    },
+    {
+      "name": "last_name",
+      "type": "string",
+      "required": true,
+      "description": "Surname to search for.",
+      "example": "Turing"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "matches",
+      "type": "table",
+      "cardinality": "rows",
+      "columns": [
+        "Member No.",
+        "Name",
+        "Shares"
+      ],
+      "description": "Candidate member records; empty is a business outcome, not an error."
+    }
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "Member No.",
+    "description": "results list rendered"
+  },
+  "max_steps": 22,
+  "max_seconds": 300.0,
+  "param_values": {
+    "operator": "teller1",
+    "password": "password",
+    "branch": "MAIN-001",
+    "last_name": "Turing"
+  }
+}

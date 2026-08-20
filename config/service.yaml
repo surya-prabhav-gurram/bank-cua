@@ -1,0 +1,97 @@
+# Server-side authorisation for the capability API.
+#
+# Everything here was previously decided by the CALLER, in the request body. That
+# meant whoever could reach /invoke chose whether irreversible actions were
+# permitted, whether the approval gate applied, and which operator to act as --
+# so a chatbot driven by a language model was choosing whether to authorise a
+# funds transfer. Moving it here is the difference between a wrapper that
+# preserves the guardrails and one that routes around them.
+#
+# A caller sends an operator ALIAS and typed args. Nothing it sends is consulted
+# when deciding what it may do.
+
+# Used when a caller names no operator. A teller, deliberately: the least
+# privileged identity that can do useful work.
+default_operator: teller1
+
+# --- who is signed in ------------------------------------------------------
+# The console signs a person in and hands the API a signed session token. The
+# API re-resolves that token against the principal store on every call, so the
+# ROLE and the member scope are read here rather than claimed by the request.
+#
+# `require_session: false` keeps the direct agent path (an operator alias in the
+# body) working, which is how the CLI demos and any non-browser caller reach the
+# API. `python -m bankcua.cli portal` starts the API with --require-session, so
+# the browser stack always has a signed-in subject behind every invocation.
+require_session: false
+principals: config/principals.json
+session_key: config/session.key
+
+# `allowed_principal_roles` is the SIGN-IN half of authorisation and is separate
+# from `requires_role`, which is about the Meridian operator a run executes as.
+# Both apply. A member's work runs delegated as `default_operator`, so without
+# this a member sign-in would inherit a teller's whole action space; with it, a
+# member reaches only what is listed here, and only ever their own record --
+# `scope_params` in bankcua/auth.py binds every member-identifying argument to
+# the member number they signed in with.
+#
+# Unlisted capabilities default CLOSED to members (staff only), so a capability
+# nobody has thought about yet cannot become member-reachable by omission.
+
+capabilities:
+  meridian.signon:
+    # Staff only: it proves an OPERATOR credential works, which is not a thing a
+    # member has.
+    allowed_principal_roles: [supervisor, teller]
+    allow_unapproved: false         # the approval gate applies to reads too
+
+  meridian.member_search:
+    # Staff only. Searching the membership by surname is a directory lookup over
+    # other people's records; scoping it to one member would be meaningless, so it
+    # is refused for members rather than narrowed.
+    allowed_principal_roles: [supervisor, teller]
+    allow_unapproved: false
+
+  meridian.member_lookup:
+    # A member may read their OWN record here. member_id is filled in from the
+    # sign-in and a different one is refused, not rewritten.
+    allowed_principal_roles: [supervisor, teller, member]
+    allow_unapproved: false
+
+  meridian.transfer_funds:
+    # A member may move their own money BETWEEN THEIR OWN SHARES: both share ids
+    # must be prefixed with their member number, and the value policy below still
+    # applies -- over $1,000 needs an independent approver.
+    allowed_principal_roles: [supervisor, teller, member]
+    # Moves money. Permitted unattended ONLY because the value policy in
+    # config/policy.meridian.yaml still applies underneath: amounts over $1,000
+    # need an independent approver and over $5,000 are refused outright.
+    allow_risky: true
+    allow_unapproved: false
+
+  meridian.open_share:
+    allowed_principal_roles: [supervisor, teller]
+    allow_risky: true
+    allow_unapproved: false
+
+  meridian.update_member_info:
+    # Self-service contact details, bound to the member's own record.
+    allowed_principal_roles: [supervisor, teller, member]
+    allow_risky: true
+    allow_unapproved: false
+
+  meridian.place_hold:
+    # Supervisors only, on both halves: the sign-in must be a supervisor AND the
+    # Meridian operator must hold the supervisor role.
+    allowed_principal_roles: [supervisor]
+    # The host restricts this to supervisors. We refuse it here as well rather
+    # than driving a member's account up to a wall we already know is there --
+    # and, more importantly, so the boundary does not depend on the target
+    # remembering to enforce it.
+    requires_role: supervisor
+    allowed_operators: [super1]
+    # Deliberately NOT allow_risky. Applying a hold unattended is the one action
+    # on this target that should always stop for a person, so replay escalates
+    # and a supervisor completes it on the live session.
+    allow_risky: false
+    allow_unapproved: false

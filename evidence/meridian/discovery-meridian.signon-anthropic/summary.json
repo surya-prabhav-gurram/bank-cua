@@ -1,0 +1,7 @@
+{
+  "status": "success",
+  "reason": "Successfully signed on as teller1 at branch MAIN-001 and reached the Main Menu, confirmed by 'Signed on as J. TELLER (TELLER)' and 'OPR TELLER1 | BR MAIN-001'.",
+  "outputs": {},
+  "num_steps": 3,
+  "artifact_path": "capabilities/meridian/meridian.signon.json"
+}

@@ -40,6 +40,12 @@ class DecisionContext:
     history: str
     screenshot_path: Optional[str]
     step_index: int
+    #: The structured observation behind `observation_text`. Model-backed
+    #: providers ignore it -- an LLM is given the rendering, not our objects --
+    #: but a provider that resolves targets programmatically needs the refs, and
+    #: re-parsing them back out of the rendered text would be a parser nobody
+    #: should have to maintain.
+    observation: Optional[object] = None
 
 
 class LLMProvider:
@@ -128,6 +134,8 @@ class BridgeProvider(LLMProvider):
 
 
 def make_provider(kind: str, **kw) -> LLMProvider:
+    if kind == "scripted":
+        return ScriptedProvider(kw["steps"])
     if kind == "anthropic":
         return AnthropicProvider(**{k: v for k, v in kw.items()
                                     if k in ("model", "max_tokens")})
@@ -135,3 +143,71 @@ def make_provider(kind: str, **kw) -> LLMProvider:
         return BridgeProvider(kw["bridge_dir"],
                               timeout_s=kw.get("timeout_s", 1800.0))
     raise ValueError(f"unknown provider {kind}")
+
+
+class ScriptedProvider(LLMProvider):
+    """Replay a recorded decision trace, addressing controls semantically.
+
+    What this is, and what it is not
+    --------------------------------
+    This is the MOCKED LLM BOUNDARY for the Meridian capabilities. Round 1's
+    committed evidence is a genuine live Anthropic run (see
+    `evidence/discovery-*-anthropic-live/`); these recordings were produced
+    without an API key, so the decisions are supplied from a trace instead of
+    generated. Everything downstream of the decision is real: the same discovery
+    loop, the same live browser, the same locator synthesis, the same safety
+    pre-flight, the same compiler. What is mocked is only who chose the action.
+
+    Why targets are semantic rather than integer refs
+    -------------------------------------------------
+    `BridgeProvider` addresses elements by the integer `ref` from the
+    observation, which is what a model does. A hand-authored trace of integers is
+    a different thing: it is unreadable, it silently retargets when a page gains
+    a control, and a reviewer cannot tell whether `ref 7` was the intended
+    button. Naming the target ("the control beside 'Operator ID:'", "the button
+    called 'Post Transfer'") keeps the trace reviewable and makes a mis-record
+    fail loudly instead of clicking the wrong thing.
+
+    The seam is unchanged: this returns the same validated `DiscoveryAction` as
+    the Anthropic provider, so the loop cannot tell them apart.
+    """
+    name = "scripted"
+
+    def __init__(self, steps: list[dict]):
+        self.steps = steps
+
+    def decide(self, ctx: DecisionContext) -> DiscoveryAction:
+        if ctx.step_index >= len(self.steps):
+            return DiscoveryAction(action="finish", intent="trace exhausted",
+                                   success=True, reason="end of recorded trace")
+        spec = dict(self.steps[ctx.step_index])
+        target = spec.pop("target", None)
+        if target is not None:
+            spec["ref"] = self._resolve_ref(target, ctx)
+        return DiscoveryAction.model_validate(spec)
+
+    @staticmethod
+    def _resolve_ref(target: dict, ctx: DecisionContext) -> int:
+        obs = ctx.observation
+        if obs is None:
+            raise RuntimeError("scripted provider needs a structured observation")
+        want_name = target.get("name")
+        want_near = target.get("near_label")
+        want_readout = target.get("readout")
+
+        if want_readout is not None:
+            for r in obs.readouts:
+                if r.label.strip().rstrip(":") == want_readout.rstrip(":"):
+                    return r.ref
+            raise RuntimeError(
+                f"step {ctx.step_index}: no readout labelled {want_readout!r}; "
+                f"saw {[r.label for r in obs.readouts][:12]}")
+
+        for e in obs.elements:
+            if want_name is not None and (e.name or "").strip() == want_name:
+                return e.ref
+            if want_near is not None and (e.near_label or "").strip() == want_near:
+                return e.ref
+        raise RuntimeError(
+            f"step {ctx.step_index}: no element matching {target}; saw "
+            f"{[(e.ref, e.name or e.near_label) for e in obs.elements][:12]}")

@@ -1,12 +1,12 @@
-{"ts": 1787196599.177, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-14-second-surface-a11y"}
-{"ts": 1787196599.418, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "12345"}}
-{"ts": 1787196599.428, "event": "replay_navigated_entry", "entry": "/login"}
-{"ts": 1787196599.451, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided {username} credentials", "ok": true, "message": "typed into textbox: textbox", "candidate_index": 0}
-{"ts": 1787196599.516, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "typed into textbox: textbox", "candidate_index": 0}
-{"ts": 1787196599.571, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
-{"ts": 1787196599.61, "event": "step_executed", "index": 3, "action": "fill", "intent": "Enter the member ID {member_id} into the search field to search for the member's account", "ok": true, "message": "typed into textbox: textbox", "candidate_index": 0}
-{"ts": 1787196599.658, "event": "step_executed", "index": 4, "action": "click", "intent": "Submit the member search form to retrieve member {member_id}'s account information", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
-{"ts": 1787196599.716, "event": "step_executed", "index": 5, "action": "extract", "intent": "Extract the member's name as required by the goal", "ok": true, "message": "", "candidate_index": 0}
-{"ts": 1787196599.769, "event": "step_executed", "index": 6, "action": "extract", "intent": "Extract the savings balance as required by the goal. The balance is <savings_balance> which needs to be normalized to integer cents (<savings_balance>).", "ok": true, "message": "", "candidate_index": 0}
-{"ts": 1787196599.822, "event": "replay_finished", "status": "success", "outputs": {"member_name": "Jane A. Doe", "savings_balance": 421355}}
-{"ts": 1787196599.841, "event": "run_finished", "summary_path": "evidence/replay-14-second-surface-a11y/summary.json"}
+{"ts": 1787243324.924, "event": "run_started", "kind": "replay", "run_dir": "evidence/replay-14-second-surface-a11y"}
+{"ts": 1787243325.186, "event": "replay_started", "capability": "corebank.member_savings_lookup", "version": "1.0.0", "num_steps": 7, "params": {"member_id": "12345"}}
+{"ts": 1787243325.195, "event": "replay_navigated_entry", "entry": "/login"}
+{"ts": 1787243325.236, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill in the username field with the provided {username} credentials", "ok": true, "message": "typed into textbox: textbox", "candidate_index": 0}
+{"ts": 1787243325.295, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill in the password field to complete the login credentials", "ok": true, "message": "typed into textbox: textbox", "candidate_index": 0}
+{"ts": 1787243325.356, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on to the system by clicking the Sign On button after credentials have been filled in", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787243325.393, "event": "step_executed", "index": 3, "action": "fill", "intent": "Enter the member ID {member_id} into the search field to search for the member's account", "ok": true, "message": "typed into textbox: textbox", "candidate_index": 0}
+{"ts": 1787243325.442, "event": "step_executed", "index": 4, "action": "click", "intent": "Submit the member search form to retrieve member {member_id}'s account information", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787243325.501, "event": "step_executed", "index": 5, "action": "extract", "intent": "Extract the member's name as required by the goal", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787243325.557, "event": "step_executed", "index": 6, "action": "extract", "intent": "Extract the savings balance as required by the goal. The balance is <savings_balance> which needs to be normalized to integer cents (<savings_balance>).", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787243325.613, "event": "replay_finished", "status": "success", "outputs": {"member_name": "Jane A. Doe", "savings_balance": 421355}}
+{"ts": 1787243325.633, "event": "run_finished", "summary_path": "evidence/replay-14-second-surface-a11y/summary.json"}

@@ -1,0 +1,24 @@
+{
+  "status": "success",
+  "capability_id": "meridian.member_search",
+  "version": "1.0.0",
+  "outputs": {
+    "matches": [
+      {
+        "Member No.": "100987",
+        "Name": "Turing, Alan",
+        "Shares": "10",
+        "col3": "Select"
+      }
+    ]
+  },
+  "business_outcome": null,
+  "refusal": null,
+  "failure": null,
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 8,
+  "duration_s": 0.54
+}

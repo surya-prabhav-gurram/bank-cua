@@ -107,6 +107,21 @@ class ValueType(str, Enum):
     BOOLEAN = "boolean"
     MONEY = "money"      # normalised to cents on extract
     DATE = "date"
+    TABLE = "table"      # list[dict[str, str]] -- see Extraction.attribute
+
+
+class OutputCardinality(str, Enum):
+    """Whether a declared output holds one value or a set of rows.
+
+    Legacy consoles answer "what are this member's balances?" with a grid, not a
+    field: the row count varies per member, so no fixed number of scalar extract
+    steps can express it. Rather than return the grid as a text blob and make
+    every caller parse it -- which would abandon the typed contract that is the
+    artifact's whole point -- a TABLE output carries structured rows keyed by the
+    grid's own column headers.
+    """
+    SCALAR = "scalar"
+    ROWS = "rows"
 
 
 class ConditionClass(str, Enum):
@@ -206,10 +221,19 @@ class Checkpoint(BaseModel):
 
 
 class Extraction(BaseModel):
-    """Read a value out of the page into a declared output."""
+    """Read a value out of the page into a declared output.
+
+    `attribute` selects WHICH property of the resolved element to read, so
+    reading a grid rides that field rather than introducing a parallel extraction
+    path: "interpret this element as a table" is a perception concern, and
+    perception is the surface\'s job. A surface with no DOM implements the same
+    `attribute="table"` against whatever it does have (an a11y tree exposes
+    row/cell/columnheader roles), which is why this did not need a new
+    LocatorKind or a new step type.
+    """
     output: str = Field(description="Name of the OutputField this populates.")
     locator: Locator
-    attribute: Literal["text", "inner_text", "value", "href"] = "text"
+    attribute: Literal["text", "inner_text", "value", "href", "table"] = "text"
     transform: Optional[Literal["strip", "money_to_cents", "digits_only"]] = None
 
 
@@ -278,8 +302,24 @@ class Step(BaseModel):
 # Known runtime conditions (the error taxonomy, expressed declaratively)
 # ---------------------------------------------------------------------------
 class ConditionDetector(BaseModel):
-    kind: Literal["text_present", "url_matches", "http_status", "element_visible"]
+    """How a runtime state is recognised on screen.
+
+    `element_count_at_least` exists because some conditions are about HOW MANY,
+    not what. A member search that matches several records is a legitimate answer
+    -- "which of these did you mean?" -- and no amount of text matching can
+    distinguish it from a search that matched one, because the page says the same
+    things either way. `value` is the accessible NAME to count rather than a
+    selector, so each surface counts in its own terms and the condition stays
+    portable to one with no DOM.
+    """
+    kind: Literal["text_present", "text_absent", "url_matches", "http_status",
+                  "element_visible", "element_count_at_least"]
     value: str
+    min_count: int = Field(
+        default=2,
+        description="For element_count_at_least: how many matching elements "
+        "constitute the condition.",
+    )
     frame_path: list[str] = Field(default_factory=list)
 
 
@@ -293,6 +333,17 @@ class RecoveryAction(BaseModel):
 class KnownCondition(BaseModel):
     """A runtime state the flow anticipates, plus how to classify/handle it.
 
+    `applies_to_actions` exists because the same words on screen can mean two
+    different things depending on what the automation just did. MERIDIAN renders
+    "TRANSACTION REJECTED" both when a submitted form genuinely fails validation
+    -- a business outcome the caller must be told about -- and when its fault
+    injector fires on an ordinary page load, where it is a transient fault worth
+    retrying. Classifying purely on page text forces one answer for both, and
+    either choice is wrong half the time: retry a real rejection and the caller
+    is told the system broke, or report an injected blip as a business outcome
+    and the caller is told the bank refused a transaction that was never
+    submitted.
+
     Detection runs after each step (and on step failure). The first matching
     condition decides the outcome:
       * business_outcome -> stop, return {status: business_outcome, code}
@@ -304,6 +355,28 @@ class KnownCondition(BaseModel):
     detector: ConditionDetector
     message: str = ""
     recovery: Optional[RecoveryAction] = None
+    also_requires: list[ConditionDetector] = Field(
+        default_factory=list,
+        description="Further detectors that must ALL hold alongside `detector`. "
+        "Some states are only identifiable by two facts at once: 'we are on a "
+        "member record' AND 'it is not the member we asked for'. Either alone is "
+        "true on pages where the condition does not apply -- the second is "
+        "trivially true on any screen that does not show a member number, "
+        "including the very form the caller wanted.",
+    )
+    applies_to_actions: list[ActionType] = Field(
+        default_factory=list,
+        description="Restrict this condition to steps of these action types. "
+        "Empty means it applies after any step. Lets one page signature carry "
+        "two classifications -- see the class docstring.",
+    )
+    applies_to_urls: list[str] = Field(
+        default_factory=list,
+        description="Restrict this condition to pages whose URL contains one of "
+        "these. Empty means anywhere. Some conditions are only meaningful on a "
+        "particular screen -- 'the member number we asked for is not on this "
+        "page' says nothing on the main menu, where it is trivially true.",
+    )
     # Which output(s), if any, a business outcome should surface as structured data
     surfaces_outputs: bool = False
 
@@ -328,6 +401,13 @@ class OutputField(BaseModel):
     name: str
     type: ValueType = ValueType.STRING
     description: str = ""
+    cardinality: OutputCardinality = OutputCardinality.SCALAR
+    columns: list[str] = Field(
+        default_factory=list,
+        description="For cardinality=rows: the column names the caller can rely "
+        "on being present in every row. Declared rather than discovered so the "
+        "contract states its shape without anyone running it.",
+    )
 
 
 class Target(BaseModel):

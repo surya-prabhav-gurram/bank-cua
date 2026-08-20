@@ -1,0 +1,21 @@
+{"ts": 1787260448.345, "event": "run_started", "kind": "replay", "run_dir": "evidence/meridian/12-escalation-resolved"}
+{"ts": 1787260448.712, "event": "replay_started", "capability": "meridian.place_hold", "version": "1.0.0", "num_steps": 12, "params": {"operator": "super1", "branch": "MAIN-001", "member_id": "100987", "share_id": "100987-S0001-3", "reason_code": "LEGAL", "notes": "evidence scenario"}}
+{"ts": 1787260448.846, "event": "replay_navigated_entry", "entry": "/signon"}
+{"ts": 1787260448.876, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill operator ID", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260448.926, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill {password} field", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260449.02, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on with filled credentials", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787260449.1, "event": "step_executed", "index": 3, "action": "click", "intent": "Navigate to Place Account Hold screen", "ok": true, "message": "clicked link: Place Account Hold", "candidate_index": 0}
+{"ts": 1787260449.127, "event": "step_executed", "index": 4, "action": "fill", "intent": "Enter member number to search", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260449.266, "event": "step_executed", "index": 5, "action": "click", "intent": "Search for member {member_id}", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787260449.338, "event": "step_executed", "index": 6, "action": "click", "intent": "Select member {member_id} to proceed to hold placement", "ok": true, "message": "clicked link: Select", "candidate_index": 0}
+{"ts": 1787260449.369, "event": "step_executed", "index": 7, "action": "select_option", "intent": "Select share {member_id}-S0070 for hold", "ok": true, "message": "selected 100987-S0001-3", "candidate_index": 0}
+{"ts": 1787260449.385, "event": "step_executed", "index": 8, "action": "fill", "intent": "Enter notes {notes}", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260449.45, "event": "step_executed", "index": 9, "action": "click", "intent": "Continue to review the hold before applying", "ok": true, "message": "clicked button: Continue", "candidate_index": 0}
+{"ts": 1787260449.49, "event": "evidence_captured", "label": "confirm_step10", "screenshot": "evidence/meridian/12-escalation-resolved/confirm_step10.png", "dom": "evidence/meridian/12-escalation-resolved/confirm_step10.dom.html"}
+{"ts": 1787260449.49, "event": "escalation_raised", "id": "replay-meridian.place_hold-step10", "kind": "risky_confirmation", "reason": "irreversible step 'Apply the hold as required by the goal' needs human confirmation", "cdp_endpoint": "http://127.0.0.1:9223", "step": 10}
+{"ts": 1787260451.499, "event": "escalation_resolved", "id": "replay-meridian.place_hold-step10", "status": "resolved", "controller": "agent", "human_actions": [{"op": "note", "detail": "supervisor reviewed the hold and is applying it", "value": null, "ts": 1787260450.120193}, {"op": "click_selector", "detail": "input[type=submit]", "value": null, "ts": 1787260450.1923058}]}
+{"ts": 1787260451.499, "event": "confirmation_granted", "id": "replay-meridian.place_hold-step10", "note": "performed manually by supervisor"}
+{"ts": 1787260451.523, "event": "step_executed", "index": 11, "action": "extract", "intent": "Extract confirmation number for the applied hold", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787260451.552, "event": "evidence_captured", "label": "completed_after_intervention", "screenshot": "evidence/meridian/12-escalation-resolved/completed_after_intervention.png"}
+{"ts": 1787260451.553, "event": "replay_finished", "status": "success", "outputs": {"confirmation": "CN480131"}}
+{"ts": 1787260451.553, "event": "run_finished", "summary_path": "evidence/meridian/12-escalation-resolved/summary.json"}

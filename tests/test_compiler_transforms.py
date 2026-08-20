@@ -1,4 +1,4 @@
-from bankcua.replay.errors import apply_transform
+from bankcua.replay.transforms import apply_transform
 from bankcua.agent.compiler import _parameterise_url, _value_source
 
 
@@ -80,3 +80,46 @@ def test_intents_are_parameterised_and_secret_free():
     assert "421355" not in text              # ...and its transformed form
     assert "{username}" in text and "{member_id}" in text
     assert "<balance>" in text
+
+
+# ---- binding recorded values back to the parameters they came from ---------
+def test_a_decorated_option_label_still_binds_to_its_parameter():
+    """Legacy selects render "CODE - Description ($balance)".
+
+    A model choosing that option by label hands the compiler the whole decorated
+    string. Matching only exactly leaves it a literal -- and that literal embeds a
+    BALANCE, welding the step to one member's account at one moment. A real
+    recording carried `'100234-S0070 - Share Draft (Checking) ($232.55)'` and
+    could never replay.
+    """
+    from bankcua.agent.compiler import _value_source
+    params = {"member_id": "100234", "from_share": "100234-S0070"}
+    v = _value_source("100234-S0070 - Share Draft (Checking) ($232.55)",
+                      params, set())
+    assert v.kind == "param" and v.param == "from_share"
+
+
+def test_the_longest_matching_parameter_wins():
+    """"100234" is a prefix of the share label too; the share id is the better
+    binding and must not be stolen by the member number."""
+    from bankcua.agent.compiler import _value_source
+    params = {"member_id": "100234", "from_share": "100234-S0070"}
+    v = _value_source("100234-S0070 - Regular Shares", params, set())
+    assert v.param == "from_share"
+
+
+def test_a_prefix_must_end_on_a_boundary():
+    """"S0001" must not claim an option belonging to "S00013" -- on this target
+    those are two different member shares."""
+    from bankcua.agent.compiler import _value_source
+    v = _value_source("S00013 - Regular Shares", {"share": "S0001"}, set())
+    assert v.kind == "literal"
+
+
+def test_a_secret_is_never_bound_by_prefix():
+    """Prefix matching is a convenience for option labels. Applying it to a
+    credential could bind an unrelated string to a secret parameter, and a
+    secret must only ever match exactly."""
+    from bankcua.agent.compiler import _value_source
+    v = _value_source("password-ish text", {"password": "password"}, {"password"})
+    assert v.kind == "literal"

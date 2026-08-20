@@ -1,82 +1,89 @@
 """
-Curated, per-vendor libraries of KnownConditions (the error taxonomy, as data).
+Per-vendor runtime-condition libraries, loaded from data.
 
-Why this lives outside any single artifact: runtime conditions (not-found,
-permission denied, session timeout, maintenance interstitial, app error) are
-properties of the *vendor product*, not of one recorded flow or one tenant.
-Curating them once per vendor and attaching them to every artifact for that
-vendor is exactly the cross-tenant reuse the brief asks for -- one place to
-maintain "how Corebank signals a locked account," inherited by all tenants
-running Corebank. A tenant that brands the text differently supplies an override
-(see REPORT section 4); the code stays shared.
+Why this is a loader and not a Python literal
+---------------------------------------------
+How a vendor product signals "locked account" or "session gone" is a property of
+THAT PRODUCT -- not of one recorded flow, and not of one institution. Curating it
+once per vendor and inheriting it into every artifact for that vendor is the
+cross-tenant reuse the brief asks for: one place to maintain, one place to review.
 
-Classification follows the brief's three-way split:
-  business_outcome -> a legitimate result the caller must be told about
-  recoverable      -> handle in-band (dismiss/retry) then continue
-  hard_failure     -> stop and surface a debuggable error
+The first version held these as Python literals in this module. That was rejected
+once the audience became clear. The people best placed to say "Meridian signals a
+locked share like THIS" are the people who know the vendor's screens, not the
+people who know our replay engine -- and a taxonomy they cannot read is a taxonomy
+they cannot correct. Holding it as YAML also means adapting to a new vendor is a
+file, not a patch: the whole Meridian error taxonomy landed without recompiling
+anything, which is the load-bearing claim of the adaptation.
+
+The seam: swap `config/knowledge/<vendor>.yaml` and every artifact for that vendor
+inherits the new taxonomy, without touching the replay engine, the schema, or any
+recorded capability.
+
+Validation is Pydantic's, not ours: each entry is a `KnownCondition`, so a
+malformed detector or an unknown `klass` fails at load with a real error rather
+than silently degrading into a condition that never fires -- which is the failure
+mode that matters, because a detector that never matches is invisible.
 """
 from __future__ import annotations
 
-from .schema import (
-    ConditionClass,
-    ConditionDetector,
-    KnownCondition,
-    Locator,
-    LocatorCandidate,
-    LocatorKind,
-    RecoveryAction,
+import functools
+import os
+from typing import Optional
+
+import yaml
+
+from .schema import KnownCondition
+
+#: Where vendor libraries live. Overridable so tests can point at a fixture
+#: directory without mutating the repo's real taxonomy.
+KNOWLEDGE_DIR = os.environ.get(
+    "BANKCUA_KNOWLEDGE_DIR",
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                 "config", "knowledge"),
 )
 
-_CONTINUE_LINK = Locator(
-    description="maintenance 'Continue to application' link",
-    candidates=[LocatorCandidate(kind=LocatorKind.TEXT,
-                                 value="Continue to application",
-                                 reasoning="Stable link text on the gate page.")],
-)
 
-COREBANK_CONDITIONS: list[KnownCondition] = [
-    KnownCondition(
-        code="MEMBER_NOT_FOUND", klass=ConditionClass.BUSINESS_OUTCOME,
-        detector=ConditionDetector(kind="text_present", value="No member found"),
-        message="No member exists for the supplied ID.", surfaces_outputs=False),
-    KnownCondition(
-        code="PERMISSION_DENIED", klass=ConditionClass.BUSINESS_OUTCOME,
-        detector=ConditionDetector(kind="text_present", value="Access Denied"),
-        message="The signed-in user is not permitted to view this member/account.",
-        # Corebank's denial screen still identifies the member whose account was
-        # refused -- the caller needs that to route the request to someone with
-        # rights. "Not found" has nothing to give, so it stays False. Which of the
-        # two a condition is, is a property of the vendor's UI, so it is declared
-        # here rather than guessed at runtime.
-        surfaces_outputs=True),
-    KnownCondition(
-        code="VALIDATION_ERROR", klass=ConditionClass.BUSINESS_OUTCOME,
-        detector=ConditionDetector(kind="text_present", value="Validation error"),
-        message="The submitted input failed the application's validation."),
-    KnownCondition(
-        code="MAINTENANCE_INTERSTITIAL", klass=ConditionClass.RECOVERABLE,
-        detector=ConditionDetector(kind="text_present",
-                                   value="System Maintenance Notice"),
-        message="Unexpected maintenance gate; dismiss and continue.",
-        recovery=RecoveryAction(kind="click", target=_CONTINUE_LINK,
-                                max_attempts=1)),
-    KnownCondition(
-        code="APP_ERROR_500", klass=ConditionClass.RECOVERABLE,
-        detector=ConditionDetector(kind="text_present", value="Application Error"),
-        message="Transient application error; reload and retry.",
-        recovery=RecoveryAction(kind="reload", max_attempts=2, backoff_ms=1500)),
-    KnownCondition(
-        code="SESSION_TIMEOUT", klass=ConditionClass.HARD_FAILURE,
-        detector=ConditionDetector(kind="text_present", value="Session expired"),
-        message="Session timed out; re-authentication required (surfaced to caller)."),
-]
+class VendorLibraryError(ValueError):
+    """A vendor library exists but could not be read as a condition set.
 
-_LIBRARY = {"Corebank": COREBANK_CONDITIONS}
+    Raised rather than returning an empty list: a vendor whose taxonomy failed to
+    load would replay with NO condition detection at all, turning every business
+    outcome into an unexplained checkpoint failure. Failing loudly at load beats
+    discovering that on a member's account.
+    """
 
 
-def conditions_for(vendor_product: str | None) -> list[KnownCondition]:
+@functools.lru_cache(maxsize=None)
+def _load(vendor_key: str) -> tuple[KnownCondition, ...]:
+    path = os.path.join(KNOWLEDGE_DIR, f"{vendor_key}.yaml")
+    if not os.path.exists(path):
+        return ()
+    with open(path) as fh:
+        raw = yaml.safe_load(fh) or {}
+    try:
+        return tuple(KnownCondition.model_validate(c)
+                     for c in (raw.get("conditions") or []))
+    except Exception as ex:
+        raise VendorLibraryError(f"{path}: {ex}") from ex
+
+
+def available_vendors() -> list[str]:
+    """Vendor keys with a library on disk, for diagnostics and tests."""
+    if not os.path.isdir(KNOWLEDGE_DIR):
+        return []
+    return sorted(n[:-5] for n in os.listdir(KNOWLEDGE_DIR)
+                  if n.endswith(".yaml"))
+
+
+def conditions_for(vendor_product: Optional[str]) -> list[KnownCondition]:
+    """Conditions for a vendor, as fresh objects the caller may mutate.
+
+    Deep-copied on the way out because the cached tuple is shared by every
+    artifact for the vendor: a tenant override that remaps detector text must not
+    reach back and edit the library other tenants are inheriting.
+    """
     if not vendor_product:
         return []
-    # deep-copy via (de)serialise so callers can't mutate the shared library
     return [KnownCondition.model_validate(c.model_dump())
-            for c in _LIBRARY.get(vendor_product, [])]
+            for c in _load(vendor_product.strip().lower())]

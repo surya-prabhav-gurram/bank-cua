@@ -1,0 +1,449 @@
+{
+  "schema_version": 1,
+  "id": "meridian.signon",
+  "name": "Sign on to Meridian Core",
+  "description": "Authenticate an operator against Meridian Core and confirm a session can be established. Returns no data by design: capabilities are stateless, so a session cannot be handed to a later invocation, and the verdict -- success, or a typed business outcome such as a bad credential -- is the whole answer.",
+  "version": "1.0.3",
+  "target": {
+    "app_id": "meridian-core",
+    "surface_type": "web",
+    "base_url": "https://web-sample.interface-hiring.com",
+    "entry_path": "/signon",
+    "tenant_id": "interface-demo",
+    "vendor_product": "Meridian",
+    "version": "4.2.1",
+    "allowed_url_patterns": [
+      "https://web-sample.interface-hiring.com/*",
+      "https://web-sample.interface-hiring.com"
+    ]
+  },
+  "inputs": [
+    {
+      "name": "operator",
+      "type": "string",
+      "required": true,
+      "description": "Operator ID to sign on with (e.g. teller1, super1).",
+      "example": "teller1",
+      "sensitive": false
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "description": "Operator password. Supplied at invocation and never persisted.",
+      "example": null,
+      "sensitive": true
+    },
+    {
+      "name": "branch",
+      "type": "string",
+      "required": true,
+      "description": "Branch code to sign on against.",
+      "example": "MAIN-001",
+      "sensitive": false
+    }
+  ],
+  "outputs": [],
+  "steps": [
+    {
+      "index": 0,
+      "intent": "Enter operator ID",
+      "action": "fill",
+      "target": {
+        "description": "textbox: empty",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "near_label",
+            "value": "Operator ID:",
+            "role": "textbox",
+            "exact": false,
+            "reasoning": "Label-proximity: the control adjacent to 'Operator ID:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+          },
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Operator ID:\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "The same proximity bound to this DOM: the input in the row labelled 'Operator ID:'."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "param",
+        "literal": null,
+        "param": "operator"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "verify_value": true,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 1,
+      "intent": "Enter {password}",
+      "action": "fill",
+      "target": {
+        "description": "textbox: empty",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "near_label",
+            "value": "Password:",
+            "role": "textbox",
+            "exact": false,
+            "reasoning": "Label-proximity: the control adjacent to 'Password:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+          },
+          {
+            "kind": "xpath",
+            "value": "//tr[td[normalize-space(.)=\"Password:\"]]//input",
+            "role": null,
+            "exact": false,
+            "reasoning": "The same proximity bound to this DOM: the input in the row labelled 'Password:'."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": {
+        "kind": "secret_param",
+        "literal": null,
+        "param": "password"
+      },
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": null,
+      "checkpoint": null,
+      "verify_value": true,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    },
+    {
+      "index": 2,
+      "intent": "Sign on with {operator} credentials at {branch} branch",
+      "action": "click",
+      "target": {
+        "description": "button: Sign On",
+        "frame_path": [],
+        "candidates": [
+          {
+            "kind": "role",
+            "value": "Sign On",
+            "role": "button",
+            "exact": false,
+            "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+          },
+          {
+            "kind": "css",
+            "value": "table > tbody > tr:nth-of-type(4) > td:nth-of-type(2) > input",
+            "role": null,
+            "exact": false,
+            "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+          },
+          {
+            "kind": "xpath",
+            "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[4]/td[2]/input[1]",
+            "role": null,
+            "exact": false,
+            "reasoning": "Absolute XPath; final fallback."
+          }
+        ]
+      },
+      "value": null,
+      "select_by": "value",
+      "key": null,
+      "url_template": null,
+      "extract": null,
+      "wait": {
+        "strategy": "load",
+        "target": null,
+        "timeout_ms": 10000
+      },
+      "checkpoint": null,
+      "verify_value": false,
+      "risk": "safe",
+      "risk_reason": "",
+      "risk_reviewed": false,
+      "requires_confirmation": false
+    }
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "MAIN MENU",
+    "frame_path": [],
+    "description": "reached the main menu"
+  },
+  "known_conditions": [
+    {
+      "code": "INSUFFICIENT_FUNDS",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "Insufficient available balance",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The source share does not hold enough available balance.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "SOURCE_SHARE_ON_HOLD",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "Source share is HOLD",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The source share is restricted by a hold and cannot be debited.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "MEMBER_NOT_ON_FILE",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "RECORD NOT FOUND",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "No member record exists for the supplied member number.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "AMBIGUOUS_MEMBER_MATCH",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "element_count_at_least",
+        "value": "Select",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "Several member records matched. Supply the full member number, or search by last name to list the candidates.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [
+        "click",
+        "press_key"
+      ],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "MEMBER_NUMBER_NOT_EXACT",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_absent",
+        "value": "{member_id}",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "No member record exactly matches that number. The search matched on a partial number and landed on a different member, so nothing was read. Supply the full member number.",
+      "recovery": null,
+      "also_requires": [
+        {
+          "kind": "text_present",
+          "value": "MEMBER RECORD",
+          "min_count": 2,
+          "frame_path": []
+        }
+      ],
+      "applies_to_actions": [
+        "click"
+      ],
+      "applies_to_urls": [
+        "/members/"
+      ],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "NO_SEARCH_MATCHES",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "No member records matched",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The search returned no member records.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "SUPERVISOR_OVERRIDE_REQUIRED",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "is not authorized to perform this",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "This function requires a supervisor profile; a teller cannot complete it.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "TRANSACTION_REJECTED",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "TRANSACTION REJECTED",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The application rejected the transaction as entered.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [
+        "click",
+        "press_key"
+      ],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "INJECTED_FAULT",
+      "klass": "recoverable",
+      "detector": {
+        "kind": "text_present",
+        "value": "TRANSACTION REJECTED",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "Fault injected on a non-submitting step; retry.",
+      "recovery": {
+        "kind": "reload",
+        "target": null,
+        "max_attempts": 3,
+        "backoff_ms": 1500
+      },
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "MAINTENANCE_WINDOW",
+      "klass": "recoverable",
+      "detector": {
+        "kind": "text_present",
+        "value": "SCHEDULED MAINTENANCE IN PROGRESS",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "Host temporarily unavailable during batch posting; retry.",
+      "recovery": {
+        "kind": "reload",
+        "target": null,
+        "max_attempts": 3,
+        "backoff_ms": 2000
+      },
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "APPLICATION_ERROR",
+      "klass": "recoverable",
+      "detector": {
+        "kind": "text_present",
+        "value": "APPLICATION ERROR",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "Transient host error; reload and retry.",
+      "recovery": {
+        "kind": "reload",
+        "target": null,
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      },
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
+      "code": "SESSION_TIMED_OUT",
+      "klass": "hard_failure",
+      "detector": {
+        "kind": "text_present",
+        "value": "YOUR SESSION HAS TIMED OUT",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "Operator session expired mid-flow; re-authentication required.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    }
+  ],
+  "approval_state": "draft",
+  "provenance": {
+    "recorded_at": null,
+    "recorded_by": "anthropic",
+    "discovery_run_id": "discovery-meridian.signon-anthropic",
+    "transcript_ref": "evidence/meridian/discovery-meridian.signon-anthropic/transcript.json",
+    "transcript_sha256": "25986868b091478025fc4e9ac4e414e9ab771bb600ad1e82bdb611baa648c468",
+    "notes": "Compiled from a successful discovery run."
+  },
+  "stability": null
+}

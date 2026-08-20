@@ -1,0 +1,11 @@
+{"ts": 1787260436.247, "event": "run_started", "kind": "replay", "run_dir": "evidence/meridian/08-session-expired"}
+{"ts": 1787260436.642, "event": "replay_started", "capability": "meridian.member_lookup", "version": "1.0.0", "num_steps": 11, "params": {"operator": "teller1", "branch": "MAIN-001", "member_id": "100234"}}
+{"ts": 1787260436.769, "event": "replay_navigated_entry", "entry": "/signon"}
+{"ts": 1787260436.801, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill operator ID", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260436.852, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill {***REDACTED:password***} field", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260436.951, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on with filled credentials and branch", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787260436.974, "event": "condition_detected", "step": 2, "code": "SESSION_TIMED_OUT", "klass": "hard_failure"}
+{"ts": 1787260436.996, "event": "evidence_captured", "label": "hard_SESSION_TIMED_OUT", "screenshot": "evidence/meridian/08-session-expired/hard_SESSION_TIMED_OUT.png", "dom": "evidence/meridian/08-session-expired/hard_SESSION_TIMED_OUT.dom.html"}
+{"ts": 1787260436.996, "event": "hard_failure", "step": 2, "code": "SESSION_TIMED_OUT", "expected": "flow to proceed", "observed": "Operator session expired mid-flow; re-authentication required."}
+{"ts": 1787260436.996, "event": "replay_finished", "status": "failure", "outputs": {}}
+{"ts": 1787260436.997, "event": "run_finished", "summary_path": "evidence/meridian/08-session-expired/summary.json"}

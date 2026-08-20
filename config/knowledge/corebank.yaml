@@ -1,0 +1,57 @@
+# Corebank runtime-condition library.
+#
+# How a vendor product signals a runtime state is a property of THAT PRODUCT, not
+# of one recorded flow or one institution -- so it is curated once here and
+# inherited by every artifact for the vendor. A tenant that rebrands the wording
+# supplies a label_map rather than a fork of this file.
+#
+# klass drives replay's response and is the most consequential field in the repo:
+#   business_outcome -> stop, return {status, code}. A legitimate answer.
+#   recoverable      -> run `recovery`, re-scan, continue.
+#   hard_failure     -> stop, return a debuggable error.
+vendor: Corebank
+conditions:
+  - code: MEMBER_NOT_FOUND
+    klass: business_outcome
+    detector: {kind: text_present, value: "No member found"}
+    message: "No member exists for the supplied ID."
+    surfaces_outputs: false
+
+  - code: PERMISSION_DENIED
+    klass: business_outcome
+    detector: {kind: text_present, value: "Access Denied"}
+    message: "The signed-in user is not permitted to view this member/account."
+    # The denial screen still identifies the member whose account was refused --
+    # the caller needs that to route the request to someone with rights.
+    # "Not found" has nothing to give, so it stays false.
+    surfaces_outputs: true
+
+  - code: VALIDATION_ERROR
+    klass: business_outcome
+    detector: {kind: text_present, value: "Validation error"}
+    message: "The submitted input failed the application's validation."
+
+  - code: MAINTENANCE_INTERSTITIAL
+    klass: recoverable
+    detector: {kind: text_present, value: "System Maintenance Notice"}
+    message: "Unexpected maintenance gate; dismiss and continue."
+    recovery:
+      kind: click
+      max_attempts: 1
+      target:
+        description: "maintenance 'Continue to application' link"
+        candidates:
+          - kind: text
+            value: "Continue to application"
+            reasoning: "Stable link text on the gate page."
+
+  - code: APP_ERROR_500
+    klass: recoverable
+    detector: {kind: text_present, value: "Application Error"}
+    message: "Transient application error; reload and retry."
+    recovery: {kind: reload, max_attempts: 2, backoff_ms: 1500}
+
+  - code: SESSION_TIMEOUT
+    klass: hard_failure
+    detector: {kind: text_present, value: "Session expired"}
+    message: "Session timed out; re-authentication required (surfaced to caller)."

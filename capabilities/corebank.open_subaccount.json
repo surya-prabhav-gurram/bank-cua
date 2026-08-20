@@ -63,7 +63,9 @@
     {
       "name": "confirmation_number",
       "type": "string",
-      "description": "The new sub-account confirmation number."
+      "description": "The new sub-account confirmation number.",
+      "cardinality": "scalar",
+      "columns": []
     }
   ],
   "steps": [
@@ -610,8 +612,8 @@
       },
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "lexical: caption contains 'Confirm'; corroborated by POST form submission | reviewed: creates a real sub-account; irreversible. Confirmed. | reviewed: creates a real sub-account; irreversible",
-      "risk_reviewed": true,
+      "risk_reason": "lexical: caption contains 'Confirm'; corroborated by POST form submission",
+      "risk_reviewed": false,
       "requires_confirmation": true
     },
     {
@@ -677,10 +679,14 @@
       "detector": {
         "kind": "text_present",
         "value": "No member found",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "No member exists for the supplied ID.",
       "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": false
     },
     {
@@ -689,10 +695,14 @@
       "detector": {
         "kind": "text_present",
         "value": "Access Denied",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "The signed-in user is not permitted to view this member/account.",
       "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": true
     },
     {
@@ -701,10 +711,14 @@
       "detector": {
         "kind": "text_present",
         "value": "Validation error",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "The submitted input failed the application's validation.",
       "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": false
     },
     {
@@ -713,6 +727,7 @@
       "detector": {
         "kind": "text_present",
         "value": "System Maintenance Notice",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "Unexpected maintenance gate; dismiss and continue.",
@@ -734,6 +749,9 @@
         "max_attempts": 1,
         "backoff_ms": 1500
       },
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": false
     },
     {
@@ -742,6 +760,7 @@
       "detector": {
         "kind": "text_present",
         "value": "Application Error",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "Transient application error; reload and retry.",
@@ -751,6 +770,9 @@
         "max_attempts": 2,
         "backoff_ms": 1500
       },
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": false
     },
     {
@@ -759,21 +781,25 @@
       "detector": {
         "kind": "text_present",
         "value": "Session expired",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "Session timed out; re-authentication required (surfaced to caller).",
       "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "approved",
+  "approval_state": "draft",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",
     "discovery_run_id": "discovery-corebank.open_subaccount-20260813-184404",
-    "transcript_ref": "evidence/discovery-corebank.open_subaccount-20260813-184404/transcript.json",
-    "transcript_sha256": "658fee9201557baea49599e73720ba1940f1862112159dd4c41e3b090545832e",
-    "notes": "Compiled from a successful discovery run."
+    "transcript_ref": "evidence/discovery-open_subaccount-anthropic-live/transcript.json",
+    "transcript_sha256": "ce2e0b367152b71d551786558939179a0f28c1736fdf09f4344020a73bdf034f",
+    "notes": "Compiled from a successful discovery run. The evidence directory was renamed after compilation (discovery-<id>-<ts>/ -> discovery-<goal>-anthropic-live/) and the transcript was subsequently re-redacted under the hardened redactor, so transcript_ref and transcript_sha256 were repointed and recomputed against the shipped file. Run identity is unchanged and independently checkable: run.jsonl records the original run_dir and summary.json records this artifact as its output."
   },
   "stability": null
 }

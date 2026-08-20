@@ -29,7 +29,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from ..knowledge import conditions_for
-from ..replay.errors import apply_transform
+from ..replay.transforms import apply_transform
 from ..safety.redaction import redact_mapping
 from ..schema import (
     ActionType,
@@ -64,12 +64,36 @@ def _parameterise_url(url_or_path: str, param_values: dict, secret: set) -> str:
 
 def _value_source(raw: Optional[str], param_values: dict,
                   secret: set) -> ValueSource:
+    """Bind a recorded value to the parameter it came from, or keep it literal.
+
+    Exact match first. Then a PREFIX match, because legacy selects render
+    "CODE - Long Description ($1,234.56)" while the parameter is the bare code:
+    a model choosing that option by its label hands us the whole decorated
+    string. Matching only exactly leaves it as a literal -- and that literal
+    contains a BALANCE, so the step is welded to one member's account at one
+    moment and can never replay. Found exactly that way: a recorded transfer
+    carried `'100234-S0070 - Share Draft (Checking) ($232.55)'`.
+
+    The boundary check and longest-first ordering are what keep this honest:
+    "100234" must not claim a label belonging to `from_share`, and a bare prefix
+    with no separator after it is a coincidence rather than a code.
+    """
     if raw is None:
         return ValueSource(kind="literal", literal="")
     for name, val in param_values.items():
         if val is not None and str(val) == raw:
             kind = "secret_param" if name in secret else "param"
             return ValueSource(kind=kind, param=name)
+    for name, val in sorted(param_values.items(),
+                            key=lambda kv: len(str(kv[1] or "")), reverse=True):
+        if name in secret or val is None:
+            continue
+        text = str(val)
+        if len(text) < 3 or not raw.startswith(text):
+            continue
+        if len(raw) > len(text) and raw[len(text)].isalnum():
+            continue          # "S0001" must not claim "S00013..."
+        return ValueSource(kind="param", param=name)
     return ValueSource(kind="literal", literal=raw)
 
 
@@ -90,6 +114,18 @@ def compile_artifact(task: DiscoveryTask, result: DiscoveryResult,
     output_types = {o.name: o.type for o in task.outputs}
 
     tx = result.transcript
+    # The invariant this whole design rests on: every recorded step already
+    # worked once, against the same locators replay will use. Enforced here as
+    # well as in the loop, because an artifact that quietly contains a step which
+    # has never succeeded is indistinguishable from a good one until it is
+    # replayed against a member's account.
+    broken = [(r.index, r.action_kind, r.message[:80]) for r in tx if not r.ok]
+    if broken:
+        raise ValueError(
+            f"refusing to compile {task.capability_id}: the transcript contains "
+            f"steps that did not succeed {broken}. A capability must describe a "
+            f"flow that worked.")
+
     steps: list[Step] = []
     seen_outputs: set[str] = set()
     for k, rec in enumerate(tx):

@@ -1,0 +1,21 @@
+{
+  "status": "refused",
+  "capability_id": "corebank.open_subaccount",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": null,
+  "refusal": {
+    "code": "VALUE_LIMIT_EXCEEDED",
+    "requirement": "inputs within policy limits",
+    "reason": "value policy: 'deposit' would take the trailing 3600s total to 5400 USD, over the permitted 5000 USD (4500 USD already spent)",
+    "step_index": null,
+    "evidence": {}
+  },
+  "failure": null,
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 0,
+  "duration_s": 0.0
+}

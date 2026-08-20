@@ -25,8 +25,25 @@ def _fmt(text: str) -> str:
 
 def _loc_expr(loc: Locator) -> str:
     """Translate the primary locator candidate into a Playwright expression on
-    a `ctx` (page or frame)."""
+    a `ctx` (page or frame).
+
+    Every kind needs a case. The fall-through emits `ctx.locator(value)`, which
+    Playwright reads as CSS -- so a kind with no case here does not fail loudly:
+    it generates a script that imports, compiles, runs, and then silently matches
+    nothing until it times out. That is the worst failure shape available, and it
+    is why tests/test_assist_codegen.py asserts every declared kind emits a
+    resolvable expression rather than trusting this function to stay complete.
+    """
     c = loc.candidates[0]
+    if c.kind == LocatorKind.NEAR_LABEL:
+        # There is no `get_by_near_label`: proximity is a statement of intent that
+        # each surface resolves in its own terms. Bind it to this DOM the way the
+        # web surface does -- the control in the labelled row, or failing that the
+        # row's value cell. Emitted as a call to a helper in the generated
+        # preamble rather than inline: the inline XPath is ~200 characters, and a
+        # script nobody can read is not the reviewable export this module claims
+        # to produce.
+        return f'_near(ctx, {c.value!r})'
     if c.kind == LocatorKind.ROLE:
         return f'ctx.get_by_role({c.role!r}, name={c.value!r})'
     if c.kind == LocatorKind.LABEL:
@@ -35,8 +52,17 @@ def _loc_expr(loc: Locator) -> str:
         return f'ctx.get_by_placeholder({c.value!r})'
     if c.kind == LocatorKind.TEXT:
         return f'ctx.get_by_text({c.value!r})'
+    if c.kind == LocatorKind.ALT_TEXT:
+        return f'ctx.get_by_alt_text({c.value!r})'
+    if c.kind == LocatorKind.TITLE:
+        return f'ctx.get_by_title({c.value!r})'
+    if c.kind == LocatorKind.TEST_ID:
+        return f'ctx.get_by_test_id({c.value!r})'
     if c.kind == LocatorKind.XPATH:
         return f'ctx.locator("xpath=" + {c.value!r})'
+    # CSS is the only kind whose correct emission IS a bare `ctx.locator(value)`.
+    # Reaching here with anything else means the vocabulary grew and this
+    # function did not; the completeness test is what catches that.
     return f'ctx.locator({c.value!r})'
 
 
@@ -69,6 +95,22 @@ def generate_playwright_script(art: CapabilityArtifact) -> str:
     a("        if f.name == ident or ident in (f.url or ''):")
     a("            return f")
     a("    return page")
+    a("")
+    a("")
+    a("def _near(ctx, label):")
+    a('    """The thing adjacent to `label` in this legacy table layout: the form')
+    a("    control in the labelled row, or -- when the row holds no control, which")
+    a("    is what a read-only value looks like -- that row's value cell.")
+    a("")
+    a("    The two branches are mutually exclusive rather than a union: a union")
+    a("    matches the cell AND the input inside it, and .first takes document")
+    a("    order, so a fill would type into the <td>.")
+    a('    """')
+    a("    row = '//tr[td[normalize-space(.)=\"%s\"]]' % label")
+    a("    control = row + '//*[self::input or self::select or self::textarea]'")
+    a("    cell = ('//tr[td[normalize-space(.)=\"%s\"] and '")
+    a("            'not(.//input or .//select or .//textarea)]/td[last()]' % label)")
+    a("    return ctx.locator('xpath=' + control + ' | ' + cell)")
     a("")
     a("")
     a(f"def run({inputs}) -> dict:")

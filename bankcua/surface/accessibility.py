@@ -40,12 +40,20 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 
 from ..schema import Checkpoint, ConditionDetector, Locator, LocatorKind
+from ..replay.matching import text_match, url_match
 from .base import ActResult, ElementInfo, Observation, ReadField, Surface
 
 # Roles we treat as operable controls, in accessibility-tree terms.
 _INTERACTIVE = {"button", "textbox", "link", "combobox", "checkbox", "radio",
                 "searchbox", "menuitem", "tab", "switch", "spinbutton"}
-_TEXT_ROLES = {"StaticText", "text", "heading", "paragraph", "cell", "LabelText"}
+_TEXT_ROLES = {"StaticText", "text", "heading", "paragraph", "cell", "LabelText",
+               "columnheader", "rowheader", "gridcell"}
+#: Grid CONTAINER roles. An accessibility tree emits a cell and, nested inside
+#: it, the StaticText that renders its contents -- so every value appears twice
+#: at nearly the same coordinates. Reading containers rather than their text
+#: children is what a real AX grid reader does, and it also merges a multi-node
+#: cell ("HOLD" + a "[HOLD]" badge) into the single value a person sees.
+_CELL_ROLES = {"cell", "gridcell", "columnheader", "rowheader"}
 
 
 class _AXNode:
@@ -421,10 +429,89 @@ class AccessibilitySurface(Surface):
         except Exception as ex:
             return ActResult(ok=False, message=f"press failed: {ex}")
 
+    def _read_table(self, anchor, idx) -> ActResult:
+        """Reconstruct a grid from cell geometry rather than from markup.
+
+        There is no <table> here to ask -- only nodes with roles and bounds. So
+        rows are recovered the way a person recovers them: cells sharing a
+        baseline are one row, and which COLUMN a cell belongs to is decided by
+        where it sits horizontally relative to the header cells. This is the same
+        reconstruction a UIA/AX driver performs on a desktop grid, which is why
+        it is done this way rather than reaching for a DOM the surface lacks.
+
+        Two things this gets right that counting cells does not, both found
+        against the live target:
+          * A status cell rendered as two nodes ("HOLD" plus a "[HOLD]" badge)
+            makes its band WIDER than the header. Counting cells drops that row
+            entirely -- silently losing the one member state anybody cares about.
+            Position-mapping merges both nodes into the Status column.
+          * The screen's footer function-key bar happens to have the same number
+            of items as the grid has columns. Counting cells adopts it as data.
+            A vertical-gap bound stops the read at the end of the grid instead.
+        """
+        below = [n for n in self._ax_nodes()
+                 if n.role in _TEXT_ROLES and (n.name or "").strip()
+                 and n.cy >= anchor.cy - 2]
+        # Prefer containers; fall back to raw text only if this tree emits no
+        # cell roles at all, which some applications genuinely do.
+        cells = [n for n in below if n.role in _CELL_ROLES] or below
+        if not cells:
+            return ActResult(ok=False, candidate_index=idx,
+                             message="no cell nodes at or below the anchor")
+
+        bands: list[list] = []
+        for n in sorted(cells, key=lambda c: (c.cy, c.x)):
+            if bands and abs(n.cy - bands[-1][0].cy) <= max(n.h, bands[-1][0].h) / 2:
+                bands[-1].append(n)
+            else:
+                bands.append([n])
+
+        head_i, header = next(
+            ((i, sorted(b, key=lambda c: c.x)) for i, b in enumerate(bands)
+             if len(b) > 1), (None, None))
+        if header is None:
+            return ActResult(ok=False, candidate_index=idx,
+                             message="no multi-column band to use as a header")
+        names = [c.name.strip() or f"col{i}" for i, c in enumerate(header)]
+        bounds = [c.x for c in header]
+
+        def column_of(node) -> int:
+            """Index of the header cell this node sits under."""
+            best, best_d = 0, abs(node.x - bounds[0])
+            for i, bx in enumerate(bounds):
+                if abs(node.x - bx) < best_d:
+                    best, best_d = i, abs(node.x - bx)
+            return best
+
+        row_h = max((c.h for c in header), default=12)
+        rows, prev_cy = [], header[0].cy
+        for band in bands[head_i + 1:]:
+            cy = band[0].cy
+            # A grid's rows are tightly stacked. A jump means the grid ended and
+            # whatever follows -- actions, footer, key bar -- is a different
+            # region that must not be read as data.
+            if cy - prev_cy > row_h * 3:
+                break
+            cols: dict[int, list[str]] = {}
+            for n in sorted(band, key=lambda c: c.x):
+                cols.setdefault(column_of(n), []).append(n.name.strip())
+            if len(cols) < 2:
+                break
+            rows.append({names[i]: " ".join(cols.get(i, [])) for i in range(len(names))})
+            prev_cy = cy
+
+        if not rows:
+            return ActResult(ok=False, candidate_index=idx,
+                             message="header found but no data rows beneath it")
+        return ActResult(ok=True, rows=rows, value=str(len(rows)),
+                         candidate_index=idx)
+
     def read(self, locator: Locator, attribute: str = "text") -> ActResult:
         node, idx = self._resolve(locator)
         if node is None or isinstance(node, str):
             return ActResult(ok=False, message=f"no a11y node for {locator.description}")
+        if attribute == "table":
+            return self._read_table(node, idx)
         # An a11y node carries both a name (what it is called) and a value (what
         # it holds). A read asking for "value" prefers the latter; anything else
         # is asking what the control says, which is the name. Either falls back to
@@ -439,25 +526,30 @@ class AccessibilitySurface(Surface):
 
     def check(self, cp: Checkpoint) -> bool:
         if cp.kind == "url_matches":
-            return cp.value in self.current_url()
+            return url_match(cp.value, self.current_url())
         if cp.kind == "http_status_lt":
             try:
                 return (self._last_status or 0) < int(cp.value)
             except Exception:
                 return False
         if cp.kind == "text_present":
-            return cp.value in self._all_text()
+            return text_match(cp.value, self._all_text())
         if cp.kind == "text_absent":
-            return cp.value not in self._all_text()
+            return not text_match(cp.value, self._all_text())
         if cp.kind == "element_visible":
             return any(n.name == cp.value for n in self._ax_nodes())
         return False
 
     def detect(self, d: ConditionDetector) -> bool:
+        if d.kind == "element_count_at_least":
+            return sum(1 for n in self._ax_nodes()
+                       if n.name.strip() == d.value) >= d.min_count
         if d.kind == "text_present":
-            return d.value in self._all_text()
+            return text_match(d.value, self._all_text())
+        if d.kind == "text_absent":
+            return not text_match(d.value, self._all_text())
         if d.kind == "url_matches":
-            return d.value in self.current_url()
+            return url_match(d.value, self.current_url())
         if d.kind == "http_status":
             return str(self._last_status) == str(d.value)
         if d.kind == "element_visible":

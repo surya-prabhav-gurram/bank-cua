@@ -98,6 +98,17 @@ def resolve_placeholders(text: Optional[str], param_values: dict) -> Optional[st
     return out
 
 
+#: Malformed model actions tolerated before the run is escalated. Two chances to
+#: correct a bad tool call; a third means the model cannot see what it needs.
+_MAX_INVALID_ACTIONS = 2
+
+
+#: Identical (url, action, target) signatures in a row before the loop calls it
+#: a dead end. Four tolerates a legitimate retry or two without letting a spin
+#: run to the step limit.
+_STUCK_ATTEMPTS = 4
+
+
 _ACTION_TO_TYPE = {
     "navigate": ActionType.NAVIGATE, "click": ActionType.CLICK,
     "fill": ActionType.FILL, "select": ActionType.SELECT,
@@ -168,7 +179,8 @@ class DiscoveryLoop:
         self.logger.event("discovery_started", goal=goal,
                           provider=self.provider.name, entry=task.entry_path)
 
-        stuck_urls: list[str] = []
+        stuck_urls: list[tuple] = []
+        invalid_actions = 0
         deadline = time.time() + task.max_seconds
 
         for i in range(task.max_steps):
@@ -190,7 +202,7 @@ class DiscoveryLoop:
                 goal=goal, inputs_hint=inputs_hint, outputs_hint=outputs_hint,
                 observation_text=obs.render_for_model(),
                 history="\n".join(history[-6:]),
-                screenshot_path=shot, step_index=i)
+                screenshot_path=shot, step_index=i, observation=obs)
             action = self.provider.decide(ctx)
             self.logger.event("model_decided", step=i,
                               action=action.action, intent=action.intent,
@@ -225,14 +237,36 @@ class DiscoveryLoop:
                         loc = rf.locator
             risk, risk_reason = classify_risk(elem, action.action)
 
-            # ---- unresolvable target -> escalate ----------------------
+            # ---- unresolvable target -> correct, then retry -------------
+            # A malformed action is not a dead end. Aborting a ten-step run
+            # because one tool call omitted a ref throws away everything that
+            # already worked, and the model can usually fix it when told what
+            # went wrong -- a live run lost a complete member lookup this way,
+            # having already extracted three of four outputs.
+            #
+            # Bounded, because a model that cannot supply a valid target after
+            # being told twice is genuinely stuck, and looping against a bank's
+            # UI is worse than stopping.
             if action.action in ("click", "fill", "select", "extract") and loc is None:
-                iid = self._escalate(
-                    task, i, f"unresolvable target (ref {action.ref})", obs)
-                return DiscoveryResult(status="escalated",
-                                       reason=f"unresolvable target (ref {action.ref})",
-                                       transcript=transcript, outputs=outputs,
-                                       intervention_id=iid)
+                invalid_actions += 1
+                if invalid_actions > _MAX_INVALID_ACTIONS:
+                    iid = self._escalate(
+                        task, i, f"unresolvable target (ref {action.ref})", obs)
+                    return DiscoveryResult(
+                        status="escalated",
+                        reason=f"unresolvable target (ref {action.ref})",
+                        transcript=transcript, outputs=outputs,
+                        intervention_id=iid)
+                hint = ("no ref was supplied" if action.ref is None
+                        else f"ref {action.ref} is not in this observation")
+                self.logger.event("invalid_action", step=i, action=action.action,
+                                  ref=action.ref, reason=hint)
+                history.append(
+                    f"[{i}] {action.action} REJECTED: {hint}. Choose a ref from "
+                    f"the INTERACTIVE ELEMENTS or READABLE FIELDS list above. "
+                    f"To read a grid, use the ref of its FIRST COLUMN HEADER "
+                    f"with attribute='table'.")
+                continue
 
             # ---- safety pre-flight ------------------------------------
             target_url = (action.url if action.action == "navigate"
@@ -289,18 +323,63 @@ class DiscoveryLoop:
 
             rec.ok, rec.message = res.ok, res.message
             rec.candidate_index = res.candidate_index
-            transcript.append(rec)
             self.logger.event("action_executed", step=i, kind=action.action,
                               ok=res.ok, message=res.message,
                               candidate_index=res.candidate_index)
-            history.append(f"[{i}] {action.action} ({action.intent}) -> "
-                           f"{'ok' if res.ok else 'FAIL: ' + res.message}")
+
+            if not res.ok:
+                # A FAILED action must never reach the transcript. The compiler
+                # turns the transcript into an artifact, and an artifact is
+                # supposed to be a flow that already worked once -- that is the
+                # whole reason discovery acts through the same locators replay
+                # will use. Recording a failed step breaks that silently: a
+                # scripted run once compiled a `select` that had timed out, then
+                # reported SUCCESS because the final checkpoint happened to pass
+                # anyway. The capability shipped containing a step that had never
+                # worked.
+                #
+                # So: tell the model what went wrong and let it try something
+                # else, bounded. Failures here are usually a wrong option value
+                # or a control that is not ready, and both are correctable.
+                invalid_actions += 1
+                if invalid_actions > _MAX_INVALID_ACTIONS:
+                    iid = self._escalate(
+                        task, i, f"action kept failing: {res.message}", obs)
+                    return DiscoveryResult(
+                        status="escalated",
+                        reason=f"action failed: {res.message[:120]}",
+                        transcript=transcript, outputs=outputs,
+                        intervention_id=iid)
+                history.append(
+                    f"[{i}] {action.action} FAILED: {res.message[:160]}. That "
+                    f"action did not work -- do not repeat it unchanged. If this "
+                    f"was a select, the option you named may not exist; the "
+                    f"observation shows the currently selected option.")
+                continue
+
+            transcript.append(rec)
+            history.append(f"[{i}] {action.action} ({action.intent}) -> ok")
 
             # ---- stuck detection --------------------------------------
-            stuck_urls.append(self.surface.current_url())
-            if len(stuck_urls) >= 4 and len(set(stuck_urls[-4:])) == 1 \
-                    and action.action != "extract":
-                iid = self._escalate(task, i, "no navigation progress in 4 steps", obs)
+            # Repetition, not stillness. The earlier rule escalated whenever four
+            # steps shared a URL, which treats filling a five-field form as a
+            # dead end -- every Meridian flow with a wide form escalated instead
+            # of recording. But dropping the guard for non-navigating actions
+            # would let a model fill one field forever.
+            #
+            # Both are the same question asked properly: is this step
+            # distinguishable from the last few? A signature of
+            # (url, action, target) repeats when a control does nothing and when
+            # a model spins on one field, and differs across the fields of a form
+            # -- which is what progress across a form actually looks like.
+            signature = (self.surface.current_url(), action.action, action.ref)
+            stuck_urls.append(signature)
+            if len(stuck_urls) >= _STUCK_ATTEMPTS and \
+                    len(set(stuck_urls[-_STUCK_ATTEMPTS:])) == 1:
+                iid = self._escalate(
+                    task, i,
+                    f"no progress: the same action repeated on the same target "
+                    f"{_STUCK_ATTEMPTS} times", obs)
                 return DiscoveryResult(status="escalated",
                                        reason="stuck: no progress",
                                        transcript=transcript, outputs=outputs,

@@ -1,0 +1,51 @@
+{
+  "status": "success",
+  "capability_id": "meridian.member_lookup",
+  "version": "1.0.0",
+  "outputs": {
+    "member_name": "Lovelace, Ada",
+    "email": "***EMAIL***",
+    "phone": "555-0101",
+    "shares": [
+      {
+        "Share ID": "100234-S0001",
+        "Type": "Regular Shares",
+        "Balance": "$1,499.00",
+        "Status": "HOLD [HOLD]"
+      },
+      {
+        "Share ID": "100234-S0070",
+        "Type": "Share Draft (Checking)",
+        "Balance": "$197.04",
+        "Status": "OPEN"
+      },
+      {
+        "Share ID": "100234-S0001-3",
+        "Type": "Regular Shares",
+        "Balance": "$2,052.51",
+        "Status": "HOLD [HOLD]"
+      },
+      {
+        "Share ID": "100234-MMKT-4",
+        "Type": "Money Market",
+        "Balance": "$52.00",
+        "Status": "HOLD [HOLD]"
+      },
+      {
+        "Share ID": "100234-MMKT-5",
+        "Type": "Money Market",
+        "Balance": "$15.00",
+        "Status": "HOLD [HOLD]"
+      }
+    ]
+  },
+  "business_outcome": null,
+  "refusal": null,
+  "failure": null,
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 11,
+  "duration_s": 0.69
+}

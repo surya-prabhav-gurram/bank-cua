@@ -17,6 +17,8 @@ down. Assumes capabilities/*.json already exist (see scripts/run_discovery.sh).
                           11 value ceiling refused
                           12 dual control unmet (fails closed)
                           13 dual control counter-signed
+                          14 second surface: a11y tree, no DOM
+                          15 velocity ceiling across runs (value ledger)
 
 Usage: python scripts/gen_evidence.py
 """
@@ -160,6 +162,7 @@ def main():
         fill_not_applied(base)
         value_policy()
         second_surface()
+        velocity_limit()
     finally:
         stop_tenants()
 
@@ -253,6 +256,7 @@ def value_policy():
                                             unit=" USD")}
     base_params = {**CREDS, "member_id": "12345", "acct_type": "Money Market"}
 
+
     # 11: hard ceiling -> refused outright, nothing opened
     line("11-value-limit-exceeded",
          run_replay("evidence/replay-11-value-limit-exceeded", SUB,
@@ -291,6 +295,45 @@ def second_surface():
     with open(os.path.join(run_dir, "portability.json"), "w") as f:
         f.write(rep.model_dump_json(indent=2))
     print(f"    portability: {rep.summary()}")
+
+
+def velocity_limit():
+    """15: the limit a per-invocation ceiling cannot see.
+
+    Every amount here is individually legal against `max`; only the trailing SUM
+    is not. Ten $999 deposits clear a $1,000 limit ten times over, which is the
+    shape real money-movement abuse takes, so the refusal has to come from
+    history rather than from the request alone. The prior spend is seeded under a
+    DIFFERENT capability, because the budget belongs to the parameter, not to one
+    flow -- splitting it per flow is the gap an attacker walks through.
+    """
+    import time as _time
+
+    from bankcua.safety.ledger import Ledger, LedgerEntry
+    from bankcua.safety.policy import ValueRule
+
+    vpol = Policy.from_yaml("config/policy.yaml")
+    vpol.value_rules = {"deposit": ValueRule(max=10_000.0, max_per_window=5_000.0,
+                                             window_seconds=3600, unit=" USD")}
+    # The ledger is cross-run state by definition, so it sits beside the run
+    # directory rather than inside one -- a velocity budget scoped to a single run
+    # is not a velocity budget. Deliberately NOT the CLI's default
+    # (evidence/value_ledger.jsonl): this scenario seeds a $4,500 spend to make
+    # the window bite, and leaving that in the path a reader's own `replay` picks
+    # up would refuse their next legitimate deposit for reasons invisible to them.
+    # Cleared first so the scenario is deterministic.
+    ledger_path = "evidence/replay-15-velocity-limit.ledger.jsonl"
+    if os.path.exists(ledger_path):
+        os.remove(ledger_path)
+    ledger = Ledger(ledger_path)
+    ledger.record(LedgerEntry(ts=_time.time(),
+                              capability_id="corebank.some_other_flow",
+                              param="deposit", value=4500.0))
+    line("15-velocity-limit",
+         run_replay("evidence/replay-15-velocity-limit", SUB,
+                    {**CREDS, "member_id": "12345", "acct_type": "Money Market",
+                     "deposit": "900.00"},
+                    allow_risky=True, policy=vpol, ledger=ledger))
 
 
 def stability():

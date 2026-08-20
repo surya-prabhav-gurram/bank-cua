@@ -3,8 +3,8 @@ value sources, and the discovery-time policy guard."""
 
 import pytest
 
-from bankcua.replay.errors import apply_transform
-from bankcua.knowledge import conditions_for, COREBANK_CONDITIONS
+from bankcua.replay.transforms import apply_transform
+from bankcua.knowledge import available_vendors, conditions_for
 from bankcua.observability.logging import RunLogger
 from bankcua.schema import ValueSource, ActionType, RiskClass, Step
 from bankcua.safety.policy import (Policy, PolicyEngine, PolicyViolation,
@@ -32,11 +32,17 @@ def test_apply_transform_none_value():
 
 # ---- vendor condition library ----------------------------------------------
 def test_conditions_for_vendor():
-    conds = conditions_for("Corebank")
-    codes = {c.code for c in conds}
-    assert codes == {c.code for c in COREBANK_CONDITIONS}
+    """Vendor lookup is case-insensitive and misses return empty, not an error.
+
+    A vendor with no library is a legitimate state (a capability recorded against
+    something we have not curated yet); a vendor whose library is MALFORMED is
+    not, and raises -- see test_knowledge_library.py."""
+    codes = {c.code for c in conditions_for("Corebank")}
+    assert "MEMBER_NOT_FOUND" in codes and "SESSION_TIMEOUT" in codes
+    assert codes == {c.code for c in conditions_for("  corebank ")}
     assert conditions_for(None) == []
     assert conditions_for("UnknownVendor") == []
+    assert "meridian" in available_vendors()
 
 
 def test_conditions_for_returns_deep_copies():

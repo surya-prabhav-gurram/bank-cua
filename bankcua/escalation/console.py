@@ -233,6 +233,11 @@ def create_console(request_id: str, handoffs: str = "evidence/handoffs") -> Flas
             f"of. Re-run the replay with --cdp-port 9222 and try again, or "
             f"resolve this one non-interactively with `operator resolve`.")
     worker = _SessionWorker(store, request_id)
+    # Exposed so a caller that manages consoles can tell a live one from a
+    # spent one. A console whose operator has handed control back keeps serving
+    # its "closed" page, and handing that to the NEXT escalation looks exactly
+    # like a broken handoff.
+    app.config["bankcua_worker"] = worker
 
     def _actions():
         return [a.model_dump() for a in store.read(request_id).human_actions]
@@ -246,9 +251,20 @@ def create_console(request_id: str, handoffs: str = "evidence/handoffs") -> Flas
             # Reloading the console after handing control back is a normal thing
             # for an operator to do. Every other route answers that cleanly; this
             # one used to answer with a stack trace.
+            #
+            # 200, not 410. A 410 is explicitly CACHEABLE, and consoles are
+            # served from a small set of ports -- so a browser that saw this page
+            # once at :8090 kept serving it from cache to the NEXT escalation's
+            # console on the same port, without ever contacting the new server.
+            # From the operator's side: press Take control, get told control was
+            # already returned, with nothing in any log because no request was
+            # made. `no-store` is the belt to that braces.
             return Response(_CLOSED_PAGE.format(rid=req.id),
-                            status=410, mimetype="text/html")
-        return _PAGE.format(rid=req.id, reason=req.reason[:90], w=w)
+                            status=200, mimetype="text/html",
+                            headers={"Cache-Control": "no-store"})
+        return Response(_PAGE.format(rid=req.id, reason=req.reason[:90], w=w),
+                        mimetype="text/html",
+                        headers={"Cache-Control": "no-store"})
 
     @app.get("/screen")
     def screen():

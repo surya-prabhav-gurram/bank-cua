@@ -123,6 +123,13 @@ class ActResult(BaseModel):
         default=None, description="Which locator candidate resolved (0-based)."
     )
     value: Optional[str] = None
+    rows: Optional[list[dict[str, str]]] = Field(
+        default=None,
+        description="Structured rows from a read with attribute='table'. A second "
+        "TYPED channel rather than widening `value` to Any: every existing caller "
+        "of `value` keeps its str contract, and a caller that wants rows cannot "
+        "accidentally receive a stringified grid it then has to re-parse.",
+    )
 
 
 class Surface(abc.ABC):

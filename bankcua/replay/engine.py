@@ -38,10 +38,11 @@ from ..schema import (
     Checkpoint,
     ConditionClass,
     KnownCondition,
+    RiskClass,
     Step,
 )
-from ..surface.base import Surface
-from .errors import apply_transform
+from ..surface.base import ActResult, Surface
+from .transforms import apply_transform
 from .result import (
     AssistEvent,
     BusinessOutcome,
@@ -79,6 +80,11 @@ class ReplayEngine:
         self.ledger = ledger
         self._drifts: list[DriftSignal] = []
         self._assists: list[AssistEvent] = []
+        #: Interventions raised during this run, including ones a human RESOLVED
+        #: so the run continued. `intervention_id` alone only ever recorded the
+        #: unresolved case, so a successful human-authorised run looked
+        #: indistinguishable from an unattended one.
+        self._interventions: list[str] = []
         self._assist_used = 0
         self._params: dict = {}
 
@@ -89,8 +95,7 @@ class ReplayEngine:
         recoveries: list[RecoveryEvent] = []
         self._params = params
         self._drifts, self._assists, self._assist_used = [], [], 0
-        result = ReplayResult(status=ReplayStatus.FAILURE,
-                              capability_id=art.id, version=art.version)
+        self._interventions = []
 
         self.logger.event("replay_started", capability=art.id, version=art.version,
                           num_steps=len(art.steps),
@@ -144,6 +149,9 @@ class ReplayEngine:
                 outcome.assists = self._assists
                 outcome.steps_executed = step.index + 1
                 outcome.duration_s = round(time.time() - t0, 2)
+                outcome.intervention_id = (outcome.intervention_id
+                                           or (self._interventions[-1]
+                                               if self._interventions else None))
                 self.logger.event("replay_finished", status=outcome.status.value,
                                   outputs={k: v for k, v in outputs.items()})
                 return outcome
@@ -184,11 +192,21 @@ class ReplayEngine:
         # all steps done -> assert top-level success
         if self.surface.check(self._render_checkpoint(art.success, params)):
             self._record_value_movement(art, params)
+            if self._interventions:
+                # A run a person authorised captures the screen it PAUSED on --
+                # the question they were asked. Without this it captures nothing
+                # else, so the evidence for an irreversible action a human
+                # approved shows the confirmation prompt and never the outcome.
+                # "What did I approve?" is answerable; "what did it then do?"
+                # was not.
+                self.logger.capture(self.surface, "completed_after_intervention")
             result = ReplayResult(status=ReplayStatus.SUCCESS, capability_id=art.id,
                                   version=art.version, outputs=outputs,
                                   recoveries=recoveries, drifts=self._drifts,
                                   assists=self._assists, steps_executed=len(art.steps),
-                                  duration_s=round(time.time() - t0, 2))
+                                  duration_s=round(time.time() - t0, 2),
+                                  intervention_id=(self._interventions[-1]
+                                                   if self._interventions else None))
         else:
             self.logger.capture(self.surface, "final_checkpoint_failed", dom=True)
             result = ReplayResult(
@@ -225,7 +243,6 @@ class ReplayEngine:
         if self.ledger is None:
             return
         from ..safety.ledger import LedgerEntry
-        import time as _t
         for name in getattr(self.policy.policy, "value_rules", {}):
             if name not in params:
                 continue
@@ -233,7 +250,7 @@ class ReplayEngine:
             if amount is None or amount != amount:
                 continue
             self.ledger.record(LedgerEntry(
-                ts=_t.time(), capability_id=art.id, param=name, value=amount,
+                ts=time.time(), capability_id=art.id, param=name, value=amount,
                 initiator=self.initiator, approver=self.approver))
             self.logger.event("value_recorded", param=name, value=amount,
                               capability=art.id)
@@ -294,20 +311,57 @@ class ReplayEngine:
             id=f"replay-{art.id}-dualcontrol",
             kind=InterventionKind.DUAL_CONTROL,
             reason=vdec.reason, capability_id=art.id,
-            state_url=self.surface.current_url(),
-            cdp_endpoint=getattr(self.surface, "cdp_endpoint", None))
+            goal=(f"Counter-sign {art.id}: {vdec.reason}. This pause asks for a "
+                  f"SECOND PERSON's approval, not for anyone to drive the "
+                  f"screen -- the value check runs before the browser is sent "
+                  f"anywhere, so there is nothing on it yet."),
+            initiator=self.initiator,
+            # Deliberately NOT the live session. A dual-control pause happens
+            # before any navigation, so `state_url` is about:blank and there is
+            # nothing to co-browse; advertising a CDP endpoint here put an
+            # operator in front of a blank screen whose only exit was to abort
+            # the run.
+            state_url="",
+            cdp_endpoint=None)
         self.coordinator.raise_intervention(req)
         resolved = self.coordinator.wait_for_resolution(req.id)
         if resolved.status.value == "resolved" and resolved.resume:
-            self.logger.event("dual_control_granted", id=req.id,
-                              note=resolved.resolution_note)
-            return None
+            # The counter-signature is re-checked HERE, against the same rule a
+            # request-supplied approver goes through. A console that posts
+            # "resolved" is asserting that somebody clicked; whether that
+            # somebody may counter-sign THIS run is not a question the console
+            # gets to answer.
+            if self.policy.approver_is_independent(resolved.resolved_by,
+                                                   self.initiator):
+                self.logger.event("dual_control_granted", id=req.id,
+                                  approver=resolved.resolved_by,
+                                  initiator=self.initiator,
+                                  note=resolved.resolution_note)
+                return None
+            self.logger.event("dual_control_rejected", id=req.id,
+                              approver=resolved.resolved_by,
+                              initiator=self.initiator,
+                              reason="resolver is not an independent approver")
+            return ReplayResult(
+                status=ReplayStatus.ESCALATED, capability_id=art.id,
+                version=art.version, intervention_id=req.id,
+                failure=FailureDetail(
+                    code="DUAL_CONTROL_REQUIRED",
+                    expected="an independent second approver to counter-sign",
+                    observed=(f"resolved by {resolved.resolved_by!r}, who "
+                              f"cannot counter-sign a run initiated by "
+                              f"{self.initiator!r}")
+                    if resolved.resolved_by else
+                    "the pause was resolved without recording who approved it"))
         return ReplayResult(
             status=ReplayStatus.ESCALATED, capability_id=art.id,
             version=art.version, intervention_id=req.id,
-            failure=FailureDetail(code="DUAL_CONTROL_REQUIRED",
-                                  expected="a second reviewer to counter-sign",
-                                  observed=resolved.status.value))
+            failure=FailureDetail(
+                code="DUAL_CONTROL_REQUIRED",
+                expected="a second reviewer to counter-sign",
+                observed=(f"nobody counter-signed within the window "
+                          f"({resolved.status.value})" if not resolved.resume
+                          else f"the request was {resolved.status.value}")))
 
     def _maybe_escalate(self, art, res: ReplayResult) -> ReplayResult:
         """Brief 3.6: on an UNRECOVERABLE runtime failure, route a human
@@ -468,7 +522,10 @@ class ReplayEngine:
                 continue
             try:
                 res = self.surface.read(st.extract.locator, st.extract.attribute)
-                if res.ok and (res.value or "").strip():
+                if res.ok and res.rows:
+                    outputs[st.extract.output] = res.rows
+                    gained.append(st.extract.output)
+                elif res.ok and (res.value or "").strip():
                     outputs[st.extract.output] = apply_transform(
                         res.value, st.extract.transform)
                     gained.append(st.extract.output)
@@ -507,15 +564,18 @@ class ReplayEngine:
         if step.action == ActionType.PRESS:
             return s.press(step.key or "Enter")
         if step.action == ActionType.WAIT_FOR:
-            from ..surface.base import ActResult
             return ActResult(ok=True, message="wait")
         if step.action == ActionType.EXTRACT and step.extract:
             res = s.read(step.extract.locator, step.extract.attribute)
             if res.ok:
-                outputs[step.extract.output] = apply_transform(
-                    res.value, step.extract.transform)
+                # Rows bypass `transform` entirely: transforms are scalar value
+                # coercions (money->cents, digits-only) and applying one to a grid
+                # would either flatten it or silently no-op. A grid's shape IS its
+                # contract, so it is stored as read.
+                outputs[step.extract.output] = (
+                    res.rows if res.rows is not None
+                    else apply_transform(res.value, step.extract.transform))
             return res
-        from ..surface.base import ActResult
         return ActResult(ok=True, message="noop")
 
     # ------------------------------------------------------------------
@@ -523,7 +583,30 @@ class ReplayEngine:
                            outputs=None) -> Optional[ReplayResult]:
         """Detect known conditions and act on the first match."""
         for cond in art.known_conditions:
-            if not self.surface.detect(cond.detector):
+            # Scope first, detect second: a condition that does not apply to this
+            # step's action must not consume the match and shadow the one that
+            # does. Ordering in the artifact stays the tie-break among those that
+            # DO apply.
+            if cond.applies_to_actions and step.action not in cond.applies_to_actions:
+                continue
+            # Some conditions are only meaningful on a particular screen. "The
+            # member number we asked for is not on this page" is trivially true
+            # on the main menu, and firing there would report a business outcome
+            # about a page nobody was looking at.
+            if cond.applies_to_urls and not any(
+                    u in self.surface.current_url() for u in cond.applies_to_urls):
+                continue
+            # Detectors are parameterised like checkpoints: a condition that has
+            # to compare against the caller's own input cannot be written without
+            # it. Rendered per evaluation because params are per invocation.
+            if not self.surface.detect(self._render_detector(cond.detector,
+                                                             self._params)):
+                continue
+            # ALL of them, or none of it counts. A compound condition that fired
+            # on its first clause would be the broad condition it was written to
+            # replace.
+            if not all(self.surface.detect(self._render_detector(d, self._params))
+                       for d in cond.also_requires):
                 continue
             self.logger.event("condition_detected", step=step.index,
                               code=cond.code, klass=cond.klass.value)
@@ -543,6 +626,23 @@ class ReplayEngine:
                 caps = self.logger.capture(self.surface, f"hard_{cond.code}", dom=True)
                 return self._fail(step, cond.code, "flow to proceed", cond.message, caps)
             if cond.klass == ConditionClass.RECOVERABLE:
+                # A recovery is a RETRY, and retrying a step that already moved
+                # money is how you move it twice. We cannot tell from the error
+                # page whether the post landed before the fault, so the only safe
+                # reading of an ambiguous outcome on an irreversible step is to
+                # stop and hand a human something to reconcile.
+                if step.risk == RiskClass.RISKY and not \
+                        getattr(self.policy.policy, "allow_recovery_on_risky_steps", False):
+                    caps = self.logger.capture(
+                        self.surface, f"no_retry_{cond.code}", dom=True)
+                    self.logger.event("recovery_refused_on_risky_step",
+                                      step=step.index, code=cond.code)
+                    return self._fail(
+                        step, f"UNSAFE_TO_RETRY_{cond.code}",
+                        "a recoverable fault on a reversible step",
+                        f"{cond.message} The step is classified irreversible, so "
+                        f"replay will not retry it; whether it took effect must "
+                        f"be confirmed before re-invoking.", caps)
                 ok = self._recover(cond, step, recoveries)
                 if not ok:
                     caps = self.logger.capture(self.surface,
@@ -608,6 +708,12 @@ class ReplayEngine:
                                     observed=resolved.status.value))
         self.logger.event("confirmation_granted", id=req.id,
                           note=resolved.resolution_note)
+        # Record it on the RESULT, not only in the log. A run that a person had
+        # to authorise is a different event from one that ran unattended, and a
+        # contract that reports them identically cannot answer "who approved
+        # this hold?" -- which is the first question asked about an irreversible
+        # action on a member's account.
+        self._interventions.append(req.id)
         return None
 
     def _operator_did_it(self, art, step) -> bool:
@@ -647,7 +753,6 @@ class ReplayEngine:
         from ..agent.providers import DecisionContext
         from ..agent.loop import (infer_risk, resolve_placeholders,
                                   _ACTION_TO_TYPE)
-        from ..schema import ActionType as AT
         self._assist_used += 1
         obs = self.surface.observe()
         shot = None
@@ -682,7 +787,7 @@ class ReplayEngine:
         full = url if url.startswith("http") else art.target.base_url + (url or "")
         try:
             dec = self.policy.evaluate_discovery_action(
-                _ACTION_TO_TYPE.get(action.action, AT.CLICK), full, risk)
+                _ACTION_TO_TYPE.get(action.action, ActionType.CLICK), full, risk)
         except PolicyViolation as pv:
             self.logger.event("assist_policy_block", step=step.index, reason=str(pv))
             return False
@@ -717,6 +822,10 @@ class ReplayEngine:
 
     def _render_checkpoint(self, cp: Checkpoint, params) -> Checkpoint:
         return cp.model_copy(update={"value": self._render(cp.value, params)})
+
+    def _render_detector(self, detector, params):
+        return detector.model_copy(
+            update={"value": self._render(detector.value, params)})
 
     def _fail(self, step, code, expected, observed, evidence=None) -> ReplayResult:
         self.logger.event("hard_failure", step=getattr(step, "index", None),

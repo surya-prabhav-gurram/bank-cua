@@ -206,3 +206,143 @@ def test_wait_budget_is_configurable(tmp_path):
     assert 0.8 <= _t.time() - started < 3.0
     assert out.status.value == "aborted"
     assert "timed out after 1s" in out.resolution_note
+
+
+def test_a_resolved_intervention_is_recorded_on_a_successful_run(mock_app, tmp_path):
+    """"Who approved this?" is the first question asked about an irreversible
+    action on a member's account.
+
+    `intervention_id` previously appeared only when a run ended ESCALATED, so a
+    run a supervisor had personally authorised came back looking exactly like one
+    that ran unattended. The audit trail existed in the log and nowhere in the
+    contract the caller keeps.
+    """
+    pytest.importorskip("playwright")
+    import threading
+    import time as _t
+
+    from bankcua.escalation.handoff import HandoffCoordinator, InterventionStatus
+    from bankcua.observability.logging import RunLogger
+    from bankcua.replay.engine import ReplayEngine
+    from bankcua.replay.result import ReplayStatus
+    from bankcua.safety.policy import Policy, PolicyEngine
+    from bankcua.schema import CapabilityArtifact
+    from bankcua.surface.web_playwright import WebSurface
+
+    art_path = os.path.join(ROOT, "capabilities", "corebank.open_subaccount.json")
+    if not os.path.exists(art_path):
+        pytest.skip("subaccount artifact missing")
+    art = CapabilityArtifact.from_json(open(art_path).read())
+    art.target.base_url = mock_app
+    risky = next(s.index for s in art.steps if s.risk.value == "risky")
+    req_id = f"replay-{art.id}-step{risky}"
+
+    store = HandoffStore(str(tmp_path / "handoffs"))
+
+    def operator():
+        """Approve without performing the step, so replay itself completes it."""
+        for _ in range(100):
+            try:
+                req = store.read(req_id)
+                if req.status == InterventionStatus.OPEN:
+                    req.status = InterventionStatus.RESOLVED
+                    req.resume = True
+                    req.controller = "agent"
+                    req.resolution_note = "approved by test supervisor"
+                    store.write(req)
+                    return
+            except Exception:
+                pass
+            _t.sleep(0.1)
+
+    thread = threading.Thread(target=operator)
+    thread.start()
+    logger = RunLogger(str(tmp_path / "run"), "replay", art.secret_params(),
+                       ["operator", "password123"])
+    pe = PolicyEngine(Policy(allowed_url_patterns=["http://127.0.0.1:*"]),
+                      allow_risky_override=False)
+    surf = WebSurface(art.target.base_url, headless=True, cdp_port=_free_port())
+    surf.start()
+    try:
+        res = ReplayEngine(surf, pe, logger,
+                           HandoffCoordinator(store, logger, wait_timeout_s=25)
+                           ).run(art, {"username": "operator",
+                                       "password": "password123",
+                                       "member_id": "12345",
+                                       "acct_type": "Money Market",
+                                       "deposit": "10.00"})
+    finally:
+        thread.join(timeout=5)
+        surf.stop()
+
+    assert res.status == ReplayStatus.SUCCESS
+    assert res.intervention_id == req_id, (
+        "a run a human authorised is indistinguishable from an unattended one")
+
+
+def test_a_human_authorised_run_captures_its_outcome_too(mock_app, tmp_path):
+    """The evidence for an approved irreversible action showed the question and
+    not the answer.
+
+    A gated run captures `confirm_stepNN.png` -- the screen the operator was
+    asked to authorise -- and then, on success, captured nothing further. So the
+    record of a hold a supervisor personally approved contained the confirmation
+    prompt and no image of what happened next. "What did I approve?" was
+    answerable; "what did it then do?" was not.
+    """
+    pytest.importorskip("playwright")
+    import threading
+    import time as _t
+
+    from bankcua.escalation.handoff import HandoffCoordinator, InterventionStatus
+    from bankcua.observability.logging import RunLogger
+    from bankcua.replay.engine import ReplayEngine
+    from bankcua.replay.result import ReplayStatus
+    from bankcua.safety.policy import Policy, PolicyEngine
+    from bankcua.schema import CapabilityArtifact
+    from bankcua.surface.web_playwright import WebSurface
+
+    art_path = os.path.join(ROOT, "capabilities", "corebank.open_subaccount.json")
+    if not os.path.exists(art_path):
+        pytest.skip("subaccount artifact missing")
+    art = CapabilityArtifact.from_json(open(art_path).read())
+    art.target.base_url = mock_app
+    risky = next(s.index for s in art.steps if s.risk.value == "risky")
+    store = HandoffStore(str(tmp_path / "handoffs"))
+    req_id = f"replay-{art.id}-step{risky}"
+
+    def approve():
+        for _ in range(100):
+            try:
+                req = store.read(req_id)
+                if req.status == InterventionStatus.OPEN:
+                    req.status = InterventionStatus.RESOLVED
+                    req.resume, req.controller = True, "agent"
+                    store.write(req)
+                    return
+            except Exception:
+                pass
+            _t.sleep(0.1)
+
+    thread = threading.Thread(target=approve)
+    thread.start()
+    run_dir = tmp_path / "run"
+    logger = RunLogger(str(run_dir), "replay", art.secret_params(), [])
+    surf = WebSurface(art.target.base_url, headless=True, cdp_port=_free_port())
+    surf.start()
+    try:
+        res = ReplayEngine(
+            surf, PolicyEngine(Policy(allowed_url_patterns=["http://127.0.0.1:*"])),
+            logger, HandoffCoordinator(store, logger, wait_timeout_s=20)
+        ).run(art, {"username": "operator", "password": "password123",
+                    "member_id": "12345", "acct_type": "Money Market",
+                    "deposit": "10.00"})
+    finally:
+        thread.join(timeout=5)
+        surf.stop()
+
+    assert res.status == ReplayStatus.SUCCESS
+    shots = {p.name for p in run_dir.glob("*.png")}
+    assert any(n.startswith("confirm_step") for n in shots), "no record of the question"
+    assert "completed_after_intervention.png" in shots, (
+        f"no record of the outcome; captured only {sorted(shots)}")

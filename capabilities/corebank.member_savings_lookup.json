@@ -47,12 +47,16 @@
     {
       "name": "member_name",
       "type": "string",
-      "description": "The member's full name."
+      "description": "The member's full name.",
+      "cardinality": "scalar",
+      "columns": []
     },
     {
       "name": "savings_balance",
       "type": "money",
-      "description": "Current savings balance, normalised to integer cents."
+      "description": "Current savings balance, normalised to integer cents.",
+      "cardinality": "scalar",
+      "columns": []
     }
   ],
   "steps": [
@@ -443,10 +447,14 @@
       "detector": {
         "kind": "text_present",
         "value": "No member found",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "No member exists for the supplied ID.",
       "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": false
     },
     {
@@ -455,10 +463,14 @@
       "detector": {
         "kind": "text_present",
         "value": "Access Denied",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "The signed-in user is not permitted to view this member/account.",
       "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": true
     },
     {
@@ -467,10 +479,14 @@
       "detector": {
         "kind": "text_present",
         "value": "Validation error",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "The submitted input failed the application's validation.",
       "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": false
     },
     {
@@ -479,6 +495,7 @@
       "detector": {
         "kind": "text_present",
         "value": "System Maintenance Notice",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "Unexpected maintenance gate; dismiss and continue.",
@@ -500,6 +517,9 @@
         "max_attempts": 1,
         "backoff_ms": 1500
       },
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": false
     },
     {
@@ -508,6 +528,7 @@
       "detector": {
         "kind": "text_present",
         "value": "Application Error",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "Transient application error; reload and retry.",
@@ -517,6 +538,9 @@
         "max_attempts": 2,
         "backoff_ms": 1500
       },
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": false
     },
     {
@@ -525,10 +549,14 @@
       "detector": {
         "kind": "text_present",
         "value": "Session expired",
+        "min_count": 2,
         "frame_path": []
       },
       "message": "Session timed out; re-authentication required (surfaced to caller).",
       "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [],
+      "applies_to_urls": [],
       "surfaces_outputs": false
     }
   ],
@@ -537,9 +565,9 @@
     "recorded_at": null,
     "recorded_by": "anthropic",
     "discovery_run_id": "discovery-corebank.member_savings_lookup-20260813-183533",
-    "transcript_ref": "evidence/discovery-corebank.member_savings_lookup-20260813-183533/transcript.json",
-    "transcript_sha256": "37ebff51abcb7ef17de91740dfa91139430d6fbad2637086d09b7d4cad1d3edf",
-    "notes": "Compiled from a successful discovery run."
+    "transcript_ref": "evidence/discovery-member_savings_lookup-anthropic-live/transcript.json",
+    "transcript_sha256": "a7c2dd5805c4b44295a4dd9744866b35653542ed372628dd6163e5a439933cbe",
+    "notes": "Compiled from a successful discovery run. The evidence directory was renamed after compilation (discovery-<id>-<ts>/ -> discovery-<goal>-anthropic-live/) and the transcript was subsequently re-redacted under the hardened redactor, so transcript_ref and transcript_sha256 were repointed and recomputed against the shipped file. Run identity is unchanged and independently checkable: run.jsonl records the original run_dir and summary.json records this artifact as its output."
   },
   "stability": null
 }

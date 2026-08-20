@@ -1,0 +1,24 @@
+{
+  "status": "failure",
+  "capability_id": "meridian.member_lookup",
+  "version": "1.0.0",
+  "outputs": {},
+  "business_outcome": null,
+  "refusal": null,
+  "failure": {
+    "code": "SESSION_TIMED_OUT",
+    "step_index": 2,
+    "expected": "flow to proceed",
+    "observed": "Operator session expired mid-flow; re-authentication required.",
+    "evidence": {
+      "screenshot": "evidence/meridian/08-session-expired/hard_SESSION_TIMED_OUT.png",
+      "dom": "evidence/meridian/08-session-expired/hard_SESSION_TIMED_OUT.dom.html"
+    }
+  },
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 3,
+  "duration_s": 0.35
+}

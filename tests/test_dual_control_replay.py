@@ -119,3 +119,84 @@ def test_a_refusal_is_never_typed_as_a_failure(mock_app, tmp_path):
     hard = _replay(broken, _params("500.00"), tmp_path, "hard")
     assert hard.status == ReplayStatus.FAILURE
     assert hard.failure is not None and hard.refusal is None
+
+
+# ---------------------------------------------------------------------------
+# Velocity: the limit a per-invocation ceiling cannot see.
+# ---------------------------------------------------------------------------
+VELOCITY_RULES = {"deposit": ValueRule(max=10_000.0, max_per_window=5_000.0,
+                                       window_seconds=3600, unit=" USD")}
+
+
+def _velocity_replay(art, params, tmp_path, name, ledger):
+    """As _replay, but with a rolling-window rule and a real ledger attached."""
+    logger = RunLogger(str(tmp_path / name), "replay", art.secret_params(),
+                       {n: str(params[n]) for n in art.secret_params()})
+    pe = PolicyEngine(Policy(allowed_url_patterns=["http://127.0.0.1:*"],
+                             value_rules=VELOCITY_RULES),
+                      allow_risky_override=True)
+    surf = WebSurface(art.target.base_url, headless=True)
+    surf.start()
+    try:
+        return ReplayEngine(surf, pe, logger, None, ledger=ledger).run(art, params)
+    finally:
+        surf.stop()
+
+
+def test_velocity_ceiling_refuses_once_the_window_total_would_be_exceeded(
+        mock_app, tmp_path):
+    """Ten $999 deposits clear a $1,000 per-invocation limit ten times over.
+
+    Each amount here is individually legal against `max`; only the trailing sum
+    is not. A limit that cannot see the sum is the gap this rule closes, so the
+    refusal has to come from history rather than from the request alone.
+    """
+    from bankcua.safety.ledger import Ledger, LedgerEntry
+    art = _load(mock_app)
+    ledger = Ledger(str(tmp_path / "value_ledger.jsonl"))
+    # $4,500 already spent in the window, by an earlier run of a DIFFERENT
+    # capability -- the budget is the parameter's, not the flow's.
+    ledger.record(LedgerEntry(ts=__import__("time").time(),
+                              capability_id="corebank.some_other_flow",
+                              param="deposit", value=4500.0))
+
+    r = _velocity_replay(art, _params("900.00"), tmp_path, "velocity", ledger)
+    assert r.status == ReplayStatus.REFUSED
+    assert r.refusal.code == "VALUE_LIMIT_EXCEEDED"
+    assert "5000" in r.refusal.reason and "4500" in r.refusal.reason
+    assert r.steps_executed == 0
+
+
+def test_a_refused_run_does_not_spend_the_velocity_budget(mock_app, tmp_path):
+    """A run that moved no money must not be charged for it.
+
+    Booking on attempt rather than on success would let a caller exhaust the
+    window with requests the system already refused -- a guardrail that
+    denial-of-services the thing it protects.
+    """
+    from bankcua.safety.ledger import Ledger
+    art = _load(mock_app)
+    ledger = Ledger(str(tmp_path / "value_ledger.jsonl"))
+
+    # refused at the step gate (irreversible click, no operator) -> no money moved
+    r = _velocity_replay(art, _params("900.00"), tmp_path, "nospend", ledger)
+    assert r.status == ReplayStatus.REFUSED
+    assert ledger.total_in_window("deposit", 3600) == 0.0
+
+
+def test_ledger_scopes_the_window_by_parameter_across_capabilities(tmp_path):
+    """Two flows that both move money share one budget: splitting it per flow is
+    the gap an attacker walks through."""
+    from bankcua.safety.ledger import Ledger, LedgerEntry
+    now = 1_000_000.0
+    ledger = Ledger(str(tmp_path / "l.jsonl"), clock=lambda: now)
+    ledger.record(LedgerEntry(ts=now - 10, capability_id="flow.a",
+                              param="deposit", value=300.0))
+    ledger.record(LedgerEntry(ts=now - 20, capability_id="flow.b",
+                              param="deposit", value=200.0))
+    ledger.record(LedgerEntry(ts=now - 9_999, capability_id="flow.a",
+                              param="deposit", value=999.0))   # outside window
+    ledger.record(LedgerEntry(ts=now - 10, capability_id="flow.a",
+                              param="transfer", value=50.0))   # other parameter
+    assert ledger.total_in_window("deposit", 3600) == 500.0
+    assert ledger.total_in_window("deposit", 3600, capability_id="flow.a") == 300.0

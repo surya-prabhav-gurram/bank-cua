@@ -1,0 +1,20 @@
+{"ts": 1787260428.436, "event": "run_started", "kind": "replay", "run_dir": "evidence/meridian/07-maintenance-recovered"}
+{"ts": 1787260428.85, "event": "replay_started", "capability": "meridian.member_lookup", "version": "1.0.0", "num_steps": 11, "params": {"operator": "teller1", "branch": "MAIN-001", "member_id": "100234"}}
+{"ts": 1787260428.989, "event": "replay_navigated_entry", "entry": "/signon"}
+{"ts": 1787260429.021, "event": "step_executed", "index": 0, "action": "fill", "intent": "Fill operator ID", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260429.074, "event": "step_executed", "index": 1, "action": "fill", "intent": "Fill {***REDACTED:password***} field", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260429.223, "event": "step_executed", "index": 2, "action": "click", "intent": "Sign on with filled credentials and branch", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787260429.251, "event": "condition_detected", "step": 2, "code": "MAINTENANCE_WINDOW", "klass": "recoverable"}
+{"ts": 1787260429.251, "event": "recovery_attempt", "code": "MAINTENANCE_WINDOW", "kind": "reload", "attempt": 1}
+{"ts": 1787260431.295, "event": "recovery_attempt", "code": "MAINTENANCE_WINDOW", "kind": "reload", "attempt": 2}
+{"ts": 1787260433.34, "event": "recovery_attempt", "code": "MAINTENANCE_WINDOW", "kind": "reload", "attempt": 3}
+{"ts": 1787260435.535, "event": "step_executed", "index": 3, "action": "click", "intent": "Go to Member Inquiry / Selection to search for member", "ok": true, "message": "clicked link: Member Inquiry / Selection", "candidate_index": 0}
+{"ts": 1787260435.557, "event": "step_executed", "index": 4, "action": "fill", "intent": "Enter member number to search", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260435.623, "event": "step_executed", "index": 5, "action": "click", "intent": "Search for member {member_id}", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787260435.704, "event": "step_executed", "index": 6, "action": "click", "intent": "Select member {member_id} to view their record", "ok": true, "message": "clicked link: Select", "candidate_index": 0}
+{"ts": 1787260435.726, "event": "step_executed", "index": 7, "action": "extract", "intent": "Extract member name", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787260435.735, "event": "step_executed", "index": 8, "action": "extract", "intent": "Extract member email", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787260435.743, "event": "step_executed", "index": 9, "action": "extract", "intent": "Extract member phone", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787260435.76, "event": "step_executed", "index": 10, "action": "extract", "intent": "Extract the shares/balances table", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787260435.766, "event": "replay_finished", "status": "success", "outputs": {"member_name": "Lovelace, Ada", "email": "***EMAIL***", "phone": "555-0101", "shares": [{"Share ID": "100234-S0001", "Type": "Regular Shares", "Balance": "$1,499.00", "Status": "HOLD [HOLD]"}, {"Share ID": "100234-S0070", "Type": "Share Draft (Checking)", "Balance": "$196.04", "Status": "OPEN"}, {"Share ID": "100234-S0001-3", "Type": "Regular Shares", "Balance": "$2,053.51", "Status": "HOLD [HOLD]"}, {"Share ID": "100234-MMKT-4", "Type": "Money Market", "Balance": "$52.00", "Status": "HOLD [HOLD]"}, {"Share ID": "100234-MMKT-5", "Type": "Money Market", "Balance": "$15.00", "Status": "HOLD [HOLD]"}]}}
+{"ts": 1787260435.766, "event": "run_finished", "summary_path": "evidence/meridian/07-maintenance-recovered/summary.json"}

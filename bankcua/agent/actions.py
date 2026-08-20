@@ -31,7 +31,7 @@ class DiscoveryAction(BaseModel):
 
     # extract
     output_name: Optional[str] = None
-    attribute: Literal["text", "inner_text", "value", "href"] = "text"
+    attribute: Literal["text", "inner_text", "value", "href", "table"] = "text"
 
     # finish / escalate
     success: Optional[bool] = None
@@ -58,7 +58,9 @@ ACT_TOOL = {
             "output_name": {"type": "string",
                             "description": "Declared output to populate (extract)."},
             "attribute": {"type": "string",
-                          "enum": ["text", "inner_text", "value", "href"]},
+                          "enum": ["text", "inner_text", "value", "href", "table"],
+                          "description": "Use 'table' to read a grid into typed "
+                                         "rows keyed by its column headers."},
             "success": {"type": "boolean", "description": "Goal met? (finish)"},
             "reason": {"type": "string", "description": "Explanation (finish/escalate)."},
         },

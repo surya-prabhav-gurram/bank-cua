@@ -1,0 +1,570 @@
+[
+  {
+    "index": 0,
+    "intent": "Enter operator ID",
+    "action_kind": "fill",
+    "url": "https://web-sample.interface-hiring.com/signon",
+    "url_template": null,
+    "element": {
+      "ref": 0,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "text",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Operator ID:",
+      "text": "empty",
+      "is_submit": false,
+      "form_method": "post",
+      "css": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: empty",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "near_label",
+          "value": "Operator ID:",
+          "role": "textbox",
+          "exact": false,
+          "reasoning": "Label-proximity: the control adjacent to 'Operator ID:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+        },
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Operator ID:\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "The same proximity bound to this DOM: the input in the row labelled 'Operator ID:'."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "teller1",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "filled textbox: empty",
+    "candidate_index": 0
+  },
+  {
+    "index": 1,
+    "intent": "Fill ***REDACTED*** field",
+    "action_kind": "fill",
+    "url": "https://web-sample.interface-hiring.com/signon",
+    "url_template": null,
+    "element": {
+      "ref": 1,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "***REDACTED***",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Password:",
+      "text": "empty",
+      "is_submit": false,
+      "form_method": "post",
+      "css": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: empty",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "near_label",
+          "value": "Password:",
+          "role": "textbox",
+          "exact": false,
+          "reasoning": "Label-proximity: the control adjacent to 'Password:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+        },
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Password:\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "The same proximity bound to this DOM: the input in the row labelled 'Password:'."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "***REDACTED***",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "filled textbox: empty",
+    "candidate_index": 0
+  },
+  {
+    "index": 2,
+    "intent": "Sign on with filled credentials",
+    "action_kind": "click",
+    "url": "https://web-sample.interface-hiring.com/signon",
+    "url_template": null,
+    "element": {
+      "ref": 3,
+      "frame_path": [],
+      "tag": "input",
+      "role": "button",
+      "name": "Sign On",
+      "type_attr": "submit",
+      "label": "",
+      "placeholder": "",
+      "near_label": "",
+      "text": "",
+      "is_submit": true,
+      "form_method": "post",
+      "css": "table > tbody > tr:nth-of-type(4) > td:nth-of-type(2) > input",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[4]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "button: Sign On",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "role",
+          "value": "Sign On",
+          "role": "button",
+          "exact": false,
+          "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(4) > td:nth-of-type(2) > input",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[2]/td[1]/form[1]/table[1]/tbody[1]/tr[4]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "clicked button: Sign On",
+    "candidate_index": 0
+  },
+  {
+    "index": 3,
+    "intent": "Open Member Inquiry / Selection",
+    "action_kind": "click",
+    "url": "https://web-sample.interface-hiring.com/menu",
+    "url_template": null,
+    "element": {
+      "ref": 4,
+      "frame_path": [],
+      "tag": "a",
+      "role": "link",
+      "name": "Member Inquiry / Selection",
+      "type_attr": "",
+      "label": "",
+      "placeholder": "",
+      "near_label": "1.",
+      "text": "Member Inquiry / Selection",
+      "is_submit": false,
+      "form_method": "",
+      "css": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > a",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/table[1]/tbody[1]/tr[1]/td[2]/a[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "link: Member Inquiry / Selection",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "role",
+          "value": "Member Inquiry / Selection",
+          "role": "link",
+          "exact": false,
+          "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+        },
+        {
+          "kind": "text",
+          "value": "Member Inquiry / Selection",
+          "role": null,
+          "exact": false,
+          "reasoning": "Visible link text."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > a",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/table[1]/tbody[1]/tr[1]/td[2]/a[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "clicked link: Member Inquiry / Selection",
+    "candidate_index": 0
+  },
+  {
+    "index": 4,
+    "intent": "Select search by Last Name",
+    "action_kind": "select",
+    "url": "https://web-sample.interface-hiring.com/members",
+    "url_template": null,
+    "element": {
+      "ref": 4,
+      "frame_path": [],
+      "tag": "select",
+      "role": "combobox",
+      "name": "",
+      "type_attr": "",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Search by:",
+      "text": "selected: Member Number",
+      "is_submit": false,
+      "form_method": "get",
+      "css": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > select",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/select[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "combobox: selected: Member Number",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "near_label",
+          "value": "Search by:",
+          "role": "combobox",
+          "exact": false,
+          "reasoning": "Label-proximity: the control adjacent to 'Search by:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+        },
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Search by:\"]]//select",
+          "role": null,
+          "exact": false,
+          "reasoning": "The same proximity bound to this DOM: the select in the row labelled 'Search by:'."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(1) > td:nth-of-type(2) > select",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/table[1]/tbody[1]/tr[1]/td[2]/select[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "Last Name",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "selected Last Name",
+    "candidate_index": 0
+  },
+  {
+    "index": 5,
+    "intent": "Enter last name Turing in search value field",
+    "action_kind": "fill",
+    "url": "https://web-sample.interface-hiring.com/members",
+    "url_template": null,
+    "element": {
+      "ref": 5,
+      "frame_path": [],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "type_attr": "text",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Value:",
+      "text": "empty",
+      "is_submit": false,
+      "form_method": "get",
+      "css": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input:nth-of-type(1)",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "textbox: empty",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "near_label",
+          "value": "Value:",
+          "role": "textbox",
+          "exact": false,
+          "reasoning": "Label-proximity: the control adjacent to 'Value:'. This control has no accessible name, so proximity is the only durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially instead of structurally."
+        },
+        {
+          "kind": "xpath",
+          "value": "//tr[td[normalize-space(.)=\"Value:\"]]//input",
+          "role": null,
+          "exact": false,
+          "reasoning": "The same proximity bound to this DOM: the input in the row labelled 'Value:'."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input:nth-of-type(1)",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": "Turing",
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "filled textbox: empty",
+    "candidate_index": 0
+  },
+  {
+    "index": 6,
+    "intent": "Submit search for last name Turing",
+    "action_kind": "click",
+    "url": "https://web-sample.interface-hiring.com/members",
+    "url_template": null,
+    "element": {
+      "ref": 6,
+      "frame_path": [],
+      "tag": "input",
+      "role": "button",
+      "name": "Search",
+      "type_attr": "submit",
+      "label": "",
+      "placeholder": "",
+      "near_label": "Value:",
+      "text": "",
+      "is_submit": true,
+      "form_method": "get",
+      "css": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input:nth-of-type(2)",
+      "xpath": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[2]",
+      "visible": true,
+      "enabled": true
+    },
+    "locator": {
+      "description": "button: Search",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "role",
+          "value": "Search",
+          "role": "button",
+          "exact": false,
+          "reasoning": "Accessibility role + name; survives markup churn and ports to a desktop accessibility tree."
+        },
+        {
+          "kind": "css",
+          "value": "table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > input:nth-of-type(2)",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS path; last-resort fallback, most brittle to layout change."
+        },
+        {
+          "kind": "xpath",
+          "value": "/html[1]/body[1]/table[1]/tbody[1]/tr[3]/td[1]/form[1]/table[1]/tbody[1]/tr[2]/td[2]/input[2]",
+          "role": null,
+          "exact": false,
+          "reasoning": "Absolute XPath; final fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": null,
+    "attribute": "text",
+    "extracted_value": null,
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "clicked button: Search",
+    "candidate_index": 0
+  },
+  {
+    "index": 7,
+    "intent": "Extract the search results table for Turing",
+    "action_kind": "extract",
+    "url": "https://web-sample.interface-hiring.com/members?by=name&q=Turing",
+    "url_template": null,
+    "element": null,
+    "locator": {
+      "description": "value for Member No.",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "near_label",
+          "value": "Member No.",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-proximity: the value adjacent to 'Member No.'. A read-only value carries no name of its own, so proximity is the durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially."
+        },
+        {
+          "kind": "xpath",
+          "value": "//td[normalize-space(.)=\"Member No.\"]/following-sibling::td[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "The same proximity bound to this DOM: the cell immediately following 'Member No.'; robust to table reflow, and correct on rows that pack more than one label/value pair."
+        },
+        {
+          "kind": "css",
+          "value": "tr:nth-of-type(3) > td > table > tbody > tr:nth-of-type(1) > td:nth-of-type(2)",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS of the value cell; fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": "matches",
+    "attribute": "table",
+    "extracted_value": "1",
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "",
+    "candidate_index": 0
+  },
+  {
+    "index": 8,
+    "intent": "Extract the search results table for Turing",
+    "action_kind": "extract",
+    "url": "https://web-sample.interface-hiring.com/members?by=name&q=Turing",
+    "url_template": null,
+    "element": null,
+    "locator": {
+      "description": "value for Member No.",
+      "frame_path": [],
+      "candidates": [
+        {
+          "kind": "near_label",
+          "value": "Member No.",
+          "role": null,
+          "exact": false,
+          "reasoning": "Label-proximity: the value adjacent to 'Member No.'. A read-only value carries no name of its own, so proximity is the durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially."
+        },
+        {
+          "kind": "xpath",
+          "value": "//td[normalize-space(.)=\"Member No.\"]/following-sibling::td[1]",
+          "role": null,
+          "exact": false,
+          "reasoning": "The same proximity bound to this DOM: the cell immediately following 'Member No.'; robust to table reflow, and correct on rows that pack more than one label/value pair."
+        },
+        {
+          "kind": "css",
+          "value": "tr:nth-of-type(3) > td > table > tbody > tr:nth-of-type(1) > td:nth-of-type(2)",
+          "role": null,
+          "exact": false,
+          "reasoning": "Structural CSS of the value cell; fallback."
+        }
+      ]
+    },
+    "value_raw": null,
+    "select_by": "label",
+    "key": null,
+    "output_name": "matches",
+    "attribute": "table",
+    "extracted_value": "1",
+    "risk": "safe",
+    "risk_reason": "",
+    "ok": true,
+    "message": "",
+    "candidate_index": 0
+  }
+]

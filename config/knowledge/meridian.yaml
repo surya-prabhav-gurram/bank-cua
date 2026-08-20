@@ -1,0 +1,140 @@
+# MERIDIAN CORE runtime-condition library.
+#
+# Every detector string below was read off the live application rather than
+# guessed -- see evidence/adaptation/condition-probe.md for the capture. A
+# taxonomy written from a brief instead of from the screen is the kind of thing
+# that passes review and fails in production.
+#
+# Ordering is significant: replay acts on the FIRST match, so specific
+# conditions precede the generic pages that would otherwise swallow them
+# (INSUFFICIENT_FUNDS before TRANSACTION_REJECTED -- both are HTTP 400).
+vendor: Meridian
+conditions:
+  # ---- business outcomes: the application decided, nothing broke -----------
+  - code: INSUFFICIENT_FUNDS
+    klass: business_outcome
+    detector: {kind: text_present, value: "Insufficient available balance"}
+    message: "The source share does not hold enough available balance."
+
+  - code: SOURCE_SHARE_ON_HOLD
+    klass: business_outcome
+    # Found by recording, not by reading the brief: a share restricted by the
+    # Place Hold flow cannot then be debited. It is a legitimate answer the
+    # caller must be told -- "use another share" -- and it is NOT the same as the
+    # generic validation rejection, which would send them to re-check the amount.
+    detector: {kind: text_present, value: "Source share is HOLD"}
+    message: "The source share is restricted by a hold and cannot be debited."
+
+  - code: MEMBER_NOT_ON_FILE
+    klass: business_outcome
+    detector: {kind: text_present, value: "RECORD NOT FOUND"}
+    message: "No member record exists for the supplied member number."
+
+  - code: AMBIGUOUS_MEMBER_MATCH
+    klass: business_outcome
+    # Meridian's member search matches on SUBSTRING: "1002" returns every member
+    # whose number contains it. A recorded flow then clicks the first "Select"
+    # and lands on someone else's record -- and because the caller asked for a
+    # member, an answer about the WRONG member is the worst outcome available.
+    #
+    # This is a question, not a fault: several records matched, so the caller has
+    # to say which. Detected by COUNT because the page says exactly the same
+    # things whether it matched one record or five; only the number of rows
+    # differs. Declared before NO_SEARCH_MATCHES so ordering never lets the
+    # empty-result page speak for a crowded one.
+    detector: {kind: element_count_at_least, value: "Select", min_count: 2}
+    message: "Several member records matched. Supply the full member number, or search by last name to list the candidates."
+    applies_to_actions: [click, press_key]
+
+  - code: MEMBER_NUMBER_NOT_EXACT
+    klass: business_outcome
+    # The third way a substring search misleads. "1002" matches exactly ONE
+    # record -- 100234 -- so it is not ambiguous, and the flow happily selects
+    # it. But no member 1002 exists, and answering with 100234's balances is
+    # the same wrong-member failure wearing a different hat.
+    #
+    # Detected by comparing the page against the caller's OWN input, which is
+    # why detectors are parameterised. Scoped to /members/ because "the number
+    # we asked for is not on this page" is trivially true on the main menu.
+    detector: {kind: text_absent, value: "{member_id}"}
+    # BOTH facts, because either alone is true elsewhere. "The number is absent"
+    # holds on the transfer form too -- which does not display it -- and firing
+    # there reported a business outcome about the screen the caller had asked
+    # for. Pinning it to the member RECORD is what makes it specific.
+    also_requires:
+      - {kind: text_present, value: "MEMBER RECORD"}
+    applies_to_actions: [click]
+    applies_to_urls: ["/members/"]
+    message: "No member record exactly matches that number. The search matched on a partial number and landed on a different member, so nothing was read. Supply the full member number."
+
+  - code: NO_SEARCH_MATCHES
+    klass: business_outcome
+    detector: {kind: text_present, value: "No member records matched"}
+    message: "The search returned no member records."
+
+  - code: SUPERVISOR_OVERRIDE_REQUIRED
+    klass: business_outcome
+    # The application's own RBAC refusing a teller-level operator is an ANSWER,
+    # not a fault: the caller's move is to obtain a supervisor, which is exactly
+    # what an escalation provides. Classifying it as a failure would page an
+    # engineer for a routine authorisation boundary.
+    # NOT the page heading. "SUPERVISOR OVERRIDE REQUIRED" is also printed as a
+    # standing WARNING on the hold form itself, at HTTP 200, for every operator
+    # including supervisors -- so detecting on it told a supervisor they were not
+    # authorised and turned every hold into a false business outcome. This phrase
+    # appears only on the actual 403 denial. Found by running the same capability
+    # as both roles, which is why the evidence set does exactly that.
+    detector: {kind: text_present, value: "is not authorized to perform this"}
+    message: "This function requires a supervisor profile; a teller cannot complete it."
+
+  - code: TRANSACTION_REJECTED
+    klass: business_outcome
+    detector: {kind: text_present, value: "TRANSACTION REJECTED"}
+    message: "The application rejected the transaction as entered."
+    # Only after something was actually SUBMITTED. MERIDIAN's fault injector
+    # renders this same page on ordinary navigations, where nothing was
+    # submitted and "the bank rejected your transaction" would be a lie told
+    # confidently. The unscoped INJECTED_FAULT entry below catches that case.
+    applies_to_actions: [click, press_key]
+
+  # ---- recoverable: handle in-band, then continue --------------------------
+  - code: INJECTED_FAULT
+    klass: recoverable
+    # The same signature as TRANSACTION_REJECTED, reached on a step that
+    # submitted nothing. Deliberately declared AFTER it so that on a submitting
+    # step the business outcome wins; on a navigate or an extract, only this one
+    # applies and the fault is retried instead of being reported as a decision
+    # the application never made.
+    detector: {kind: text_present, value: "TRANSACTION REJECTED"}
+    message: "Fault injected on a non-submitting step; retry."
+    recovery: {kind: reload, max_attempts: 3, backoff_ms: 1500}
+
+  - code: MAINTENANCE_WINDOW
+    klass: recoverable
+    detector: {kind: text_present, value: "SCHEDULED MAINTENANCE IN PROGRESS"}
+    message: "Host temporarily unavailable during batch posting; retry."
+    # Reload rather than click the page's own "Continue": that link goes to
+    # /menu, which clears the interstitial by ABANDONING the flow's position.
+    # A recovery that silently returns you to the main menu mid-transfer is
+    # worse than the fault it fixes.
+    recovery: {kind: reload, max_attempts: 3, backoff_ms: 2000}
+
+  - code: APPLICATION_ERROR
+    klass: recoverable
+    detector: {kind: text_present, value: "APPLICATION ERROR"}
+    message: "Transient host error; reload and retry."
+    # Bounded here, and additionally refused outright on irreversible steps by
+    # policy.allow_recovery_on_risky_steps -- reloading a posted transfer is how
+    # you post it twice.
+    recovery: {kind: reload, max_attempts: 2, backoff_ms: 1500}
+
+  # ---- hard failure: stop, surface a debuggable error ----------------------
+  - code: SESSION_TIMED_OUT
+    klass: hard_failure
+    # Deliberately NOT recoverable-by-re-authentication. Re-signing on mid
+    # transaction and resuming is precisely where double-execution lives: we
+    # cannot know whether the step that timed out landed. Capabilities are
+    # stateless, so re-invoking the whole capability is the caller's decision to
+    # make with full knowledge -- not ours to make silently.
+    detector: {kind: text_present, value: "YOUR SESSION HAS TIMED OUT"}
+    message: "Operator session expired mid-flow; re-authentication required."

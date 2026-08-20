@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Reproduce the discovery runs OFFLINE using the recorded model decisions.
 #
-# The genuine discovery was driven by an LLM through the bridge
-# provider (see REPORT / README). For deterministic, key-free reproduction we
-# replay those exact per-step decisions through the SAME real discovery loop
-# (observe -> decide -> act), which re-derives the artifact from a live run.
+# The genuine discovery was driven by a live LLM through the Anthropic Messages
+# API (see evidence/discovery-*-anthropic-live/, recorded_by: anthropic). This
+# script is the KEY-FREE REPRODUCTION of it: the same per-step decisions, replayed
+# through the SAME real discovery loop (observe -> decide -> act), so the artifact
+# is re-derived from a live browser session rather than copied.
 #
 # To run a fresh, truly-live discovery with your own key instead:
 #   python -m bankcua.cli discover --task <task> --provider anthropic

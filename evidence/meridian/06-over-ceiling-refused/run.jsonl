@@ -1,0 +1,5 @@
+{"ts": 1787260425.428, "event": "run_started", "kind": "replay", "run_dir": "evidence/meridian/06-over-ceiling-refused"}
+{"ts": 1787260425.81, "event": "replay_started", "capability": "meridian.transfer_funds", "version": "1.0.0", "num_steps": 15, "params": {"operator": "teller1", "branch": "MAIN-001", "member_id": "100234", "from_share": "100234-S0070", "to_share": "100234-S0001-3", "amount": "9000.00", "memo": "evidence scenario"}}
+{"ts": 1787260425.81, "event": "value_policy_block", "reason": "value policy: 'amount'=9000 USD exceeds the permitted maximum of 5000 USD"}
+{"ts": 1787260425.81, "event": "replay_refused", "code": "VALUE_LIMIT_EXCEEDED", "requirement": "inputs within policy limits"}
+{"ts": 1787260425.811, "event": "run_finished", "summary_path": "evidence/meridian/06-over-ceiling-refused/summary.json"}

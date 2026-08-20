@@ -204,9 +204,16 @@ def test_console_stops_cleanly_once_control_is_handed_back(paused_run):
     assert client.post("/key", json={"key": "Tab"}).status_code == 410
 
     # reloading the console is the most natural thing an operator does next, and
-    # it used to be the one route that answered with a stack trace
+    # it used to be the one route that answered with a stack trace.
+    #
+    # 200 rather than 410, deliberately: 410 Gone is CACHEABLE, and consoles are
+    # served from a small set of ports. A browser that saw this page once at
+    # :8090 served it from cache to the next escalation's console on that port
+    # without contacting the new server -- which looks exactly like a broken
+    # handoff and leaves no trace in any log.
     home = client.get("/")
-    assert home.status_code == 410
+    assert home.status_code == 200
+    assert home.headers.get("Cache-Control") == "no-store"
     body = home.get_data(as_text=True)
     assert "returned to the agent" in body and "close this window" in body
     assert "/screen" not in body                 # nothing left to poll
@@ -257,3 +264,44 @@ def test_origin_clicks_are_rejected_server_side(paused_run):
 
     client.post("/resolve", json={"resume": False, "note": "done"})
     thread.join(timeout=25)
+
+
+def _open_request(rid):
+    from bankcua.escalation.handoff import InterventionKind, InterventionRequest
+    return InterventionRequest(id=rid, kind=InterventionKind.RISKY_CONFIRMATION,
+                               reason="test", cdp_endpoint="http://127.0.0.1:9222",
+                               created_at=1000.0)
+
+
+def test_console_pages_are_never_cacheable(tmp_path, monkeypatch):
+    """A cached console page is indistinguishable from a broken handoff.
+
+    The closed page used to answer 410, which HTTP explicitly allows a browser to
+    cache. Consoles are served from a small set of ports, so a browser that saw
+    that page once at :8090 kept serving it from cache to the NEXT escalation's
+    console on the same port -- never contacting the new server at all. The
+    operator pressed Take control, was told control had already been returned,
+    and no log anywhere recorded a request, because none was made.
+    """
+    import bankcua.escalation.console as console_mod
+
+    class _ClosedWorker:
+        _closed = True
+
+        def call(self, *a, **kw):
+            raise console_mod.SessionClosed("control has been returned")
+
+        def close(self): ...
+
+    monkeypatch.setattr(console_mod, "_SessionWorker",
+                        lambda store, rid: _ClosedWorker())
+    store = HandoffStore(str(tmp_path))
+    store.write(_open_request("cache-probe"))
+    app = console_mod.create_console("cache-probe", handoffs=str(tmp_path))
+
+    r = app.test_client().get("/")
+    assert r.status_code == 200, (
+        "410 Gone is cacheable; a browser will serve this page to the next "
+        "console bound to the same port")
+    assert r.headers.get("Cache-Control") == "no-store"
+    assert b"Control has been returned" in r.data

@@ -1,0 +1,17 @@
+{
+  "status": "success",
+  "capability_id": "meridian.transfer_funds",
+  "version": "1.0.0",
+  "outputs": {
+    "confirmation": "CN480130"
+  },
+  "business_outcome": null,
+  "refusal": null,
+  "failure": null,
+  "recoveries": [],
+  "drifts": [],
+  "assists": [],
+  "intervention_id": null,
+  "steps_executed": 15,
+  "duration_s": 3.1
+}

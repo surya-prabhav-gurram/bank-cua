@@ -1,0 +1,67 @@
+{"ts": 1787260298.328, "event": "run_started", "kind": "discovery", "run_dir": "evidence/meridian/discovery-meridian.transfer_funds-anthropic"}
+{"ts": 1787260298.922, "event": "discovery_started", "goal": "Sign on, open member 100234, start a Funds Transfer from 100234-S0070 to 100234-S0001-3 for 1.00 with memo capability recording, review it, and post it.", "provider": "anthropic", "entry": "/signon"}
+{"ts": 1787260298.964, "event": "evidence_captured", "label": "step00", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step00.png"}
+{"ts": 1787260298.964, "event": "observation", "step": 0, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787260302.472, "event": "model_decided", "step": 0, "action": "fill", "intent": "Enter operator ID", "ref": 0, "value": "{operator}"}
+{"ts": 1787260302.495, "event": "action_executed", "step": 0, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260302.525, "event": "evidence_captured", "label": "step01", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step01.png"}
+{"ts": 1787260302.526, "event": "observation", "step": 1, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787260305.519, "event": "model_decided", "step": 1, "action": "fill", "intent": "Enter ***REDACTED:password*** for sign on", "ref": 1, "value": "{***REDACTED:password***}"}
+{"ts": 1787260305.567, "event": "action_executed", "step": 1, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260305.597, "event": "evidence_captured", "label": "step02", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step02.png"}
+{"ts": 1787260305.598, "event": "observation", "step": 2, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787260309.242, "event": "model_decided", "step": 2, "action": "click", "intent": "Sign on with entered credentials", "ref": 3, "value": null}
+{"ts": 1787260309.388, "event": "action_executed", "step": 2, "kind": "click", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787260309.427, "event": "evidence_captured", "label": "step03", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step03.png"}
+{"ts": 1787260309.427, "event": "observation", "step": 3, "url": "https://web-sample.interface-hiring.com/menu", "status": 200, "num_elements": 11}
+{"ts": 1787260313.487, "event": "model_decided", "step": 3, "action": "click", "intent": "Go to Member Inquiry / Selection to open member 100234", "ref": 4, "value": null}
+{"ts": 1787260313.542, "event": "action_executed", "step": 3, "kind": "click", "ok": true, "message": "clicked link: Member Inquiry / Selection", "candidate_index": 0}
+{"ts": 1787260313.576, "event": "evidence_captured", "label": "step04", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step04.png"}
+{"ts": 1787260313.576, "event": "observation", "step": 4, "url": "https://web-sample.interface-hiring.com/members", "status": 200, "num_elements": 7}
+{"ts": 1787260316.986, "event": "model_decided", "step": 4, "action": "fill", "intent": "Enter member number to search", "ref": 5, "value": "{member_id}"}
+{"ts": 1787260316.993, "event": "action_executed", "step": 4, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260317.019, "event": "evidence_captured", "label": "step05", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step05.png"}
+{"ts": 1787260317.019, "event": "observation", "step": 5, "url": "https://web-sample.interface-hiring.com/members", "status": 200, "num_elements": 7}
+{"ts": 1787260320.576, "event": "model_decided", "step": 5, "action": "click", "intent": "Search for member 100234", "ref": 6, "value": null}
+{"ts": 1787260320.638, "event": "action_executed", "step": 5, "kind": "click", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787260320.677, "event": "evidence_captured", "label": "step06", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step06.png"}
+{"ts": 1787260320.677, "event": "observation", "step": 6, "url": "https://web-sample.interface-hiring.com/members?by=number&q=100234", "status": 200, "num_elements": 8}
+{"ts": 1787260323.014, "event": "model_decided", "step": 6, "action": "click", "intent": "Select member 100234 to open member record", "ref": 7, "value": null}
+{"ts": 1787260323.073, "event": "action_executed", "step": 6, "kind": "click", "ok": true, "message": "clicked link: Select", "candidate_index": 0}
+{"ts": 1787260323.115, "event": "evidence_captured", "label": "step07", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step07.png"}
+{"ts": 1787260323.115, "event": "observation", "step": 7, "url": "https://web-sample.interface-hiring.com/members/100234", "status": 200, "num_elements": 8}
+{"ts": 1787260327.595, "event": "model_decided", "step": 7, "action": "click", "intent": "Start Funds Transfer for member 100234", "ref": 4, "value": null}
+{"ts": 1787260327.734, "event": "action_executed", "step": 7, "kind": "click", "ok": true, "message": "clicked link: Funds Transfer", "candidate_index": 0}
+{"ts": 1787260327.78, "event": "evidence_captured", "label": "step08", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step08.png"}
+{"ts": 1787260327.78, "event": "observation", "step": 8, "url": "https://web-sample.interface-hiring.com/members/100234/transfer", "status": 200, "num_elements": 10}
+{"ts": 1787260330.309, "event": "model_decided", "step": 8, "action": "select", "intent": "Select From Share as 100234-S0070", "ref": 4, "value": "100234-S0070"}
+{"ts": 1787260330.316, "event": "action_executed", "step": 8, "kind": "select", "ok": true, "message": "selected 100234-S0070", "candidate_index": 0}
+{"ts": 1787260330.344, "event": "evidence_captured", "label": "step09", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step09.png"}
+{"ts": 1787260330.344, "event": "observation", "step": 9, "url": "https://web-sample.interface-hiring.com/members/100234/transfer", "status": 200, "num_elements": 10}
+{"ts": 1787260332.942, "event": "model_decided", "step": 9, "action": "select", "intent": "Select To Share as 100234-S0001-3", "ref": 5, "value": "100234-S0001-3"}
+{"ts": 1787260334.951, "event": "action_executed", "step": 9, "kind": "select", "ok": true, "message": "selected 100234-S0001-3 (recorded by=label; matched on value)", "candidate_index": 0}
+{"ts": 1787260334.98, "event": "evidence_captured", "label": "step10", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step10.png"}
+{"ts": 1787260334.98, "event": "observation", "step": 10, "url": "https://web-sample.interface-hiring.com/members/100234/transfer", "status": 200, "num_elements": 10}
+{"ts": 1787260338.302, "event": "model_decided", "step": 10, "action": "fill", "intent": "Fill amount field with 1.00", "ref": 6, "value": "{amount}"}
+{"ts": 1787260338.309, "event": "action_executed", "step": 10, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260338.338, "event": "evidence_captured", "label": "step11", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step11.png"}
+{"ts": 1787260338.339, "event": "observation", "step": 11, "url": "https://web-sample.interface-hiring.com/members/100234/transfer", "status": 200, "num_elements": 10}
+{"ts": 1787260342.627, "event": "model_decided", "step": 11, "action": "fill", "intent": "Fill memo field with 'capability recording'", "ref": 7, "value": "{memo}"}
+{"ts": 1787260342.636, "event": "action_executed", "step": 11, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787260342.661, "event": "evidence_captured", "label": "step12", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step12.png"}
+{"ts": 1787260342.661, "event": "observation", "step": 12, "url": "https://web-sample.interface-hiring.com/members/100234/transfer", "status": 200, "num_elements": 10}
+{"ts": 1787260344.93, "event": "model_decided", "step": 12, "action": "click", "intent": "Continue to review the transfer details", "ref": 8, "value": null}
+{"ts": 1787260345.003, "event": "action_executed", "step": 12, "kind": "click", "ok": true, "message": "clicked button: Continue", "candidate_index": 0}
+{"ts": 1787260345.045, "event": "evidence_captured", "label": "step13", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step13.png"}
+{"ts": 1787260345.045, "event": "observation", "step": 13, "url": "https://web-sample.interface-hiring.com/members/100234/transfer/review", "status": 200, "num_elements": 6}
+{"ts": 1787260347.552, "event": "model_decided", "step": 13, "action": "click", "intent": "Post the reviewed transfer as required by the goal", "ref": 4, "value": null}
+{"ts": 1787260347.675, "event": "action_executed", "step": 13, "kind": "click", "ok": true, "message": "clicked button: Post Transfer", "candidate_index": 0}
+{"ts": 1787260347.719, "event": "evidence_captured", "label": "step14", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step14.png"}
+{"ts": 1787260347.72, "event": "observation", "step": 14, "url": "https://web-sample.interface-hiring.com/members/100234/transfer/post", "status": 200, "num_elements": 6}
+{"ts": 1787260350.417, "event": "model_decided", "step": 14, "action": "extract", "intent": "Extract the confirmation number for the posted transfer", "ref": 6, "value": null}
+{"ts": 1787260350.43, "event": "action_executed", "step": 14, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787260350.457, "event": "evidence_captured", "label": "step15", "screenshot": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/step15.png"}
+{"ts": 1787260350.457, "event": "observation", "step": 15, "url": "https://web-sample.interface-hiring.com/members/100234/transfer/post", "status": 200, "num_elements": 6}
+{"ts": 1787260353.195, "event": "model_decided", "step": 15, "action": "finish", "intent": "", "ref": null, "value": null}
+{"ts": 1787260353.2, "event": "finish_requested", "success_checkpoint": true, "model_success": true}
+{"ts": 1787260353.208, "event": "run_finished", "summary_path": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/summary.json"}

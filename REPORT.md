@@ -69,8 +69,13 @@ reading the steps; a human should be able to review it.
   label, placeholder, link text, then CSS, then XPath. Replay uses the first
   candidate that resolves; one strategy going stale doesn't break the step.
   `frame_path` addresses controls inside iframes (the balance pane), and read-only
-  values (member name, balance) get **label-relative XPath** locators
-  (`//tr[td="Savings"]/td[last()]`) that survive table reflow.
+  values (member name, balance) are addressed by **label proximity** — a read-only
+  value has no accessible name of its own ("$4,213.55" is not called anything), so
+  the label beside it is the durable handle. That intent is recorded first as a
+  portable `near_label` and second as the same proximity bound to this DOM
+  (`//tr[td="Savings"]/td[last()]`), which survives table reflow. Recording only
+  the XPath would make every extraction step unportable to a surface without a
+  DOM — a property of how it was recorded, not of the flow.
 - **The error taxonomy lives in the schema.** `KnownCondition` records, as data,
   a detector, a class (business_outcome / recoverable / hard_failure), and an
   optional recovery. This makes the most important behaviour reviewable and
@@ -204,7 +209,7 @@ irreversible flow.
 labels, and frames — vocabulary a desktop **accessibility tree** exposes just as
 a browser does — so the artifact format does not assume a DOM. A legacy-web
 target (framesets, nested tables) is the same web surface leaning harder on
-`frame_path` and the structural-fallback candidates; the label-relative readout
+`frame_path` and the structural-fallback candidates; the label-proximity readout
 locators already target exactly the table-soup case. A **desktop** target is a
 new `Surface` backed by an OS accessibility API (UIA/AX) or screenshot+coordinates
 (the schema already has a `COORDINATES` locator kind and the surface a
@@ -326,8 +331,13 @@ and replay** — a violation raises, it never warns-and-continues.
   `--approver whoever` is theatre. `max_per_window` bounds the **sum** over a
   rolling window against a file-backed ledger, because a per-invocation ceiling is
   blind to velocity: ten $999 deposits inside a minute clear a $1,000 limit ten
-  times over. Amounts are booked only on success; a refused or escalated run moved
-  no money and must not starve the budget. A governed value that will not parse as
+  times over. The ledger is wired into both invocation paths that exist — the CLI
+  and the HTTP service — because a guardrail nothing constructs is configuration,
+  not a control (evidence 15 refuses a legal $900 deposit on the trailing hour's
+  total, and the budget is scoped to the *parameter*, so two flows that both move
+  money cannot each spend it). Amounts are booked only on success; a refused or
+  escalated run moved no money and must not starve the budget. A governed value
+  that will not parse as
   a number is refused — a limit you cannot evaluate is not a limit. The value gate
   and the irreversible-step gate are independent and compose: evidence 13 clears
   the value gate on a counter-signed $1,500 deposit and is then stopped by the
@@ -369,10 +379,11 @@ gate), assisted single-step recovery, and cross-tenant reuse with per-variant
 overrides and route canonicalisation. What remains deliberately thin, at clean
 seams:
 
-- **Operator console** — CLI stand-in; the handoff mechanism is real (§5).
-- **Desktop / legacy-web *surfaces*** — designed, not built (§4). The `Surface`
-  seam keeps the core uncommitted; cross-tenant reuse *within* the web surface is
-  built and demonstrated.
+- **A desktop *driver*** — the second `Surface` is built and replays the same
+  artifact through an accessibility tree with no DOM (§4, evidence 14), but its
+  tree comes from Chromium over CDP rather than from an OS API, because there is
+  no desktop application here to drive. The remaining delta is `_ax_nodes()`, one
+  method wide.
 - **Multi-tenant plumbing** (tenant registry, scheduling) — intentionally not
   built; that is the scaling infrastructure the brief says to avoid.
 - **Discovery** — the committed evidence is a **genuine live run** through the
@@ -381,20 +392,16 @@ seams:
   offline reproduction via the `bridge` provider (`scripts/run_discovery.sh`)
   drives the same real loop from a recorded decision trace.
 
-Since the first pass, four of the gaps this section previously named as future
-work are **built and evidenced**: value-level policy with amount ceilings and
-dual control on money movement (§6, evidence 11–13); a layered risk model with a
-per-step human review gate before approval (§6); fill verification, closing the
-one action whose effect no page checkpoint could see (§3, evidence 10); and
-`surfaces_outputs`, so a business outcome can return the data it does have (§3,
-evidence 03).
-
-All four items this section previously listed as future work are now **built and
-evidenced**: a second `Surface` (§4, evidence 14); value-level policy with
-ceilings, dual control, a velocity ledger and a registry-bound approver (§6,
-evidence 11–13); a real co-browsing operator console over the existing CDP seam
-(§5); and a drift-driven artifact repair loop (`repair analyse|apply`) that
-aggregates drift across runs, proposes a reviewable patch, bumps the version and
+Everything this section named as future work in earlier passes is now **built and
+evidenced**: value-level policy with amount ceilings, dual control, a velocity
+ledger and a registry-bound approver (§6, evidence 11–13 and 15); a layered risk
+model with a per-step human review gate before approval (§6); fill verification,
+closing the one action whose effect no page checkpoint could see (§3, evidence
+10); `surfaces_outputs`, so a business outcome can return the data it does have
+(§3, evidence 03); a second `Surface` (§4, evidence 14); a real co-browsing
+operator console over the existing CDP seam (§5); and a drift-driven artifact
+repair loop (`repair analyse|apply`) that aggregates drift across runs, proposes
+a reviewable patch, bumps the version and
 lands it in `draft` so the existing approval gate still decides. That loop is
 deliberately not self-modifying: automation that silently rewrites its own
 instructions for driving a bank is a worse problem than the staleness it fixes.

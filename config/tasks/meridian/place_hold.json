@@ -1,0 +1,83 @@
+{
+  "capability_id": "meridian.place_hold",
+  "name": "Place a hold on a member's share",
+  "description": "Restrict a share with a reason code and notes. The host requires a supervisor profile for this function and the hold is irreversible, so it carries both the application's own authorisation boundary and our irreversible-step gate.",
+  "goal": "Sign on, open member {member_id}, place a hold on share {share_id} with reason {reason_code} and notes {notes}, review it, and apply it.",
+  "app_id": "meridian-core",
+  "surface_type": "web",
+  "base_url": "https://web-sample.interface-hiring.com",
+  "entry_path": "/signon",
+  "tenant_id": "interface-demo",
+  "vendor_product": "Meridian",
+  "version": "4.2.1",
+  "inputs": [
+    {
+      "name": "operator",
+      "type": "string",
+      "required": true,
+      "description": "Operator ID to sign on with (e.g. teller1, super1).",
+      "example": "teller1"
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "sensitive": true,
+      "description": "Operator password. Supplied at invocation and never persisted."
+    },
+    {
+      "name": "branch",
+      "type": "string",
+      "required": true,
+      "description": "Branch code to sign on against.",
+      "example": "MAIN-001"
+    },
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "example": "100234"
+    },
+    {
+      "name": "share_id",
+      "type": "string",
+      "required": true,
+      "description": "Share to restrict."
+    },
+    {
+      "name": "reason_code",
+      "type": "string",
+      "required": true,
+      "description": "Hold reason code.",
+      "example": "FRAUD"
+    },
+    {
+      "name": "notes",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "outputs": [
+    {
+      "name": "confirmation",
+      "type": "string",
+      "description": "Confirmation number for the applied hold."
+    }
+  ],
+  "success": {
+    "kind": "text_present",
+    "value": "HOLD APPLIED",
+    "description": "hold established"
+  },
+  "max_steps": 22,
+  "max_seconds": 300.0,
+  "param_values": {
+    "operator": "super1",
+    "password": "password",
+    "branch": "MAIN-001",
+    "member_id": "100987",
+    "share_id": "100987-S0070",
+    "reason_code": "FRAUD",
+    "notes": "recorded during capability discovery"
+  }
+}

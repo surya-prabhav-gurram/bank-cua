@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "reason": "Share successfully established with confirmation CN480126, already extracted in previous step.",
+  "outputs": {
+    "confirmation": "CN480126"
+  },
+  "num_steps": 13,
+  "artifact_path": "capabilities/meridian/meridian.open_share.json"
+}
