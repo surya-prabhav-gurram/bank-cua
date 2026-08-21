@@ -1,51 +1,51 @@
-{"ts": 1787260132.754, "event": "run_started", "kind": "discovery", "run_dir": "evidence/meridian/discovery-meridian.member_lookup-anthropic"}
-{"ts": 1787260133.774, "event": "discovery_started", "goal": "Sign on, search for member number 100234, select that member, and read their record and share balances.", "provider": "anthropic", "entry": "/signon"}
-{"ts": 1787260133.816, "event": "evidence_captured", "label": "step00", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step00.png"}
-{"ts": 1787260133.816, "event": "observation", "step": 0, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
-{"ts": 1787260137.616, "event": "model_decided", "step": 0, "action": "fill", "intent": "Fill operator ID", "ref": 0, "value": "{operator}"}
-{"ts": 1787260137.633, "event": "action_executed", "step": 0, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
-{"ts": 1787260137.655, "event": "evidence_captured", "label": "step01", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step01.png"}
-{"ts": 1787260137.655, "event": "observation", "step": 1, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
-{"ts": 1787260140.07, "event": "model_decided", "step": 1, "action": "fill", "intent": "Fill ***REDACTED:password*** field", "ref": 1, "value": "{***REDACTED:password***}"}
-{"ts": 1787260140.114, "event": "action_executed", "step": 1, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
-{"ts": 1787260140.138, "event": "evidence_captured", "label": "step02", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step02.png"}
-{"ts": 1787260140.138, "event": "observation", "step": 2, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
-{"ts": 1787260142.536, "event": "model_decided", "step": 2, "action": "click", "intent": "Sign on with filled credentials and branch", "ref": 3, "value": null}
-{"ts": 1787260142.814, "event": "action_executed", "step": 2, "kind": "click", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
-{"ts": 1787260142.864, "event": "evidence_captured", "label": "step03", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step03.png"}
-{"ts": 1787260142.864, "event": "observation", "step": 3, "url": "https://web-sample.interface-hiring.com/menu", "status": 200, "num_elements": 11}
-{"ts": 1787260146.629, "event": "model_decided", "step": 3, "action": "click", "intent": "Go to Member Inquiry / Selection to search for member", "ref": 4, "value": null}
-{"ts": 1787260146.737, "event": "action_executed", "step": 3, "kind": "click", "ok": true, "message": "clicked link: Member Inquiry / Selection", "candidate_index": 0}
-{"ts": 1787260146.771, "event": "evidence_captured", "label": "step04", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step04.png"}
-{"ts": 1787260146.771, "event": "observation", "step": 4, "url": "https://web-sample.interface-hiring.com/members", "status": 200, "num_elements": 7}
-{"ts": 1787260150.043, "event": "model_decided", "step": 4, "action": "fill", "intent": "Enter member number to search", "ref": 5, "value": "{member_id}"}
-{"ts": 1787260150.061, "event": "action_executed", "step": 4, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
-{"ts": 1787260150.09, "event": "evidence_captured", "label": "step05", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step05.png"}
-{"ts": 1787260150.09, "event": "observation", "step": 5, "url": "https://web-sample.interface-hiring.com/members", "status": 200, "num_elements": 7}
-{"ts": 1787260152.229, "event": "model_decided", "step": 5, "action": "click", "intent": "Search for member 100234", "ref": 6, "value": null}
-{"ts": 1787260152.302, "event": "action_executed", "step": 5, "kind": "click", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
-{"ts": 1787260152.339, "event": "evidence_captured", "label": "step06", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step06.png"}
-{"ts": 1787260152.339, "event": "observation", "step": 6, "url": "https://web-sample.interface-hiring.com/members?by=number&q=100234", "status": 200, "num_elements": 8}
-{"ts": 1787260154.718, "event": "model_decided", "step": 6, "action": "click", "intent": "Select member 100234 to view their record", "ref": 7, "value": null}
-{"ts": 1787260154.808, "event": "action_executed", "step": 6, "kind": "click", "ok": true, "message": "clicked link: Select", "candidate_index": 0}
-{"ts": 1787260154.851, "event": "evidence_captured", "label": "step07", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step07.png"}
-{"ts": 1787260154.851, "event": "observation", "step": 7, "url": "https://web-sample.interface-hiring.com/members/100234", "status": 200, "num_elements": 8}
-{"ts": 1787260159.378, "event": "model_decided", "step": 7, "action": "extract", "intent": "Extract member name", "ref": 9, "value": null}
-{"ts": 1787260159.391, "event": "action_executed", "step": 7, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
-{"ts": 1787260159.421, "event": "evidence_captured", "label": "step08", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step08.png"}
-{"ts": 1787260159.421, "event": "observation", "step": 8, "url": "https://web-sample.interface-hiring.com/members/100234", "status": 200, "num_elements": 8}
-{"ts": 1787260163.536, "event": "model_decided", "step": 8, "action": "extract", "intent": "Extract member email", "ref": 10, "value": null}
-{"ts": 1787260163.553, "event": "action_executed", "step": 8, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
-{"ts": 1787260163.582, "event": "evidence_captured", "label": "step09", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step09.png"}
-{"ts": 1787260163.582, "event": "observation", "step": 9, "url": "https://web-sample.interface-hiring.com/members/100234", "status": 200, "num_elements": 8}
-{"ts": 1787260168.136, "event": "model_decided", "step": 9, "action": "extract", "intent": "Extract member phone", "ref": 11, "value": null}
-{"ts": 1787260168.151, "event": "action_executed", "step": 9, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
-{"ts": 1787260168.181, "event": "evidence_captured", "label": "step10", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step10.png"}
-{"ts": 1787260168.181, "event": "observation", "step": 10, "url": "https://web-sample.interface-hiring.com/members/100234", "status": 200, "num_elements": 8}
-{"ts": 1787260173.059, "event": "model_decided", "step": 10, "action": "extract", "intent": "Extract the shares/balances table", "ref": 13, "value": null}
-{"ts": 1787260173.09, "event": "action_executed", "step": 10, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
-{"ts": 1787260173.126, "event": "evidence_captured", "label": "step11", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step11.png"}
-{"ts": 1787260173.127, "event": "observation", "step": 11, "url": "https://web-sample.interface-hiring.com/members/100234", "status": 200, "num_elements": 8}
-{"ts": 1787260175.925, "event": "model_decided", "step": 11, "action": "finish", "intent": "", "ref": null, "value": null}
-{"ts": 1787260175.93, "event": "finish_requested", "success_checkpoint": true, "model_success": true}
-{"ts": 1787260175.951, "event": "run_finished", "summary_path": "evidence/meridian/discovery-meridian.member_lookup-anthropic/summary.json"}
+{"ts": 1787276789.996, "event": "run_started", "kind": "discovery", "run_dir": "evidence/meridian/discovery-meridian.member_lookup-anthropic"}
+{"ts": 1787276790.525, "event": "discovery_started", "goal": "Sign on, search for member number 100234, select that member, and read their record and share balances.", "provider": "anthropic", "entry": "/signon"}
+{"ts": 1787276790.563, "event": "evidence_captured", "label": "step00", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step00.png"}
+{"ts": 1787276790.563, "event": "observation", "step": 0, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787276793.191, "event": "model_decided", "step": 0, "action": "fill", "intent": "Fill operator ID", "ref": 0, "value": "{operator}"}
+{"ts": 1787276793.223, "event": "action_executed", "step": 0, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787276793.247, "event": "evidence_captured", "label": "step01", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step01.png"}
+{"ts": 1787276793.247, "event": "observation", "step": 1, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787276795.174, "event": "model_decided", "step": 1, "action": "fill", "intent": "Fill ***REDACTED:password*** field", "ref": 1, "value": "{***REDACTED:password***}"}
+{"ts": 1787276795.21, "event": "action_executed", "step": 1, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787276795.239, "event": "evidence_captured", "label": "step02", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step02.png"}
+{"ts": 1787276795.239, "event": "observation", "step": 2, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787276797.251, "event": "model_decided", "step": 2, "action": "click", "intent": "Sign on with filled credentials", "ref": 3, "value": null}
+{"ts": 1787276797.42, "event": "action_executed", "step": 2, "kind": "click", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787276797.466, "event": "evidence_captured", "label": "step03", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step03.png"}
+{"ts": 1787276797.466, "event": "observation", "step": 3, "url": "https://web-sample.interface-hiring.com/menu", "status": 200, "num_elements": 11}
+{"ts": 1787276799.322, "event": "model_decided", "step": 3, "action": "click", "intent": "Go to Member Inquiry / Selection to search for member", "ref": 4, "value": null}
+{"ts": 1787276799.387, "event": "action_executed", "step": 3, "kind": "click", "ok": true, "message": "clicked link: Member Inquiry / Selection", "candidate_index": 0}
+{"ts": 1787276799.42, "event": "evidence_captured", "label": "step04", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step04.png"}
+{"ts": 1787276799.42, "event": "observation", "step": 4, "url": "https://web-sample.interface-hiring.com/members", "status": 200, "num_elements": 7}
+{"ts": 1787276801.296, "event": "model_decided", "step": 4, "action": "fill", "intent": "Enter member number to search", "ref": 5, "value": "{member_id}"}
+{"ts": 1787276801.304, "event": "action_executed", "step": 4, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787276801.331, "event": "evidence_captured", "label": "step05", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step05.png"}
+{"ts": 1787276801.331, "event": "observation", "step": 5, "url": "https://web-sample.interface-hiring.com/members", "status": 200, "num_elements": 7}
+{"ts": 1787276803.241, "event": "model_decided", "step": 5, "action": "click", "intent": "Search for member 100234", "ref": 6, "value": null}
+{"ts": 1787276803.317, "event": "action_executed", "step": 5, "kind": "click", "ok": true, "message": "clicked button: Search", "candidate_index": 0}
+{"ts": 1787276803.354, "event": "evidence_captured", "label": "step06", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step06.png"}
+{"ts": 1787276803.354, "event": "observation", "step": 6, "url": "https://web-sample.interface-hiring.com/members?by=number&q=100234", "status": 200, "num_elements": 8}
+{"ts": 1787276805.187, "event": "model_decided", "step": 6, "action": "click", "intent": "Select member 100234 to view their record", "ref": 7, "value": null}
+{"ts": 1787276805.317, "event": "action_executed", "step": 6, "kind": "click", "ok": true, "message": "clicked link: Select", "candidate_index": 0}
+{"ts": 1787276805.367, "event": "evidence_captured", "label": "step07", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step07.png"}
+{"ts": 1787276805.367, "event": "observation", "step": 7, "url": "https://web-sample.interface-hiring.com/members/100234", "status": 200, "num_elements": 8}
+{"ts": 1787276809.901, "event": "model_decided", "step": 7, "action": "extract", "intent": "Extract member name", "ref": 9, "value": null}
+{"ts": 1787276809.913, "event": "action_executed", "step": 7, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787276809.947, "event": "evidence_captured", "label": "step08", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step08.png"}
+{"ts": 1787276809.947, "event": "observation", "step": 8, "url": "https://web-sample.interface-hiring.com/members/100234", "status": 200, "num_elements": 8}
+{"ts": 1787276813.789, "event": "model_decided", "step": 8, "action": "extract", "intent": "Extract member email", "ref": 10, "value": null}
+{"ts": 1787276813.806, "event": "action_executed", "step": 8, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787276813.843, "event": "evidence_captured", "label": "step09", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step09.png"}
+{"ts": 1787276813.843, "event": "observation", "step": 9, "url": "https://web-sample.interface-hiring.com/members/100234", "status": 200, "num_elements": 8}
+{"ts": 1787276817.165, "event": "model_decided", "step": 9, "action": "extract", "intent": "Extract member phone", "ref": 11, "value": null}
+{"ts": 1787276817.168, "event": "action_executed", "step": 9, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787276817.192, "event": "evidence_captured", "label": "step10", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step10.png"}
+{"ts": 1787276817.192, "event": "observation", "step": 10, "url": "https://web-sample.interface-hiring.com/members/100234", "status": 200, "num_elements": 8}
+{"ts": 1787276819.374, "event": "model_decided", "step": 10, "action": "extract", "intent": "Extract the shares/balances table", "ref": 13, "value": null}
+{"ts": 1787276819.404, "event": "action_executed", "step": 10, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787276819.428, "event": "evidence_captured", "label": "step11", "screenshot": "evidence/meridian/discovery-meridian.member_lookup-anthropic/step11.png"}
+{"ts": 1787276819.428, "event": "observation", "step": 11, "url": "https://web-sample.interface-hiring.com/members/100234", "status": 200, "num_elements": 8}
+{"ts": 1787276822.186, "event": "model_decided", "step": 11, "action": "finish", "intent": "", "ref": null, "value": null}
+{"ts": 1787276822.191, "event": "finish_requested", "success_checkpoint": true, "model_success": true}
+{"ts": 1787276822.2, "event": "run_finished", "summary_path": "evidence/meridian/discovery-meridian.member_lookup-anthropic/summary.json"}

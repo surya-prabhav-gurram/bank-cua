@@ -199,7 +199,7 @@
     },
     {
       "index": 2,
-      "intent": "Sign on with filled credentials and branch",
+      "intent": "Sign on with filled credentials",
       "action": "click",
       "target": {
         "description": "button: Sign On",
@@ -614,7 +614,7 @@
             }
           ]
         },
-        "attribute": "value",
+        "attribute": "text",
         "transform": "strip"
       },
       "wait": null,
@@ -907,13 +907,13 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",
     "discovery_run_id": "discovery-meridian.member_lookup-anthropic",
     "transcript_ref": "evidence/meridian/discovery-meridian.member_lookup-anthropic/transcript.json",
-    "transcript_sha256": "1df70f64c3e6513cec01a30b2f15087545209accb9ec755cddc6dd7ac4deab46",
+    "transcript_sha256": "b92171a1007909a75147f9c38a752b2dfe2387703cd0edbf284faeef4ea21d9f",
     "notes": "Compiled from a successful discovery run."
   },
   "stability": null

@@ -71,7 +71,7 @@
   },
   {
     "index": 1,
-    "intent": "Enter ***REDACTED*** for sign on",
+    "intent": "Enter ***REDACTED***",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/signon",
     "url_template": null,
@@ -204,7 +204,7 @@
   },
   {
     "index": 3,
-    "intent": "Go to Member Inquiry / Selection to open member 100234",
+    "intent": "Open Member Inquiry / Selection to find member 100234",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/menu",
     "url_template": null,
@@ -274,7 +274,7 @@
   },
   {
     "index": 4,
-    "intent": "Enter member number to search",
+    "intent": "Enter member number 100234 to search",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/members",
     "url_template": null,
@@ -407,7 +407,7 @@
   },
   {
     "index": 6,
-    "intent": "Select member 100234 to open member record",
+    "intent": "Open member 100234 details",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/members?by=number&q=100234",
     "url_template": null,
@@ -420,7 +420,7 @@
       "type_attr": "",
       "label": "",
       "placeholder": "",
-      "near_label": "5",
+      "near_label": "6",
       "text": "Select",
       "is_submit": false,
       "form_method": "",
@@ -477,7 +477,7 @@
   },
   {
     "index": 7,
-    "intent": "Start Funds Transfer for member 100234",
+    "intent": "Open Funds Transfer form",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/members/100234",
     "url_template": null,
@@ -687,7 +687,7 @@
   },
   {
     "index": 10,
-    "intent": "Fill amount field with 1.00",
+    "intent": "Enter transfer amount",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/members/100234/transfer",
     "url_template": null,
@@ -757,7 +757,7 @@
   },
   {
     "index": 11,
-    "intent": "Fill memo field with 'capability recording'",
+    "intent": "Enter memo text",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/members/100234/transfer",
     "url_template": null,
@@ -827,7 +827,7 @@
   },
   {
     "index": 12,
-    "intent": "Continue to review the transfer details",
+    "intent": "Continue to review the transfer",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/members/100234/transfer",
     "url_template": null,
@@ -890,7 +890,7 @@
   },
   {
     "index": 13,
-    "intent": "Post the reviewed transfer as required by the goal",
+    "intent": "Post the reviewed funds transfer as required by the goal",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/members/100234/transfer/review",
     "url_template": null,
@@ -953,7 +953,7 @@
   },
   {
     "index": 14,
-    "intent": "Extract the confirmation number for the posted transfer",
+    "intent": "Extract confirmation number from posted transfer",
     "action_kind": "extract",
     "url": "https://web-sample.interface-hiring.com/members/100234/transfer/post",
     "url_template": null,
@@ -990,7 +990,7 @@
     "key": null,
     "output_name": "confirmation",
     "attribute": "text",
-    "extracted_value": "CN480129",
+    "extracted_value": "CN480190",
     "risk": "safe",
     "risk_reason": "",
     "ok": true,

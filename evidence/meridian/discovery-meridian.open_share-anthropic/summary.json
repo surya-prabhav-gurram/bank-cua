@@ -1,8 +1,8 @@
 {
   "status": "success",
-  "reason": "Share successfully established with confirmation CN480126, already extracted in previous step.",
+  "reason": "The share has been successfully established with confirmation number CN480191, which was already extracted in the previous step. All goal steps (sign on, open member, create MMKT share with $5.00 deposit, review, establish) are complete.",
   "outputs": {
-    "confirmation": "CN480126"
+    "confirmation": "CN480191"
   },
   "num_steps": 13,
   "artifact_path": "capabilities/meridian/meridian.open_share.json"

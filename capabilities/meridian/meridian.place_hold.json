@@ -250,7 +250,7 @@
     },
     {
       "index": 3,
-      "intent": "Navigate to Place Account Hold screen",
+      "intent": "Navigate to Place Account Hold",
       "action": "click",
       "target": {
         "description": "link: Place Account Hold",
@@ -478,7 +478,7 @@
     },
     {
       "index": 7,
-      "intent": "Select share {member_id}-S0070 for hold",
+      "intent": "Select share {member_id}-S0070",
       "action": "select_option",
       "target": {
         "description": "combobox: selected: 100987-S0001 - Regular Shares",
@@ -533,7 +533,7 @@
     },
     {
       "index": 8,
-      "intent": "Enter notes {notes}",
+      "intent": "Enter notes for the hold",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -588,7 +588,7 @@
     },
     {
       "index": 9,
-      "intent": "Continue to review the hold before applying",
+      "intent": "Continue to review the hold details",
       "action": "click",
       "target": {
         "description": "button: Continue",
@@ -688,13 +688,13 @@
       },
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Apply Hold' (assumed state-changing)",
-      "risk_reviewed": false,
+      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Apply Hold' (assumed state-changing) | reviewed: Restricts a member's share. Irreversible, and the host additionally requires a supervisor profile. Left un-risky in config/service.yaml so unattended invocation escalates to a person rather than proceeding.",
+      "risk_reviewed": true,
       "requires_confirmation": true
     },
     {
       "index": 11,
-      "intent": "Extract confirmation number for the applied hold",
+      "intent": "Extract the confirmation number for the applied hold",
       "action": "extract",
       "target": null,
       "value": null,
@@ -974,13 +974,13 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",
     "discovery_run_id": "discovery-meridian.place_hold-anthropic",
     "transcript_ref": "evidence/meridian/discovery-meridian.place_hold-anthropic/transcript.json",
-    "transcript_sha256": "6d6ddc513a7d4226fe8a510fd86845891d3a1685f9cbe9ef5892af12a190aa0d",
+    "transcript_sha256": "02e214819435c664d4f87b3f6db04bfa77cf381c5e15e58db9c179d5425c7db2",
     "notes": "Compiled from a successful discovery run."
   },
   "stability": null

@@ -141,7 +141,7 @@
   },
   {
     "index": 2,
-    "intent": "Sign on with teller1 credentials at MAIN-001 branch",
+    "intent": "Submit the sign on form with teller1 credentials at MAIN-001 branch",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/signon",
     "url_template": null,

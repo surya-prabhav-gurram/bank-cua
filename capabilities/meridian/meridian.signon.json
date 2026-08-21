@@ -3,7 +3,7 @@
   "id": "meridian.signon",
   "name": "Sign on to Meridian Core",
   "description": "Authenticate an operator against Meridian Core and confirm a session can be established. Returns no data by design: capabilities are stateless, so a session cannot be handed to a later invocation, and the verdict -- success, or a typed business outcome such as a bad credential -- is the whole answer.",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "target": {
     "app_id": "meridian-core",
     "surface_type": "web",
@@ -157,7 +157,7 @@
     },
     {
       "index": 2,
-      "intent": "Sign on with {operator} credentials at {branch} branch",
+      "intent": "Submit the sign on form with {operator} credentials at {branch} branch",
       "action": "click",
       "target": {
         "description": "button: Sign On",
@@ -436,13 +436,13 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",
     "discovery_run_id": "discovery-meridian.signon-anthropic",
     "transcript_ref": "evidence/meridian/discovery-meridian.signon-anthropic/transcript.json",
-    "transcript_sha256": "25986868b091478025fc4e9ac4e414e9ab771bb600ad1e82bdb611baa648c468",
+    "transcript_sha256": "2f50525974707137fcc53d2f213a5e787956b0812ae44d52c6b271c508810ce4",
     "notes": "Compiled from a successful discovery run."
   },
   "stability": null

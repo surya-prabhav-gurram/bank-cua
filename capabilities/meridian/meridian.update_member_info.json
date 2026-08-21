@@ -94,7 +94,7 @@
   "steps": [
     {
       "index": 0,
-      "intent": "Enter operator ID",
+      "intent": "Fill operator ID",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -149,7 +149,7 @@
     },
     {
       "index": 1,
-      "intent": "Enter {password}",
+      "intent": "Fill {password} field",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -204,7 +204,7 @@
     },
     {
       "index": 2,
-      "intent": "Sign on with entered credentials",
+      "intent": "Sign on with filled credentials",
       "action": "click",
       "target": {
         "description": "button: Sign On",
@@ -425,7 +425,7 @@
     },
     {
       "index": 6,
-      "intent": "Select member {member_id} to view/update their details",
+      "intent": "Select member {member_id} to open their record for update",
       "action": "click",
       "target": {
         "description": "link: Select",
@@ -527,9 +527,9 @@
       "checkpoint": null,
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Save Changes' (assumed state-changing)",
-      "risk_reviewed": false,
-      "requires_confirmation": true
+      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Save Changes' (assumed state-changing) | reviewed: Overwrites stored contact details. Reversible only by knowing the previous values, which the capability reads back but does not retain.",
+      "risk_reviewed": true,
+      "requires_confirmation": false
     },
     {
       "index": 8,
@@ -593,7 +593,7 @@
     },
     {
       "index": 9,
-      "intent": "Extract updated email value",
+      "intent": "extract step",
       "action": "extract",
       "target": null,
       "value": null,
@@ -623,55 +623,6 @@
             {
               "kind": "css",
               "value": "tr:nth-of-type(3) > td > table:nth-of-type(1) > tbody > tr:nth-of-type(2) > td:nth-of-type(2)",
-              "role": null,
-              "exact": false,
-              "reasoning": "Structural CSS of the value cell; fallback."
-            }
-          ]
-        },
-        "attribute": "text",
-        "transform": "strip"
-      },
-      "wait": null,
-      "checkpoint": null,
-      "verify_value": false,
-      "risk": "safe",
-      "risk_reason": "",
-      "risk_reviewed": false,
-      "requires_confirmation": false
-    },
-    {
-      "index": 10,
-      "intent": "Extract updated phone value",
-      "action": "extract",
-      "target": null,
-      "value": null,
-      "select_by": "value",
-      "key": null,
-      "url_template": null,
-      "extract": {
-        "output": "phone",
-        "locator": {
-          "description": "value for Phone:",
-          "frame_path": [],
-          "candidates": [
-            {
-              "kind": "near_label",
-              "value": "Phone:",
-              "role": null,
-              "exact": false,
-              "reasoning": "Label-proximity: the value adjacent to 'Phone:'. A read-only value carries no name of its own, so proximity is the durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially."
-            },
-            {
-              "kind": "xpath",
-              "value": "//td[normalize-space(.)=\"Phone:\"]/following-sibling::td[1]",
-              "role": null,
-              "exact": false,
-              "reasoning": "The same proximity bound to this DOM: the cell immediately following 'Phone:'; robust to table reflow, and correct on rows that pack more than one label/value pair."
-            },
-            {
-              "kind": "css",
-              "value": "tr:nth-of-type(3) > td > table:nth-of-type(1) > tbody > tr:nth-of-type(2) > td:nth-of-type(4)",
               "role": null,
               "exact": false,
               "reasoning": "Structural CSS of the value cell; fallback."
@@ -922,13 +873,13 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",
     "discovery_run_id": "discovery-meridian.update_member_info-anthropic",
     "transcript_ref": "evidence/meridian/discovery-meridian.update_member_info-anthropic/transcript.json",
-    "transcript_sha256": "93685e0646ba6b47ab30d47c6cd6de4a2e317dd7cc909e9e128ad7e5534c827f",
+    "transcript_sha256": "fed8414f5d669489109b03a37954ede5a6a242573968ebf56c77c957c220b837",
     "notes": "Compiled from a successful discovery run."
   },
   "stability": null

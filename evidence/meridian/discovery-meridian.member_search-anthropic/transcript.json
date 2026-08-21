@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "intent": "Enter operator ID",
+    "intent": "Fill operator ID",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/signon",
     "url_template": null,
@@ -344,7 +344,7 @@
   },
   {
     "index": 5,
-    "intent": "Enter last name Turing in search value field",
+    "intent": "Enter last name to search",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/members",
     "url_template": null,
@@ -477,7 +477,7 @@
   },
   {
     "index": 7,
-    "intent": "Extract the search results table for Turing",
+    "intent": "Extract the search results table",
     "action_kind": "extract",
     "url": "https://web-sample.interface-hiring.com/members?by=name&q=Turing",
     "url_template": null,
@@ -523,7 +523,7 @@
   },
   {
     "index": 8,
-    "intent": "Extract the search results table for Turing",
+    "intent": "",
     "action_kind": "extract",
     "url": "https://web-sample.interface-hiring.com/members?by=name&q=Turing",
     "url_template": null,

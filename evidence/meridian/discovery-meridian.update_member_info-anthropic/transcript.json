@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "intent": "Enter operator ID",
+    "intent": "Fill operator ID",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/signon",
     "url_template": null,
@@ -71,7 +71,7 @@
   },
   {
     "index": 1,
-    "intent": "Enter ***REDACTED***",
+    "intent": "Fill ***REDACTED*** field",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/signon",
     "url_template": null,
@@ -141,7 +141,7 @@
   },
   {
     "index": 2,
-    "intent": "Sign on with entered credentials",
+    "intent": "Sign on with filled credentials",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/signon",
     "url_template": null,
@@ -407,7 +407,7 @@
   },
   {
     "index": 6,
-    "intent": "Select member 100987 to view/update their details",
+    "intent": "Select member 100987 to open their record for update",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/members?next=update&by=number&q=100987",
     "url_template": null,
@@ -420,7 +420,7 @@
       "type_attr": "",
       "label": "",
       "placeholder": "",
-      "near_label": "10",
+      "near_label": "17",
       "text": "Select",
       "is_submit": false,
       "form_method": "",
@@ -610,7 +610,7 @@
   },
   {
     "index": 9,
-    "intent": "Extract updated email value",
+    "intent": "",
     "action_kind": "extract",
     "url": "https://web-sample.interface-hiring.com/members/100987",
     "url_template": null,
@@ -656,53 +656,7 @@
   },
   {
     "index": 10,
-    "intent": "Extract updated phone value",
-    "action_kind": "extract",
-    "url": "https://web-sample.interface-hiring.com/members/100987",
-    "url_template": null,
-    "element": null,
-    "locator": {
-      "description": "value for Phone:",
-      "frame_path": [],
-      "candidates": [
-        {
-          "kind": "near_label",
-          "value": "Phone:",
-          "role": null,
-          "exact": false,
-          "reasoning": "Label-proximity: the value adjacent to 'Phone:'. A read-only value carries no name of its own, so proximity is the durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially."
-        },
-        {
-          "kind": "xpath",
-          "value": "//td[normalize-space(.)=\"Phone:\"]/following-sibling::td[1]",
-          "role": null,
-          "exact": false,
-          "reasoning": "The same proximity bound to this DOM: the cell immediately following 'Phone:'; robust to table reflow, and correct on rows that pack more than one label/value pair."
-        },
-        {
-          "kind": "css",
-          "value": "tr:nth-of-type(3) > td > table:nth-of-type(1) > tbody > tr:nth-of-type(2) > td:nth-of-type(4)",
-          "role": null,
-          "exact": false,
-          "reasoning": "Structural CSS of the value cell; fallback."
-        }
-      ]
-    },
-    "value_raw": null,
-    "select_by": "label",
-    "key": null,
-    "output_name": "phone",
-    "attribute": "text",
-    "extracted_value": "555-0102",
-    "risk": "safe",
-    "risk_reason": "",
-    "ok": true,
-    "message": "",
-    "candidate_index": 0
-  },
-  {
-    "index": 11,
-    "intent": "Extract confirmed email value from record",
+    "intent": "",
     "action_kind": "extract",
     "url": "https://web-sample.interface-hiring.com/members/100987",
     "url_template": null,
@@ -740,52 +694,6 @@
     "output_name": "email",
     "attribute": "text",
     "extracted_value": "***EMAIL***",
-    "risk": "safe",
-    "risk_reason": "",
-    "ok": true,
-    "message": "",
-    "candidate_index": 0
-  },
-  {
-    "index": 12,
-    "intent": "Extract confirmed phone value from record",
-    "action_kind": "extract",
-    "url": "https://web-sample.interface-hiring.com/members/100987",
-    "url_template": null,
-    "element": null,
-    "locator": {
-      "description": "value for Phone:",
-      "frame_path": [],
-      "candidates": [
-        {
-          "kind": "near_label",
-          "value": "Phone:",
-          "role": null,
-          "exact": false,
-          "reasoning": "Label-proximity: the value adjacent to 'Phone:'. A read-only value carries no name of its own, so proximity is the durable handle -- and stating it semantically lets a non-DOM surface resolve it spatially."
-        },
-        {
-          "kind": "xpath",
-          "value": "//td[normalize-space(.)=\"Phone:\"]/following-sibling::td[1]",
-          "role": null,
-          "exact": false,
-          "reasoning": "The same proximity bound to this DOM: the cell immediately following 'Phone:'; robust to table reflow, and correct on rows that pack more than one label/value pair."
-        },
-        {
-          "kind": "css",
-          "value": "tr:nth-of-type(3) > td > table:nth-of-type(1) > tbody > tr:nth-of-type(2) > td:nth-of-type(4)",
-          "role": null,
-          "exact": false,
-          "reasoning": "Structural CSS of the value cell; fallback."
-        }
-      ]
-    },
-    "value_raw": null,
-    "select_by": "label",
-    "key": null,
-    "output_name": "phone",
-    "attribute": "text",
-    "extracted_value": "555-0102",
     "risk": "safe",
     "risk_reason": "",
     "ok": true,

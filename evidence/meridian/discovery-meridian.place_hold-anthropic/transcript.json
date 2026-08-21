@@ -204,7 +204,7 @@
   },
   {
     "index": 3,
-    "intent": "Navigate to Place Account Hold screen",
+    "intent": "Navigate to Place Account Hold",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/menu",
     "url_template": null,
@@ -420,7 +420,7 @@
       "type_attr": "",
       "label": "",
       "placeholder": "",
-      "near_label": "10",
+      "near_label": "17",
       "text": "Select",
       "is_submit": false,
       "form_method": "",
@@ -477,7 +477,7 @@
   },
   {
     "index": 7,
-    "intent": "Select share 100987-S0070 for hold",
+    "intent": "Select share 100987-S0070",
     "action_kind": "select",
     "url": "https://web-sample.interface-hiring.com/members/100987/hold",
     "url_template": null,
@@ -547,7 +547,7 @@
   },
   {
     "index": 8,
-    "intent": "Enter notes recorded during capability discovery",
+    "intent": "Enter notes for the hold",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/members/100987/hold",
     "url_template": null,
@@ -617,7 +617,7 @@
   },
   {
     "index": 9,
-    "intent": "Continue to review the hold before applying",
+    "intent": "Continue to review the hold details",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/members/100987/hold",
     "url_template": null,
@@ -743,7 +743,7 @@
   },
   {
     "index": 11,
-    "intent": "Extract confirmation number for the applied hold",
+    "intent": "Extract the confirmation number for the applied hold",
     "action_kind": "extract",
     "url": "https://web-sample.interface-hiring.com/members/100987/hold/post",
     "url_template": null,
@@ -780,7 +780,7 @@
     "key": null,
     "output_name": "confirmation",
     "attribute": "text",
-    "extracted_value": "CN480128",
+    "extracted_value": "CN480192",
     "risk": "safe",
     "risk_reason": "",
     "ok": true,

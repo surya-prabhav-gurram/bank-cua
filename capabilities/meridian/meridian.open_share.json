@@ -79,7 +79,7 @@
   "steps": [
     {
       "index": 0,
-      "intent": "Fill operator ID",
+      "intent": "Enter operator ID",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -134,7 +134,7 @@
     },
     {
       "index": 1,
-      "intent": "Fill {password} field",
+      "intent": "Enter {password} for {operator}",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -189,7 +189,7 @@
     },
     {
       "index": 2,
-      "intent": "Sign on with filled credentials and selected branch",
+      "intent": "Sign on with {operator} credentials",
       "action": "click",
       "target": {
         "description": "button: Sign On",
@@ -242,7 +242,7 @@
     },
     {
       "index": 3,
-      "intent": "Go to Member Inquiry / Selection to find member {member_id}",
+      "intent": "Go to Member Inquiry / Selection to open member {member_id}",
       "action": "click",
       "target": {
         "description": "link: Member Inquiry / Selection",
@@ -302,7 +302,7 @@
     },
     {
       "index": 4,
-      "intent": "Enter member number {member_id} for search",
+      "intent": "Enter member number {member_id} to search",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -470,7 +470,7 @@
     },
     {
       "index": 7,
-      "intent": "Open New Share for member {member_id}",
+      "intent": "Open the Open New Share form",
       "action": "click",
       "target": {
         "description": "link: Open New Share",
@@ -693,7 +693,7 @@
     },
     {
       "index": 11,
-      "intent": "Establish the new share by clicking Open Share",
+      "intent": "Confirm and establish the new {share_type} share",
       "action": "click",
       "target": {
         "description": "button: Open Share",
@@ -740,13 +740,13 @@
       },
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Open Share' (assumed state-changing)",
-      "risk_reviewed": false,
-      "requires_confirmation": true
+      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Open Share' (assumed state-changing) | reviewed: Establishes a new share on the member record. Caption 'Open Share' carries no risky keyword; the POST-form structural signal is what classified it, and that classification is correct.",
+      "risk_reviewed": true,
+      "requires_confirmation": false
     },
     {
       "index": 12,
-      "intent": "Extract confirmation number for the newly established share.",
+      "intent": "Extract the confirmation number for the newly established share",
       "action": "extract",
       "target": null,
       "value": null,
@@ -1026,13 +1026,13 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",
     "discovery_run_id": "discovery-meridian.open_share-anthropic",
     "transcript_ref": "evidence/meridian/discovery-meridian.open_share-anthropic/transcript.json",
-    "transcript_sha256": "47dfc19f366a1f481cc5848cfb1ad31bf0991d7ea3c2ac63b314d648c1fc5a2e",
+    "transcript_sha256": "0bd4a30a79009a6394642175c2ff9ed7208f1828dcf8753643c3701c501558dc",
     "notes": "Compiled from a successful discovery run."
   },
   "stability": null

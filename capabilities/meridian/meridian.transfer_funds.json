@@ -150,7 +150,7 @@
     },
     {
       "index": 1,
-      "intent": "Enter {password} for sign on",
+      "intent": "Enter {password}",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -258,7 +258,7 @@
     },
     {
       "index": 3,
-      "intent": "Go to Member Inquiry / Selection to open member {member_id}",
+      "intent": "Open Member Inquiry / Selection to find member {member_id}",
       "action": "click",
       "target": {
         "description": "link: Member Inquiry / Selection",
@@ -318,7 +318,7 @@
     },
     {
       "index": 4,
-      "intent": "Enter member number to search",
+      "intent": "Enter member number {member_id} to search",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -426,7 +426,7 @@
     },
     {
       "index": 6,
-      "intent": "Select member {member_id} to open member record",
+      "intent": "Open member {member_id} details",
       "action": "click",
       "target": {
         "description": "link: Select",
@@ -486,7 +486,7 @@
     },
     {
       "index": 7,
-      "intent": "Start Funds Transfer for member {member_id}",
+      "intent": "Open Funds Transfer form",
       "action": "click",
       "target": {
         "description": "link: Funds Transfer",
@@ -540,9 +540,9 @@
       },
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "lexical: caption contains 'Transfer'",
-      "risk_reviewed": false,
-      "requires_confirmation": true
+      "risk_reason": "lexical: caption contains 'Transfer' | reviewed: Posts a funds movement between shares; the host issues a confirmation number and provides no reversal path. Amount limits and dual control apply underneath via config/policy.meridian.yaml.",
+      "risk_reviewed": true,
+      "requires_confirmation": false
     },
     {
       "index": 8,
@@ -656,7 +656,7 @@
     },
     {
       "index": 10,
-      "intent": "Fill amount field with {amount}",
+      "intent": "Enter transfer amount",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -711,7 +711,7 @@
     },
     {
       "index": 11,
-      "intent": "Fill memo field with '{memo}'",
+      "intent": "Enter memo text",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -766,7 +766,7 @@
     },
     {
       "index": 12,
-      "intent": "Continue to review the transfer details",
+      "intent": "Continue to review the transfer",
       "action": "click",
       "target": {
         "description": "button: Continue",
@@ -819,7 +819,7 @@
     },
     {
       "index": 13,
-      "intent": "Post the reviewed transfer as required by the goal",
+      "intent": "Post the reviewed funds transfer as required by the goal",
       "action": "click",
       "target": {
         "description": "button: Post Transfer",
@@ -866,13 +866,13 @@
       },
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "lexical: caption contains 'Post'; corroborated by POST form submission",
-      "risk_reviewed": false,
-      "requires_confirmation": true
+      "risk_reason": "lexical: caption contains 'Post'; corroborated by POST form submission | reviewed: Posts a funds movement between shares; the host issues a confirmation number and provides no reversal path. Amount limits and dual control apply underneath via config/policy.meridian.yaml.",
+      "risk_reviewed": true,
+      "requires_confirmation": false
     },
     {
       "index": 14,
-      "intent": "Extract the confirmation number for the posted transfer",
+      "intent": "Extract confirmation number from posted transfer",
       "action": "extract",
       "target": null,
       "value": null,
@@ -1152,13 +1152,13 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",
     "discovery_run_id": "discovery-meridian.transfer_funds-anthropic",
     "transcript_ref": "evidence/meridian/discovery-meridian.transfer_funds-anthropic/transcript.json",
-    "transcript_sha256": "8729c5f5326085b3efa03cbe90377bacc7fab13a8988d29da1404eb7b7b7ab0f",
+    "transcript_sha256": "cfcdc39dd65599a4fa6ca1277da99c3bc2dc511cbb988ffe23f8a008f6133ef9",
     "notes": "Compiled from a successful discovery run."
   },
   "stability": null

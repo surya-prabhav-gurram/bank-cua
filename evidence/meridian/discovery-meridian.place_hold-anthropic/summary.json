@@ -1,8 +1,8 @@
 {
   "status": "success",
-  "reason": "Hold successfully applied with confirmation CN480128, already extracted in previous step.",
+  "reason": "Hold successfully applied on share 100987-S0070 with confirmation number CN480192, which was already extracted in the previous step.",
   "outputs": {
-    "confirmation": "CN480128"
+    "confirmation": "CN480192"
   },
   "num_steps": 12,
   "artifact_path": "capabilities/meridian/meridian.place_hold.json"

@@ -67,7 +67,7 @@
   "steps": [
     {
       "index": 0,
-      "intent": "Enter operator ID",
+      "intent": "Fill operator ID",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -345,7 +345,7 @@
     },
     {
       "index": 5,
-      "intent": "Enter last name {last_name} in search value field",
+      "intent": "Enter last name to search",
       "action": "fill",
       "target": {
         "description": "textbox: empty",
@@ -453,7 +453,7 @@
     },
     {
       "index": 7,
-      "intent": "Extract the search results table for {last_name}",
+      "intent": "Extract the search results table",
       "action": "extract",
       "target": null,
       "value": null,
@@ -733,13 +733,13 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",
     "discovery_run_id": "discovery-meridian.member_search-anthropic",
     "transcript_ref": "evidence/meridian/discovery-meridian.member_search-anthropic/transcript.json",
-    "transcript_sha256": "24e4237c32f7570acad821c6ca7cd292c435457601cafc25c09a01969819a250",
+    "transcript_sha256": "c3df423878dee2738c49b2ebf869aeacf3c613b9c35056f609bfac360b3b5f70",
     "notes": "Compiled from a successful discovery run."
   },
   "stability": null

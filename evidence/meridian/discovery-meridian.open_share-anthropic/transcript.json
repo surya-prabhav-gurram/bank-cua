@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "intent": "Fill operator ID",
+    "intent": "Enter operator ID",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/signon",
     "url_template": null,
@@ -71,7 +71,7 @@
   },
   {
     "index": 1,
-    "intent": "Fill ***REDACTED*** field",
+    "intent": "Enter ***REDACTED*** for teller1",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/signon",
     "url_template": null,
@@ -141,7 +141,7 @@
   },
   {
     "index": 2,
-    "intent": "Sign on with filled credentials and selected branch",
+    "intent": "Sign on with teller1 credentials",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/signon",
     "url_template": null,
@@ -204,7 +204,7 @@
   },
   {
     "index": 3,
-    "intent": "Go to Member Inquiry / Selection to find member 100987",
+    "intent": "Go to Member Inquiry / Selection to open member 100987",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/menu",
     "url_template": null,
@@ -274,7 +274,7 @@
   },
   {
     "index": 4,
-    "intent": "Enter member number 100987 for search",
+    "intent": "Enter member number 100987 to search",
     "action_kind": "fill",
     "url": "https://web-sample.interface-hiring.com/members",
     "url_template": null,
@@ -420,7 +420,7 @@
       "type_attr": "",
       "label": "",
       "placeholder": "",
-      "near_label": "9",
+      "near_label": "16",
       "text": "Select",
       "is_submit": false,
       "form_method": "",
@@ -477,7 +477,7 @@
   },
   {
     "index": 7,
-    "intent": "Open New Share for member 100987",
+    "intent": "Open the Open New Share form",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/members/100987",
     "url_template": null,
@@ -750,7 +750,7 @@
   },
   {
     "index": 11,
-    "intent": "Establish the new share by clicking Open Share",
+    "intent": "Confirm and establish the new MMKT share",
     "action_kind": "click",
     "url": "https://web-sample.interface-hiring.com/members/100987/open-share/review",
     "url_template": null,
@@ -813,7 +813,7 @@
   },
   {
     "index": 12,
-    "intent": "Extract confirmation number for the newly established share.",
+    "intent": "Extract the confirmation number for the newly established share",
     "action_kind": "extract",
     "url": "https://web-sample.interface-hiring.com/members/100987/open-share/post",
     "url_template": null,
@@ -850,7 +850,7 @@
     "key": null,
     "output_name": "confirmation",
     "attribute": "text",
-    "extracted_value": "CN480126",
+    "extracted_value": "CN480191",
     "risk": "safe",
     "risk_reason": "",
     "ok": true,
