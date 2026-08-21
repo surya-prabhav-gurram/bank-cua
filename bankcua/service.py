@@ -10,7 +10,18 @@ result contract.
   GET  /capabilities/<id>       -> full contract (inputs, outputs, steps)
   GET  /operators               -> alias names only, never secrets
   POST /invoke/<id>             -> {params, operator} -> ReplayResult
+  POST /session/signon          -> establish the signed-in operator's session
   GET  /runs, /runs/<id>        -> run history and evidence, for the dashboard
+
+One capability is not like the others
+-------------------------------------
+Signing an operator on to the host is not a service an agent should be able to
+order up. It is what the console does at the door, once, on the alias the
+sign-in names -- so `session_signon` in `config/service.yaml` names that
+capability, and for any caller carrying a session it is withheld from the
+manifest and refused at /invoke. `POST /session/signon` is the only way it runs,
+and it runs the same way everything else does: same engine, same policy, same
+evidence, same contract.
 
 The decision this file exists to enforce
 ----------------------------------------
@@ -44,10 +55,11 @@ import datetime as _dt
 import glob
 import json
 import os
+import time as _time
 from dataclasses import dataclass, field
 
 import yaml
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 
 from .auth import (AuthError, Principal, SessionAuthority, may_invoke,
                    operator_alias_for, scope_params, token_from_request)
@@ -56,7 +68,8 @@ from .observability.logging import RunLogger
 from .replay.engine import ReplayEngine
 from .safety.credentials import (CredentialError, CredentialStore,
                                  EnvCredentialStore)
-from .escalation.handoff import HandoffCoordinator, HandoffStore
+from .escalation.handoff import (HandoffCoordinator, HandoffStore,
+                                 InterventionStatus)
 from .safety.ledger import Ledger
 from .safety.policy import Policy, PolicyEngine
 from .surface.web_playwright import WebSurface
@@ -96,6 +109,21 @@ class ServiceConfig:
     require_session: bool = False
     principals_path: str = "config/principals.json"
     session_key_path: str = "config/session.key"
+    #: The capability the CONSOLE establishes when a person signs in, and which
+    #: a signed-in session may therefore never invoke for itself.
+    #:
+    #: Signing an operator on to the host is not a thing anyone should ask for
+    #: twice. It happens once, at the door, because somebody signed in -- so it
+    #: is withheld from the published manifest and refused at /invoke for any
+    #: caller carrying a session, and reachable only through
+    #: `POST /session/signon`, which the console calls at sign-in. The model in
+    #: front of the console never sees it, which is the point: a tool whose only
+    #: possible effect is to redo what the sign-in already did is a tool that can
+    #: only be called by mistake.
+    #:
+    #: Empty disables all of that and leaves the capability an ordinary one,
+    #: which is what the direct agent path (no sign-in) still wants.
+    session_signon: str = ""
 
     @classmethod
     def from_yaml(cls, path: str) -> "ServiceConfig":
@@ -108,6 +136,7 @@ class ServiceConfig:
         return cls(
             default_operator=raw.get("default_operator", ""),
             require_session=bool(raw.get("require_session", False)),
+            session_signon=str(raw.get("session_signon") or ""),
             principals_path=raw.get("principals", "config/principals.json"),
             session_key_path=raw.get("session_key", "config/session.key"),
             rules={cid: CapabilityRule(
@@ -122,6 +151,17 @@ class ServiceConfig:
 
     def rule_for(self, cap_id: str) -> CapabilityRule:
         return self.rules.get(cap_id, CapabilityRule())
+
+
+def _is_safe_intervention_id(ident: str) -> bool:
+    """Is this an identifier rather than a path?
+
+    `HandoffStore` turns an id straight into `<root>/<id>.json`, and these
+    routes match with `<path:...>` because intervention ids are long and dotted.
+    That join is only safe while the id cannot climb out of the store.
+    """
+    return bool(ident) and ".." not in ident and "/" not in ident \
+        and "\\" not in ident and not os.path.isabs(ident)
 
 
 def _refused(code: str, requirement: str, reason: str, cap_id: str, status: int):
@@ -185,6 +225,8 @@ def create_app(catalog_dir="capabilities/meridian",
                 "GET /capabilities/<id>": "full typed contract",
                 "GET /operators": "operator aliases and roles (never secrets)",
                 "POST /invoke/<id>": "{params, operator} -> ReplayResult",
+                "POST /session/signon": "establish the signed-in operator's "
+                                        "session on the target",
                 "GET /runs": "run history",
                 "GET /runs/<run_id>": "one run with its evidence",
             },
@@ -222,6 +264,13 @@ def create_app(catalog_dir="capabilities/meridian",
         chatbot to fill in with somebody else's number.
         """
         if principal is not None:
+            if tool["name"] and tool["name"] == svc.session_signon:
+                # Established at sign-in, so it is not in anyone's action space
+                # here. Publishing it would offer a chatbot a tool whose only
+                # possible effect is to redo what signing in already did -- and
+                # the model has no way to know that, so it would eventually be
+                # called, on a live host, for nothing.
+                return None
             rule = svc.rule_for(tool["name"])
             if may_invoke(principal, rule.allowed_principal_roles) is not None:
                 return None
@@ -349,6 +398,22 @@ def create_app(catalog_dir="capabilities/meridian",
                 "this deployment requires every invocation to name a "
                 "signed-in person", cap_id, 401)
 
+        if principal is not None and svc.session_signon \
+                and cap_id == svc.session_signon:
+            # Signing the operator on is what the CONSOLE did when this person
+            # signed in, on the same alias, against the same host. Doing it
+            # again on request is at best a no-op that drives a live browser for
+            # nothing, and at worst a way for whoever is in front of the console
+            # to exercise an operator credential as an action of its own. It is
+            # withheld from the manifest for the same reason; this is the half
+            # that does not depend on anyone reading the manifest first.
+            return _refused(
+                "SIGNON_ESTABLISHED_AT_SIGN_IN",
+                "the console sign-in, which establishes it once",
+                f"{cap_id} runs when a person signs in to the console, not on "
+                f"request; the session held by this caller is already the "
+                f"result of it", cap_id, 403)
+
         if principal is not None:
             denial = may_invoke(principal, rule.allowed_principal_roles)
             if denial is not None:
@@ -404,14 +469,218 @@ def create_app(catalog_dir="capabilities/meridian",
                             "an operator alias the service can resolve",
                             "no operator supplied and no default configured",
                             cap_id, 403)
+        art, params, refusal = _bind(art, rule, alias, params,
+                                     tenant=body.get("tenant"))
+        if refusal is not None:
+            return refusal
+
+        # WHICH SURFACE asked. Not an authorisation input -- nothing is decided
+        # by it -- but a routing one: it is stamped on any intervention the run
+        # raises so the pause can be shown where the person who caused it is
+        # sitting. Constrained to a known set so a caller cannot invent a
+        # channel that no surface polls, which would hide the pause from
+        # everyone.
+        channel = str(body.get("channel") or "")
+        if channel not in ("assistant", "dashboard", ""):
+            channel = ""
+        return _run(art, params, alias, principal, rule,
+                    approver=str(body.get("approver", "")), channel=channel)
+
+    # ---- runs paused for a person ---------------------------------------
+    @app.get("/interventions")
+    def interventions():
+        """Runs currently stopped, waiting for someone.
+
+        Exposed on the API rather than read off disk by each surface, because
+        there is now more than one surface that has to show a pause. The
+        dashboard reads the handoff store directly; the assistant cannot, and
+        should not have to learn where that store lives to tell the person in
+        front of it that their own request is waiting on them.
+
+        Staff only. A paused run describes whichever member an operator was
+        working on, which is categorically not a member's business -- and a
+        member cannot clear one either way.
+        """
+        try:
+            principal = _principal()
+        except AuthError as ex:
+            return jsonify({"error": str(ex)}), 401
+        if principal is not None and principal.is_member:
+            return jsonify([])
+        out = []
+        for req in HandoffStore(handoff_dir).list_open():
+            dual = req.kind.value == "dual_control"
+            out.append({
+                "id": req.id, "kind": req.kind.value, "reason": req.reason,
+                "capability_id": req.capability_id,
+                "step": req.current_step_index,
+                "channel": req.channel, "initiator": req.initiator,
+                "initiator_role": req.initiator_role,
+                "needs": "countersignature" if dual else "confirmation",
+                "state_url": req.state_url,
+                "created_at": req.created_at,
+                "has_screenshot": bool(req.screenshot_path),
+            })
+        return jsonify(out)
+
+    @app.get("/interventions/<path:req_id>/screenshot")
+    def intervention_screenshot(req_id):
+        """The frame captured when the run stopped.
+
+        Approving an irreversible step without seeing it is a rubber stamp, so
+        whatever surface offers the button has to be able to show the screen.
+        """
+        try:
+            principal = _principal()
+        except AuthError as ex:
+            return jsonify({"error": str(ex)}), 401
+        if principal is not None and principal.is_member:
+            return jsonify({"error": "not available"}), 403
+        if not _is_safe_intervention_id(req_id):
+            return jsonify({"error": "unknown intervention"}), 404
+        try:
+            req = HandoffStore(handoff_dir).read(req_id)
+        except Exception:
+            return jsonify({"error": "unknown intervention"}), 404
+        if not req.screenshot_path or not os.path.isfile(req.screenshot_path):
+            return jsonify({"error": "no screenshot"}), 404
+        return send_file(os.path.abspath(req.screenshot_path))
+
+    @app.post("/interventions/<path:req_id>/confirm")
+    def confirm_intervention(req_id):
+        """Authorise a paused irreversible step, without driving the screen.
+
+        The identity comes from the SESSION, never the body: an approver a
+        caller can type is a string, not a second pair of eyes. A dual-control
+        pause is refused here on purpose -- that one asks for an INDEPENDENT
+        second person, and the engine re-checks independence itself, so letting
+        it be cleared through the same button would quietly turn two signatures
+        into one.
+        """
+        try:
+            principal = _principal()
+        except AuthError as ex:
+            return _refused("SESSION_INVALID", "a valid console sign-in",
+                            str(ex), "", 401)
+        if principal is None:
+            return _refused(
+                "SESSION_REQUIRED", "a signed-in supervisor",
+                "confirming an irreversible step records WHO approved it, so "
+                "there has to be somebody signed in", "", 401)
+        if principal.role != "supervisor":
+            return _refused(
+                "CONFIRMATION_NOT_PERMITTED_FOR_ROLE", "a supervisor sign-in",
+                f"{principal.username!r} is signed in as {principal.role!r}; "
+                f"authorising an irreversible step is supervisor work", "", 403)
+        if not _is_safe_intervention_id(req_id):
+            return jsonify({"error": "unknown intervention"}), 404
+        store = HandoffStore(handoff_dir)
+        try:
+            req = store.read(req_id)
+        except Exception:
+            return jsonify({"error": "unknown intervention"}), 404
+        if req.kind.value == "dual_control":
+            return jsonify({"error": "this pause needs an independent "
+                                     "counter-signature from a second "
+                                     "supervisor, not a confirmation"}), 409
+        if req.status.value != "open":
+            return jsonify({"error": f"already {req.status.value}"}), 409
+        req.status = InterventionStatus.RESOLVED
+        req.resolved_at = _time.time()
+        req.resolved_by = principal.username
+        req.resume = True
+        req.controller = "agent"
+        # Deliberately not the word "manual": the engine reads this note to
+        # decide whether the operator already performed the step by hand. Nobody
+        # touched the page here -- the automation still posts it.
+        req.resolution_note = (f"confirmed by {principal.username} from "
+                               f"{req.channel or 'the operator console'}; the "
+                               f"automation performed the step")
+        store.write(req)
+        return jsonify({"ok": True, "resolved_by": principal.username})
+
+    @app.post("/session/signon")
+    def session_signon():
+        """Establish the signed-in operator's session on the target. Once.
+
+        The other half of withholding `session_signon` from every signed-in
+        caller. The capability still runs -- same replay engine, same policy
+        engine, same evidence directory, same result contract -- it is simply
+        not something the person or the model in front of the console can ask
+        for. It happens BECAUSE they signed in, which is the only moment at
+        which signing on means anything.
+
+        Staff only, and not because a member is less trusted: a member has no
+        Meridian operator identity at all, so there is no operator session to
+        establish on their behalf. Their work runs delegated on the alias the
+        deployment configured, and exercising that alias's credential is not
+        something a member's sign-in should cause.
+        """
+        if not svc.session_signon:
+            return jsonify({
+                "error": "this deployment establishes no sign-on at sign-in; "
+                         "set `session_signon` in the service config"}), 404
+        cap_id = svc.session_signon
+        try:
+            principal = _principal()
+        except AuthError as ex:
+            return _refused("SESSION_INVALID", "a valid console sign-in",
+                            str(ex), cap_id, 401)
+        if principal is None:
+            return _refused(
+                "SESSION_REQUIRED", "a signed-in console session",
+                "a sign-on is established for the person who signed in, so "
+                "there has to be one", cap_id, 401)
+        if principal.is_member:
+            return _refused(
+                "SIGNON_NOT_FOR_MEMBERS", "a staff sign-in",
+                "a member has no Meridian operator identity to sign on with; "
+                "their work runs delegated on the deployment's staff alias",
+                cap_id, 403)
+        try:
+            art = cat.get(cap_id)
+        except Exception:
+            return jsonify({"error": "unknown capability"}), 404
+
+        rule = svc.rule_for(cap_id)
+        denial = may_invoke(principal, rule.allowed_principal_roles)
+        if denial is not None:
+            return _refused(denial.code, denial.requirement, denial.reason,
+                            cap_id, 403)
+        alias = operator_alias_for(principal, svc.default_operator)
+        if not alias:
+            return _refused("OPERATOR_REQUIRED",
+                            "an operator alias the service can resolve",
+                            f"{principal.username!r} maps to no operator alias",
+                            cap_id, 403)
+        art, params, refusal = _bind(art, rule, alias, {})
+        if refusal is not None:
+            # Notably including CAPABILITY_NOT_APPROVED. A deployment that has
+            # not approved its sign-on capability has not approved it for this
+            # either -- the console reports the refusal and lets the person in
+            # unverified rather than quietly making an exception for itself.
+            return refusal
+        return _run(art, params, alias, principal, rule)
+
+    # ---- the two halves every invocation shares -------------------------
+    def _bind(art, rule, alias, params, tenant=None):
+        """Authorise the OPERATOR and bind the capability's parameters.
+
+        Split out from the route because the console's sign-on has to go through
+        exactly this, and a second, quieter path for the one capability that
+        exercises a credential is precisely the shortcut this service exists not
+        to have. Returns `(artifact, params, None)` or `(_, _, refusal)`.
+        """
+        cap_id = art.id
         try:
             identity = creds.resolve(alias)
         except CredentialError as ex:
-            return _refused("UNKNOWN_OPERATOR", "a configured operator alias",
-                            str(ex), cap_id, 403)
+            return art, params, _refused(
+                "UNKNOWN_OPERATOR", "a configured operator alias",
+                str(ex), cap_id, 403)
 
         if rule.allowed_operators and alias not in rule.allowed_operators:
-            return _refused(
+            return art, params, _refused(
                 "OPERATOR_NOT_PERMITTED",
                 f"an operator on this capability's allow list "
                 f"({rule.allowed_operators})",
@@ -421,18 +690,17 @@ def create_app(catalog_dir="capabilities/meridian",
             # The application enforces this too, and would refuse at its own
             # screen. Refusing here as well means we never drive a member's
             # account up to a wall we already knew was there.
-            return _refused(
+            return art, params, _refused(
                 "ROLE_NOT_PERMITTED",
                 f"an operator with role {rule.requires_role!r}",
                 f"{alias!r} holds role {identity.role!r}", cap_id, 403)
 
         if art.approval_state.value != "approved" and not rule.allow_unapproved:
-            return _refused(
+            return art, params, _refused(
                 "CAPABILITY_NOT_APPROVED",
                 "the capability to be approved for unattended use",
                 f"{cap_id} is {art.approval_state.value}", cap_id, 409)
 
-        tenant = body.get("tenant")
         if tenant:
             ov = (TenantOverride.model_validate(tenant) if isinstance(tenant, dict)
                   else TenantOverride.load(tenant))
@@ -445,6 +713,7 @@ def create_app(catalog_dir="capabilities/meridian",
         # Identity is merged in AFTER everything the caller sent, so a caller
         # cannot override a secret -- or a branch -- by sending a param of the
         # same name.
+        params = dict(params)
         params["operator"] = alias
         params.update(identity.context)
         params.update(identity.secrets)
@@ -458,11 +727,23 @@ def create_app(catalog_dir="capabilities/meridian",
         missing = [p.name for p in art.inputs
                    if p.required and p.name not in params]
         if missing:
-            return _refused(
+            return art, params, _refused(
                 "MISSING_REQUIRED_INPUT",
                 f"a value for each required input: {missing}",
                 f"no value supplied for {', '.join(missing)}", cap_id, 400)
+        return art, params, None
 
+    def _run(art, params, alias, principal, rule, approver: str = "",
+             channel: str = ""):
+        """Execute one authorised capability run and shape the response.
+
+        Everything above this point decided WHETHER the call may happen; this is
+        the part that happens. Both entry points -- an agent at /invoke and the
+        console establishing a sign-on -- land here, so a run's evidence, its
+        policy engine, its handoff coordinator and its result contract cannot
+        differ depending on which door it came through.
+        """
+        cap_id = art.id
         run_id = (f"{cap_id}-"
                   f"{_dt.datetime.now().strftime('%Y%m%d-%H%M%S-%f')[:-3]}")
         run_dir = os.path.join(evidence_dir, run_id)
@@ -495,8 +776,10 @@ def create_app(catalog_dir="capabilities/meridian",
         try:
             res = ReplayEngine(surf, pe, logger, coordinator,
                                initiator=alias,
-                               approver=str(body.get("approver", "")),
-                               ledger=ledger).run(art, params)
+                               approver=approver,
+                               ledger=ledger, channel=channel,
+                               initiator_role=(principal.role if principal
+                                               else "")).run(art, params)
         finally:
             logger.finish(json.loads(res.model_dump_json()) if res else {})
             surf.stop()

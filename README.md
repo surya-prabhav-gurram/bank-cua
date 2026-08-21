@@ -58,7 +58,12 @@ browser, same compiler; only *who chooses the action* differs.
 **3. Review and approve them.** Capabilities ship as `draft` — approval is a
 human act performed against a deployment, and the API refuses to invoke a draft.
 This script walks the review gate for real, ratifying each irreversible step with
-a recorded justification:
+a recorded justification, and recording one reviewer *disagreement* with the
+classifier (the step that merely opens the transfer form). **Nothing irreversible
+is cleared to run unattended:** every posting step keeps its per-run
+confirmation, so it pauses for a person and the value policy bounds what a
+mistake can cost on top of that. Run it after recording, and after any
+re-record:
 
 ```bash
 python scripts/approve_meridian.py
@@ -83,8 +88,16 @@ the key; the default `--router rule` is deterministic and needs nothing.)
 python -m bankcua.cli dashboard           # run dashboard  -> http://127.0.0.1:8082
 ```
 
-These come up open, with the operator chosen from a dropdown — the
-single-operator demo path.
+These come up open — the single-operator demo path. The assistant has no
+operator picker: with nobody signed in it acts as the alias `chat --operator`
+names, and behind a sign-in the API derives the alias from the session and
+refuses a request that names a different one. A control that is either ignored
+or refused is not a control.
+
+Note that `serve --require-session` (path 4b) makes this path unusable: the
+standalone assistant on :8081 holds no session, so every message it sends is
+refused with `SESSION_REQUIRED`. Behind a sign-in, the assistant is the tab at
+:8083, not a separate process.
 
 **4b — Behind a sign-in.** The console mounts the dashboard and the assistant
 behind one sign-in, on one origin, so a single session covers both. What a
@@ -106,9 +119,30 @@ python -m bankcua.cli serve --require-session   # API     -> http://127.0.0.1:80
 python -m bankcua.cli portal                    # console -> http://127.0.0.1:8083
 ```
 
-**Now open <http://127.0.0.1:8083> and sign in as `teller1` / `password`.**
+**Now open <http://127.0.0.1:8083>, pick `teller1` from the operator list, and
+press Sign in.** No password: staff sign in on the choice alone — see the
+warning under [Signing in](#signing-in--one-console-two-tabs-one-identity).
 
-That is the sign-in page. Every sign-in, and what each one may do, is in
+Pressing Sign in **signs that operator on to MERIDIAN** before the console
+opens. The header then reads `MERIDIAN signed on`, and the run that did it is in
+the dashboard's history like any other. Two things follow, and they are the same
+decision seen from both sides:
+
+* nobody types a Meridian operator password anywhere — the secret stays in
+  `config/credentials.json` and is merged in server-side at the moment of use;
+* `meridian.signon` **leaves the action space**. The API withholds it from the
+  manifest and refuses it at `/invoke` for any signed-in caller
+  (`SIGNON_ESTABLISHED_AT_SIGN_IN`), so the assistant cannot route to it and the
+  dashboard cannot offer it. Ask the assistant to sign on and it tells you it
+  already happened.
+
+If MERIDIAN **rejects** the operator, the sign-in is refused with the host's own
+words. If it cannot be reached at all — API down, target offline, capability
+still `draft` — you are signed in anyway and the header says `MERIDIAN not
+verified`, because an unreachable host is not evidence about anybody's
+credential.
+
+Every sign-in, and what each one may do, is in
 [Signing in](#signing-in--one-console-two-tabs-one-identity) below.
 
 **5. Drive it from the dashboard** — pick a capability, fill its typed inputs,
@@ -131,9 +165,26 @@ caller is never invited to send a password.
 | `balances for member 999999` | `business_outcome` — an answer, not an error |
 | `transfer 1.00 from 100234-S0070 to 100234-S0001-3` | `success` with the host's confirmation number |
 | `transfer 9000 from 100234-S0070 to 100234-S0001-3` | `refused` — over the ceiling, nothing opened |
+| `open a share for 100234 with 1.00` | `business_outcome` — the host's own minimum-deposit rule, reported as the answer it is rather than as a crash |
 | `transfer 2000 from 100234-S0070 to 100234-S0001-3` | pauses over the dual-control threshold rather than failing closed. **A second supervisor counter-signs it** — in the console, the *Paused* panel offers `Counter-sign`, and the run resumes on the spot. Unattended it is `escalated`; shorten the wait with `serve --handoff-timeout 15`, or clear the gate non-interactively by passing an independent `approver` to `POST /invoke` |
 | `place a fraud hold on 100234-S0070` (as **teller1**) | `refused` before a browser opens — the service refuses on identity, so nothing is driven |
 | the same, as **super1** | `escalated` — paused on a live session for a person, with a CDP endpoint to attach to |
+
+**A pause raised in the assistant is answered in the assistant.** When a run
+stops for a human confirmation, the reply does not simply take longer to
+arrive: while the request is still open the chat window polls for the pauses
+*this conversation* raised and drops a **Paused — waiting for you** card into
+the transcript, carrying the reason, the actual screen the run stopped on, and
+a `Confirm and continue` button. Approving it hands control back and the same
+run finishes in the same conversation.
+
+The dashboard's operator queue stops listing those, because the same
+irreversible step in front of two people means one of them is approving
+something they did not ask for. Two exceptions stay in the queue, and both are
+cases the chat window cannot answer: a pause raised by a **teller**, which only
+a supervisor may confirm, and a **dual-control** pause, which needs a second
+person by definition. Hiding either would strand the run in a window whose
+occupant is not allowed to clear it.
 
 Rows that escalate hold the session open for `--handoff-timeout` seconds (90 by
 default) waiting for an operator. That default suits a person who has to be
@@ -160,15 +211,29 @@ a person can see and do is decided by **who signed in**.
 
 | Sign-in | Password | Is |
 |---|---|---|
-| `super1` | `password` | Supervisor — the Meridian operator of the same name |
-| `teller1` | `password` | Teller — likewise |
+| `super1` | *(none — picked from a list)* | Supervisor — the Meridian operator of the same name |
+| `teller1` | *(none — picked from a list)* | Teller — likewise |
 | `100234`, `100987`, `101555`, `102777`, `103001` | `member123` | Members, one per member number |
 
-Staff sign in with the operator credentials the target itself uses
-(`https://web-sample.interface-hiring.com/signon`). The five member sign-ins are
-new: a member is *not* a Meridian operator, so their work runs **delegated** as
-the deployment's least-privileged staff alias (`default_operator`, a teller) and
-is bound to their own member number on every call.
+> **The staff sign-in has no password, and that is a hole.** Anyone who can
+> reach port 8083 can become either operator by choosing one from a list. It is
+> a demo affordance for the automated sign-on: pick an operator, and the console
+> signs that operator on to the target for you. Nothing else in the system
+> relies on it — every authorisation decision is still made by the API against
+> the principal store, so putting the field back (the form still verifies a
+> password when one is supplied) changes the door and nothing behind it.
+>
+> The **member** sign-ins keep their password deliberately. Member usernames
+> *are* member numbers, so a list of them to pick from would be an enumeration
+> of the membership with a login attached to each row.
+
+Staff sign-ins name the operator identities the target itself uses
+(`https://web-sample.interface-hiring.com/signon`), and the console signs the
+chosen one on at the door. The five member sign-ins are different in kind: a
+member is *not* a Meridian operator, so nothing is signed on for them, their
+work runs **delegated** as the deployment's least-privileged staff alias
+(`default_operator`, a teller), and it is bound to their own member number on
+every call.
 
 What each sign-in reaches is declared per capability in `config/service.yaml`:
 
@@ -179,11 +244,19 @@ What each sign-in reaches is declared per capability in `config/service.yaml`:
 | `meridian.update_member_info` | ✓ | ✓ | ✓ own record only |
 | `meridian.member_search` | ✓ | ✓ | — |
 | `meridian.open_share` | ✓ | ✓ | — |
-| `meridian.signon` | ✓ | ✓ | — |
+| `meridian.signon` | — | — | — |
 | `meridian.place_hold` | ✓ | — | — |
 
 Capabilities with no `allowed_principal_roles` line default to **staff only**, so
 a new capability cannot become member-reachable by omission.
+
+`meridian.signon` is reachable by nobody *through this table*: it is named as
+`session_signon` in `config/service.yaml`, which is what withholds it from a
+signed-in caller's manifest and refuses it at `/invoke`. It still runs — once,
+at sign-in, through `POST /session/signon`, down the same engine, policy and
+evidence path as everything else. Comment that line out and it goes back to
+being an ordinary staff capability, which is what the direct agent path (where
+nobody signs in) still sees.
 
 Try it:
 
@@ -300,7 +373,9 @@ failures. The harness may set up the world; the automation may not.
 | Chatbot: routing seam + result presentation | `bankcua/chat/` |
 | Run dashboard (read-only projection of evidence) | `bankcua/dashboard.py` |
 | Sign-in: principals, sessions, role gate, member scoping | `bankcua/auth.py` |
-| Signed-in console (login + dashboard/assistant tabs) | `bankcua/portal/app.py` |
+| Signed-in console (operator list, sign-on at the door, two tabs) | `bankcua/portal/app.py` |
+| Sign-on established at sign-in, then withheld | `session_signon` in `config/service.yaml`, `POST /session/signon` |
+| Pauses surfaced where they were raised | `channel` on the intervention, `GET /interventions`, `bankcua/chat/app.py` |
 | Who may sign in (hashed, gitignored) | `config/principals.json` |
 | MERIDIAN capabilities + recording | `capabilities/meridian/`, `scripts/record_meridian.py` |
 | Target fault-state control (harness only) | `scripts/meridian_control.py` |

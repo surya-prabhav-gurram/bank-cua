@@ -393,6 +393,8 @@ def cmd_serve(args):
     print("  GET  /capabilities/<id>       full contract")
     print("  GET  /operators               aliases + roles (never secrets)")
     print("  POST /invoke/<id>             {params, operator}")
+    print("  POST /session/signon          establish the signed-in operator's "
+          "session")
     print("  GET  /runs, /runs/<id>        run history + evidence")
     if args.require_session:
         print("[serve] every invocation must carry a console session; the "
@@ -435,7 +437,7 @@ def cmd_portal(args):
         print("[portal] " + ("created " + ", ".join(created) if created
                              else "nothing to do; both files already exist"))
         print(f"[portal] edit {args.principals} to change who may sign in; "
-              f"`portal hash <password>` prints a hash to paste in")
+              f"`portal hash --password <password>` prints a hash to paste in")
         return
     if args.action == "hash":
         from .auth import hash_password
@@ -455,6 +457,9 @@ def cmd_portal(args):
     print(f"[portal] console on http://{args.host}:{args.port} -> API {args.api}")
     print(f"[portal] sign-ins from {args.principals}; roles and member scope are "
           f"enforced by the API, not by the page")
+    print("[portal] staff pick an operator and are signed on to the target at "
+          "sign-in; the sign-on capability is then withheld from the manifest "
+          "and refused at /invoke for that session")
     print("[portal] start the API with --require-session so nothing reaches it "
           "without a signed-in person behind it")
     app.run(host=args.host, port=args.port, threaded=True)

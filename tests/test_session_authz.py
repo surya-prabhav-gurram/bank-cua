@@ -74,6 +74,9 @@ def _make(tmp_path, authority, require_session=False):
     app = create_app(catalog_dir=CATALOG, service_config_path=str(cfg),
                      evidence_dir=str(tmp_path / "ev"), credential_store=CREDS,
                      session_authority=authority,
+                     # See test_service.py: the default inbox is the repo's own
+                     # committed evidence directory.
+                     handoff_dir=str(tmp_path / "handoffs"),
                      require_session=require_session or None)
     return app.test_client()
 

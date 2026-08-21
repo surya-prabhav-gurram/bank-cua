@@ -54,6 +54,15 @@ def client(tmp_path):
     app = create_app(catalog_dir=CATALOG,
                      service_config_path=str(cfg),
                      evidence_dir=str(tmp_path / "ev"),
+                     # Its own handoff inbox, and a short wait. Left at the
+                     # defaults, a test that escalates writes into the repo's
+                     # COMMITTED evidence/handoffs -- so the suite rewrites
+                     # curated evidence, and any console left running can
+                     # resolve a test's pause from a browser, which turns "the
+                     # run escalated" into "the run succeeded" and fails a test
+                     # about privilege escalation for reasons nobody can see.
+                     handoff_dir=str(tmp_path / "handoffs"),
+                     handoff_timeout_s=10,
                      credential_store=STORE)
     return app.test_client()
 

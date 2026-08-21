@@ -59,7 +59,8 @@ class ReplayEngine:
     def __init__(self, surface: Surface, policy: PolicyEngine, logger,
                  coordinator=None, assist_provider=None, max_assists: int = 1,
                  escalate_unrecoverable: bool = False,
-                 initiator: str = "", approver: str = "", ledger=None):
+                 initiator: str = "", approver: str = "", ledger=None,
+                 channel: str = "", initiator_role: str = ""):
         self.surface = surface
         self.policy = policy
         self.logger = logger
@@ -75,6 +76,12 @@ class ReplayEngine:
         # They must be different people -- a run may not approve itself.
         self.initiator = initiator
         self.approver = approver
+        # WHERE the run was started from, and what the starter's role was. The
+        # engine does nothing with either except record them on any intervention
+        # it raises: a pause has to be answerable where the person who caused it
+        # is sitting, and only the surfaces know where that is.
+        self.channel = channel
+        self.initiator_role = initiator_role
         # Memory for velocity limits. Without it a per-invocation ceiling is
         # blind to ten near-limit runs in a row.
         self.ledger = ledger
@@ -316,6 +323,7 @@ class ReplayEngine:
                   f"screen -- the value check runs before the browser is sent "
                   f"anywhere, so there is nothing on it yet."),
             initiator=self.initiator,
+            channel=self.channel, initiator_role=self.initiator_role,
             # Deliberately NOT the live session. A dual-control pause happens
             # before any navigation, so `state_url` is about:blank and there is
             # nothing to co-browse; advertising a CDP endpoint here put an
@@ -383,6 +391,8 @@ class ReplayEngine:
             reason=f"unrecoverable: {res.failure.code} at step "
                    f"{res.failure.step_index}",
             capability_id=art.id, current_step_index=res.failure.step_index,
+            initiator=self.initiator, channel=self.channel,
+            initiator_role=self.initiator_role,
             state_url=self.surface.current_url(),
             screenshot_path=caps.get("screenshot"), dom_path=caps.get("dom"),
             cdp_endpoint=getattr(self.surface, "cdp_endpoint", None))
@@ -694,6 +704,8 @@ class ReplayEngine:
             kind=InterventionKind.RISKY_CONFIRMATION,
             reason=f"irreversible step '{step.intent}' needs human confirmation",
             capability_id=art.id, current_step_index=step.index,
+            initiator=self.initiator, channel=self.channel,
+            initiator_role=self.initiator_role,
             state_url=self.surface.current_url(),
             screenshot_path=caps.get("screenshot"), dom_path=caps.get("dom"),
             cdp_endpoint=getattr(self.surface, "cdp_endpoint", None))

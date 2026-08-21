@@ -114,6 +114,17 @@ class RuleRouter(Router):
             # loop rephrasing a request that was understood perfectly well.
             withheld = next((cid for cid, pat in _INTENTS
                              if cid not in known and pat.search(message)), None)
+            if withheld and withheld.endswith(".signon"):
+                # Withheld for a different reason from the others, and saying
+                # "not available under your sign-in" would be actively
+                # misleading: it is missing BECAUSE they signed in. Someone
+                # asking for it is asking for something that has already
+                # happened, and the answer is to say so.
+                return Routed(unmatched_reason=(
+                    "You are already signed on — the console established the "
+                    "operator's session on MERIDIAN when you signed in, and "
+                    "every capability signs on for itself besides. There is "
+                    "nothing to sign on to separately."))
             if withheld:
                 return Routed(unmatched_reason=(
                     f"That reads as **{withheld}**, which is not available "

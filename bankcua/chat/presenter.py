@@ -52,6 +52,10 @@ OUTCOME_TEXT: dict[str, str] = {
     "SOURCE_SHARE_ON_HOLD":
         "The source share is under a hold and cannot be debited. Another share "
         "would have to be used.",
+    "REQUEST_NOT_VALIDATED":
+        "The host would not accept those details — the screen says which rule "
+        "they broke, such as a minimum opening deposit. Nothing was posted, so "
+        "correcting the value and asking again is all that is needed.",
     "TRANSACTION_REJECTED":
         "The host rejected the transaction as entered.",
     "SESSION_TIMED_OUT":

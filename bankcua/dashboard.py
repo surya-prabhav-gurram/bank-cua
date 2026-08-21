@@ -446,6 +446,18 @@ def create_app(catalog_dir: str = "capabilities/meridian",
             return jsonify([])
         out = []
         for req in HandoffStore(handoff_dir).list_open():
+            if _answered_in_the_assistant(req):
+                # Raised by someone talking to the assistant, and answerable
+                # right there. Listing it here too would put the same
+                # irreversible step in front of two people, and the one who did
+                # NOT ask for it has no context for what they are approving.
+                #
+                # Deliberately narrow: only a confirmation, and only when the
+                # person who raised it could clear it themselves. A teller's
+                # pause needs a supervisor, and a dual-control pause needs a
+                # second person by definition -- hiding either would strand the
+                # run in a window whose occupant cannot answer it.
+                continue
             # Two different things stop a run, and they need different
             # answers from a person. A gated irreversible step needs someone to
             # DRIVE the paused screen. A dual-control pause needs a second
@@ -524,6 +536,61 @@ def create_app(catalog_dir: str = "capabilities/meridian",
         store.write(req)
         return jsonify({"ok": True, "resolved_by": principal.username})
 
+    @app.post("/api/interventions/<path:req_id>/confirm")
+    def confirm_step(req_id):
+        """Authorise a paused irreversible step without driving the screen.
+
+        `allow_risky: false` stops every irreversible step for a person. Most of
+        the time that person does not need to *do* anything -- they need to see
+        what the run is about to post and say yes. Before this, taking control
+        was the only way to say yes, so the reviewer had to complete the step by
+        hand and the run recorded a manual intervention for what was really an
+        approval. That is a worse record, not a safer one.
+
+        The identity comes from the SESSION, never the request body. The
+        resolution note deliberately avoids the word "manual": the engine reads
+        that note to decide whether the operator already performed the step, and
+        here nobody has touched the page -- the automation still posts it.
+        """
+        principal = _gate()
+        if not _is_safe_id(req_id):
+            return jsonify({"error": "unknown intervention"}), 404
+        store = HandoffStore(handoff_dir)
+        try:
+            req = store.read(req_id)
+        except Exception:
+            return jsonify({"error": "unknown intervention"}), 404
+        if req.kind.value == "dual_control":
+            # A value threshold asks for a SECOND person; one signed-in
+            # supervisor confirming their own run does not answer it.
+            return jsonify({"error": "this pause needs an independent "
+                                     "counter-signature, not a confirmation"}), 409
+        if req.kind.value != "risky_confirmation":
+            # A run that stopped because it could not proceed is not waiting to
+            # be authorised. Approving it would resume a run whose screen nobody
+            # has looked at, which is the opposite of what this button means.
+            return jsonify({"error": f"a {req.kind.value} pause is not an "
+                                     f"approval; it needs someone to take "
+                                     f"control of the session"}), 409
+        if req.status.value != "open":
+            return jsonify({"error": f"already {req.status.value}"}), 409
+        if principal is None:
+            return jsonify({"error": "confirming an irreversible step requires a "
+                                     "signed-in person; start the console with a "
+                                     "session or use `bankcua operator resolve`"}), 401
+        if principal.role != "supervisor":
+            return jsonify({"error": "confirming an irreversible step is "
+                                     "supervisor work"}), 403
+        req.status = InterventionStatus.RESOLVED
+        req.resolved_at = time.time()
+        req.resolved_by = principal.username
+        req.resume = True
+        req.controller = "agent"
+        req.resolution_note = (f"confirmed in the console by {principal.username}; "
+                               f"the automation performed the step")
+        store.write(req)
+        return jsonify({"ok": True, "resolved_by": principal.username})
+
     @app.get("/api/interventions/<path:req_id>/screenshot")
     def intervention_screenshot(req_id):
         """The frame captured when the run stopped, so a reviewer can see what
@@ -586,6 +653,19 @@ def create_app(catalog_dir: str = "capabilities/meridian",
         return send_file(os.path.abspath(path))
 
     return app
+
+
+def _answered_in_the_assistant(req) -> bool:
+    """Is this pause both raised in the assistant AND clearable there?
+
+    The second half is the whole safety of the first. `channel` says where the
+    person is sitting; `initiator_role` says whether that person is allowed to
+    answer what is being asked. Only when both hold is the operator queue a
+    duplicate rather than the only place anyone will see it.
+    """
+    return (getattr(req, "channel", "") == "assistant"
+            and req.kind.value == "risky_confirmation"
+            and getattr(req, "initiator_role", "") == "supervisor")
 
 
 def evidence_counts(evidence_dir: str) -> dict[str, int]:
@@ -856,12 +936,34 @@ function escMarkup(x){
         style="width:100%;height:780px;
         border:1px solid #33405a;border-radius:6px;background:#12161d"></iframe>`;
   }
+  // Two ways to release an irreversible step, and they record differently.
+  // Confirming says "post it as it stands" and the automation performs the
+  // step. Taking control says "the screen needs a person" and every action is
+  // recorded into the intervention. Offering only the second one made every
+  // approval look like a manual repair.
+  const meC = ME.username || '';
+  const approvable = x.kind === 'risky_confirmation';
+  const confirmBlock = !approvable
+    ? `<p class="muted">This run stopped because it could not proceed, not to ask
+       permission — it needs someone to look at the screen.</p>`
+    : (ME.signed_in && ME.role === 'supervisor')
+    ? `<p><button onclick="confirmStep('${esc(x.id)}')">
+         Confirm and continue as ${esc(meC)}</button>
+       <span class="muted" id="cf_${cid}"></span></p>
+       <p class="muted">Approves the step as it stands; the automation posts it.
+         Take control instead only if the screen needs correcting by hand.</p>`
+    : (ME.signed_in
+        ? `<p class="muted">Confirming an irreversible step is supervisor work.</p>`
+        : `<p class="muted">Confirming needs a signed-in supervisor — the open
+           dashboard has no identity to record. Use the console, or
+           <code>bankcua operator resolve</code>.</p>`);
+
   if(!x.attachable){
-    return head + `<p class="muted">Not attachable: the run exposed no CDP port,
-      so no operator can take control of it. Restart the API with
+    return head + confirmBlock + `<p class="muted">Not attachable: the run exposed
+      no CDP port, so no operator can take control of it. Restart the API with
       <code>--cdp-port</code>.</p>`;
   }
-  return head + `
+  return head + confirmBlock + `
     <p><button onclick="takeControl('${esc(x.id)}','${x.created_at}')">Take control of this session</button>
        <span class="muted" id="cs_${cid}"></span></p>`
     + (x.screenshot
@@ -905,6 +1007,19 @@ async function countersign(id){
                                : ' counter-signed — the run is continuing';
     if(!d.error){ ESC_SIG=''; loadEscalations(); loadRuns(); }
   }catch(e){ note.textContent=' could not counter-sign: '+e; }
+}
+
+async function confirmStep(id){
+  const note=document.getElementById('cf_'+cssId(id));
+  note.textContent=' recording your confirmation…';
+  try{
+    const r=await fetch(P+'/api/interventions/'+encodeURIComponent(id)+'/confirm',
+                        {method:'POST'});
+    const d=await r.json();
+    note.textContent = d.error ? ' '+d.error
+                               : ' confirmed — the run is continuing';
+    if(!d.error){ ESC_SIG=''; loadEscalations(); loadRuns(); }
+  }catch(e){ note.textContent=' could not confirm: '+e; }
 }
 
 async function takeControl(id, createdAt){

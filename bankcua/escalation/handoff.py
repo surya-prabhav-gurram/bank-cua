@@ -76,6 +76,19 @@ class InterventionRequest(BaseModel):
         description="Attach here to take control of the SAME live session.",
     )
     controller: str = "operator"          # who holds control right now
+    #: WHICH SURFACE the run was started from: "assistant", "dashboard", or ""
+    #: for an agent calling the API directly. A pause has to be answerable where
+    #: the person who caused it is actually sitting -- someone who asked the
+    #: chatbot to move money is watching the chat, not an operator queue on
+    #: another tab, and a request that appears to hang while its confirmation
+    #: waits somewhere they cannot see is indistinguishable from a broken one.
+    channel: str = ""
+    #: The ROLE of the sign-in that started it. Recorded because it decides
+    #: whether the pause can be answered where it was raised: a supervisor in
+    #: the assistant can clear their own confirmation, a teller cannot, and one
+    #: that its own surface cannot clear must stay visible to the operator queue
+    #: or it strands until it times out.
+    initiator_role: str = ""
     #: Who asked for the run. Carried across the handoff because a
     #: counter-signature is only meaningful relative to it: the one identity
     #: that must NOT be able to resolve a dual-control pause is the person who

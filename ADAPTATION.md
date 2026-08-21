@@ -83,7 +83,18 @@ Seven capabilities cover §2.1's seven functions:
 | `meridian.update_member_info` | Update member information | `email`, `phone` |
 | `meridian.place_hold` | Place account hold | `confirmation` |
 
-Three contract decisions worth defending:
+Four contract decisions worth defending:
+
+**`signon` is established at the door, not requested.** Every capability signs
+on for itself, so a *separate* sign-on capability, published to a signed-in
+caller, can only ever be called by mistake: the session it would establish is the
+one the caller is already holding. The console therefore runs it once when a
+person signs in — on the alias their sign-in names, down the same engine, policy
+and evidence path as any invocation — and the API then withholds it from the
+manifest and refuses it at `/invoke` for that session
+(`SIGNON_ESTABLISHED_AT_SIGN_IN`). The model in front of the console cannot route
+to it, because it is not in the action space at all. On the direct agent path,
+where nobody has signed in, it stays an ordinary capability.
 
 **Capabilities are stateless.** Each replay signs on fresh, completes one
 transaction, and returns. There is no session to hand between invocations — which
@@ -151,7 +162,15 @@ both roles — which is why the evidence set does exactly that (scenarios 09 and
 up open, with the operator picked from a dropdown — fine for one operator,
 wrong the moment anyone else uses it. `bankcua portal` puts a sign-in in front
 (supervisor, teller, and one per seed member) and mounts the dashboard and the
-chatbot behind it, but the authorisation is **not** in the console: it mints a
+chatbot behind it. Staff pick their operator from a list and are **signed on to
+MERIDIAN by the act of signing in** — no operator password is typed anywhere,
+because the secret stays in the credential store and is merged in server-side —
+and the sign-on capability then leaves the action space entirely. A host
+rejection stops the sign-in with the host's own words; a host that cannot be
+reached does not, because an unreachable target is not evidence about anybody's
+credential. The staff sign-in takes no password of its own, which is a demo
+affordance and a real hole, stated as one in the README and in the module that
+implements it. The authorisation is **not** in the console: it mints a
 signed token carrying a username and an expiry only, and the capability API
 re-resolves it against the principal store on every call, applying the role gate
 (`allowed_principal_roles` in `config/service.yaml`) and binding a member's
@@ -193,6 +212,19 @@ handoff coordinator, so a gated step still pauses, exposes the live session, and
 waits. Evidence 11 shows it timing out unattended; evidence 12 shows a supervisor
 attaching to that exact page, applying the hold, handing control back, and replay
 resuming to `SUCCESS` with a confirmation number.
+
+**A pause is answered where it was raised.** A run started from the chatbot
+stops for a human confirmation like any other, but the question used to appear
+on the dashboard's operator queue while the person who asked sat in front of a
+request that looked hung. The intervention now records which surface started
+the run, the assistant polls for its own while the call is open and renders the
+pause — reason, the live screen, a `Confirm and continue` button — into the
+conversation, and the operator queue stops listing the ones it can answer.
+Exactly the ones it cannot are kept there: a teller's confirmation, which needs
+a supervisor, and a dual-control pause, which needs a second person by
+definition. Hiding either would strand a run in a window whose occupant is not
+allowed to clear it (`bankcua/dashboard.py::_answered_in_the_assistant`,
+asserted in `tests/test_assistant_handoff.py`).
 
 **The model's blast radius is the catalog.** The chatbot imports nothing from
 `bankcua` except its own router and presenter — asserted structurally in

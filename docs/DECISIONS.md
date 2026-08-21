@@ -70,6 +70,7 @@ is about proportion, not completeness.
 | [11. Adaptation to MERIDIAN](#11-adaptation-to-meridian-core) | MER-01 … MER-21 | Round-2: the live target, the API, chatbot and dashboard |
 | [12. Open decisions](#12-open-decisions-awaiting-requirements) | OPEN-01 … OPEN-07 | Analysed, deliberately not built |
 | [13. Live-model findings](#13-live-model-findings) | LIVE-01 … LIVE-10 | Defects only a real model against the real target could surface |
+| [14. Sign-in](#auth-01--the-session-token-carries-an-identity-never-a-permission--locked) | AUTH-01 … AUTH-22, DC-01 | Who is signed in, what that permits, and the sign-on at the door |
 
 ---
 
@@ -1436,6 +1437,98 @@ option by the wrong handle.
 
 **Revisit when.** A third audience appears. Two templates is fine; four is a signal to render from a shared description of what each role may see.
 
+## AUTH-13 — The sign-on happens at the door, and then stops being askable · **Locked**
+
+**Fork.** Every capability signs on for itself, and `meridian.signon` was also a capability in its own right — published in the manifest, invocable by anyone signed in. So a person at the console, or a model routing for them, could ask the system to sign on. What is that request supposed to mean once there is a session behind it?
+
+**Options.**
+- **Establish it at sign-in and withhold it afterwards**: the console runs the capability once, on the alias the sign-in names, through a purpose-built endpoint; for any caller carrying a session it is dropped from the manifest and refused at `/invoke`.
+- **Leave it an ordinary capability** and let people re-run it. Simplest, and what shipped.
+- **Delete it from the catalog** and let the per-capability sign-on steps be the only sign-on.
+
+**Chosen.** Establish it at sign-in (`session_signon` in `config/service.yaml`, `POST /session/signon`), and withhold it from every signed-in caller.
+
+**Why / cost.** The manifest is a chatbot's entire action space, and a tool whose only remaining effect is to redo what signing in already did is a tool that can only ever be called by mistake — a live browser driven against a shared host for nothing, or worse, whoever is in front of the console exercising an operator credential as an action of its own. Withholding it is only defensible because the sign-on genuinely happens: it runs down the same path as any invocation — same policy engine, same evidence directory, same result contract — so the run is in the history like everything else, and the approval gate still applies to it. Deleting it from the catalog was rejected for the opposite reason: nobody has signed in on the direct agent path, so there the capability is an ordinary one and still means something.
+
+Two halves, and each is worthless without the other. The manifest narrowing is defence in depth; the refusal at `/invoke` is the defence, because a caller that never read the manifest gets the same answer.
+
+**Revisit when.** Sessions are reused across capabilities (§5 of ADAPTATION's next-steps list). Then the sign-on establishes something that *outlives* the invocation, and where it happens stops being a presentational question.
+
+## AUTH-14 — A host rejection stops the sign-in; an unreachable host does not · **Locked**
+
+**Fork.** The sign-on at the door can come back three ways. Which of them should refuse the console sign-in?
+
+**Options.**
+- **Only a business outcome refuses.** The host answered about this credential and said no. A refusal or a failure means the sign-on was not *attempted* — API down, target offline, capability still in draft — so the person is signed in and the header says `MERIDIAN not verified`.
+- **Anything but success refuses.** Fail closed, uniformly.
+- **Nothing refuses**; always sign in, always show the verdict.
+
+**Chosen.** Only a business outcome refuses.
+
+**Why / cost.** This is the result contract's own distinction applied to the door: a business outcome is the bank answering, and a failure is something breaking. Failing closed uniformly would mean an offline target locks every operator out of a console whose authorisation does not depend on that target at all — the principal store, the role gate and the member scoping are all local. Signing everyone in regardless would let a definite "that credential is wrong" become somebody's first confusing capability failure instead. Cost: a person can be signed in to a console whose operator is not signed on to anything, which is why the state is on screen rather than inferred.
+
+**Revisit when.** The console starts holding a target session rather than proving one. Then "not verified" is not a warning, it is a broken feature.
+
+## AUTH-18 — A pause is shown where the person who caused it is sitting · **Locked**
+
+**Fork.** A run started from the chatbot stops for a confirmation. The question — "may I post this?" — was raised on the dashboard's operator queue, a different tab, while the chat request sat on an open connection with nothing on screen. Where should it appear?
+
+**Options.**
+- **Stamp the surface on the intervention** (`channel`), let the assistant poll for its own while a call is in flight, and drop the ones it can answer from the operator queue.
+- **Leave it on the dashboard only** and tell people to look there. Zero code; also the reason it looked broken.
+- **Show it in both, always.** No new field, but the same irreversible step is then in front of two people.
+
+**Chosen.** Stamp the channel; the assistant renders and resolves its own; the dashboard hides exactly those.
+
+**Why / cost.** A person who asks a chatbot to move money is watching the chat. The answer existed and was reachable — it just was not anywhere they were looking, which is indistinguishable from a hung request. Showing it in both was rejected for a sharper reason than duplication: the person who did NOT ask has no context for what they would be approving, and an approval given without context is the rubber stamp the pause exists to prevent. Cost: two fields on the handoff record, and a poll loop that runs only while a request is open.
+
+**Revisit when.** A third surface appears, or pauses need to outlive the request that raised them. Both would push this from a poll toward something the server pushes.
+
+## AUTH-19 — Hiding a pause is only safe when its own surface can clear it · **Locked**
+
+**Fork.** Having decided the assistant owns its pauses, which ones does the dashboard stop showing?
+
+**Options.**
+- **Only the ones answerable where they were raised**: a confirmation, raised in the assistant, by a supervisor.
+- **All assistant-raised pauses** — the simple reading of "show it in the chat, not the dashboard".
+- **None** — keep the queue complete and accept the duplicate.
+
+**Chosen.** Only the ones answerable there, on both counts: `channel == "assistant"` AND `kind == risky_confirmation` AND `initiator_role == "supervisor"`.
+
+**Why / cost.** The simple version has a hole that fails closed in the worst direction. A TELLER can raise a confirmation from the chat, but only a supervisor may clear one — hide it and it waits in a window whose occupant is not allowed to answer, then times out. A dual-control pause is worse: it asks for a *second* person by definition, so the surface that raised it can never be the one that clears it. Both stay in the queue. Cost: the rule has three clauses instead of one, so it is written in a single named function with the reason attached, and asserted directly (`test_the_hiding_rule_states_both_halves`).
+
+**Revisit when.** Roles stop deciding who may confirm — then the condition is about capability, not role, and should be asked of the API rather than derived from a stamped field.
+
+## AUTH-20 — The assistant has no operator picker · **Locked**
+
+**Fork.** The chat page carried a `teller1 / super1` dropdown from the single-operator demo. With a sign-in in front of it, what is that control?
+
+**Options.**
+- **Delete it.** Signed in, the API derives the alias from the session; unattended, the deployment sets one with `chat --operator`.
+- **Keep it, hidden by script when signed in** — what it did, and the reason it survived this long.
+- **Keep it and honour it** — the caller choosing which operator to be, which is the exact escalation the credential store exists to close.
+
+**Chosen.** Delete it.
+
+**Why / cost.** With a session it was ignored, and naming the other operator was refused (`OPERATOR_NOT_SESSION`) — so the control could only ever do nothing or produce an error, and a control that behaves like that reads as a broken console rather than as a guardrail working. Hiding it in the browser left the same choice one "view source" away and kept a dead branch in the request path. Cost: the unauthenticated demo path loses a way to switch operator without restarting; `chat --operator` is that knob now, and it belongs to whoever runs the process rather than whoever types in it.
+
+**Revisit when.** Never, while identity is established at sign-in.
+
+## SAFE-15 — No irreversible step runs unattended, whatever the value policy allows · **Locked**
+
+**Fork.** `approve_meridian.py` put three capabilities in an `UNATTENDED` set, ratifying their posting steps with `requires_confirmation: false` on the argument that the value policy — amount ceiling, dual-control threshold, rolling-window budget — is envelope enough. Is it?
+
+**Options.**
+- **Empty the set.** Every irreversible step stops for a person, and the value policy bounds what a mistake can cost on top of that.
+- **Keep it**, and rely on the envelope.
+- **Keep it but shrink it** to the flows with the tightest limits.
+
+**Chosen.** Empty it.
+
+**Why / cost.** The limits bound the SIZE of a mistake, not whether one is being made: a $1.00 transfer into the wrong share is inside every rule and is still wrong, and the host offers no reversal. The setting also has to agree with `config/service.yaml`, and when it did not the two combined into the one state the policy engine refuses outright — `requires_confirmation: false` with `allow_risky: false` is a hard BLOCK, not a pause — so the capability could not run at all and the console's Confirm button had nothing to answer. That was found by running it, not by reading it. Cost: no money moves without somebody present, which is the point and also the limit of this deployment's unattended usefulness.
+
+**Revisit when.** A capability exists whose irreversible step is genuinely idempotent and verifiable after the fact (OPEN-07's confirm-then-retry probe). Then "did it land" can be asked instead of a person.
+
 ## Compact register — sign-in
 
 | ID | Decision | Alternative rejected | Why |
@@ -1447,6 +1540,13 @@ option by the wrong handle.
 | AUTH-09 | Both tabs on one origin, session in an `HttpOnly` cookie | A tab per port, token passed between them | A token in a URL is a token in an access log, a referrer header, and any screenshot of the address bar |
 | AUTH-10 | Wrong password and unknown sign-in answer identically, and both are throttled | Say which | Member usernames ARE member numbers, so distinguishing them enumerates the membership |
 | AUTH-12 | A member sign-in may not send `approver` or `tenant` | Leave both caller-supplied, as they always were | `approver` clears dual control, and a member's work is *initiated* by the delegated teller alias — so naming a supervisor would look independent and authorise their own large transfer with nobody approving it. Caller-supplied was defensible while every caller was the institution |
+| AUTH-15 | Staff sign in by picking an operator, with no password | Keep the password field | A demo affordance for the automated sign-on, and a real hole written down in three places rather than hidden: anyone reaching the port becomes either operator. Nothing behind the door relies on it — the API still decides everything against the principal store, and a supplied password is still verified |
+| AUTH-16 | Members keep their password | Put them in the list too | Member usernames ARE member numbers, so a list to pick from would be an enumeration of the membership with a login attached to each row |
+| LIVE-16 | "The request could not be validated" is a business outcome, not a failure | Leave it unclassified | The host answering "your opening deposit is below the $5.00 minimum" surfaced as ACTION_FAILED, because the validation page replaced the form and the next step could not find its button. A caller's typo was paging an engineer |
+| LIVE-17 | A reviewer downgrade that matches no step aborts the approval run | Skip it quietly, as it did | A re-recording renamed "Start a Funds Transfer" to "Open Funds Transfer form"; the downgrade silently did not apply, and a navigation-only step was approved as irreversible carrying a justification about posting money. A reviewer decision that evaporates when a caption changes is not a decision |
+| AUTH-21 | `channel` is validated against a known set, not taken as sent | Accept whatever the caller sends | It decides which surface polls for the pause; an unknown value raises an intervention no window is watching, which is worse than not stamping one at all |
+| AUTH-22 | The assistant proxies the pause endpoints rather than reading the handoff store | Read the store directly, as the dashboard does | The chatbot's whole defensibility is that it reaches the system only over the API and holds no state of its own — `tests/test_chat.py` asserts it imports nothing from `bankcua` |
+| AUTH-17 | The sign-on verdict is a pointer to a run, held in process | Persist it; or re-derive it per request | It names the run id and what that run answered; the evidence the engine wrote stays the only account. A verdict about a session must not outlive the session, so signing out drops it |
 | AUTH-11 | `require_session` is off by default in `config/service.yaml`, and `portal` turns it on | Require sessions everywhere | Non-browser callers — every CLI demo in the README — name an operator alias and cannot perform a browser sign-in. The browser stack always enforces it |
 
 ## DC-01 — A dual-control pause asks for a signature, not for the screen · **Locked**

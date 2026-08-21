@@ -27,6 +27,22 @@ require_session: false
 principals: config/principals.json
 session_key: config/session.key
 
+# --- the sign-on, established at the door -----------------------------------
+# The capability the CONSOLE runs when a staff member signs in, on the alias
+# their sign-in names. Naming it here does two things at once, and they are the
+# same decision seen from both sides:
+#
+#   * it is REMOVED from the manifest and REFUSED at /invoke for any caller
+#     carrying a session, because signing on again is either a no-op that drives
+#     a live browser for nothing or a way for whoever is in front of the console
+#     to exercise an operator credential as an action of its own;
+#   * `POST /session/signon` becomes the one path that runs it, and the console
+#     calls that path once, at sign-in.
+#
+# Comment it out and the capability goes back to being an ordinary one -- which
+# is what the direct agent path, where nobody signs in, still wants.
+session_signon: meridian.signon
+
 # `allowed_principal_roles` is the SIGN-IN half of authorisation and is separate
 # from `requires_role`, which is about the Meridian operator a run executes as.
 # Both apply. A member's work runs delegated as `default_operator`, so without
@@ -41,7 +57,10 @@ session_key: config/session.key
 capabilities:
   meridian.signon:
     # Staff only: it proves an OPERATOR credential works, which is not a thing a
-    # member has.
+    # member has. Named as `session_signon` above, so these rules are the ones
+    # `POST /session/signon` applies at sign-in -- including the approval gate.
+    # A deployment that has not approved its sign-on capability signs people in
+    # unverified rather than making an exception for the door.
     allowed_principal_roles: [supervisor, teller]
     allow_unapproved: false         # the approval gate applies to reads too
 
@@ -63,21 +82,28 @@ capabilities:
     # must be prefixed with their member number, and the value policy below still
     # applies -- over $1,000 needs an independent approver.
     allowed_principal_roles: [supervisor, teller, member]
-    # Moves money. Permitted unattended ONLY because the value policy in
-    # config/policy.meridian.yaml still applies underneath: amounts over $1,000
-    # need an independent approver and over $5,000 are refused outright.
-    allow_risky: true
+    # Moves money, and posting a transfer cannot be undone by replaying it back.
+    # Every irreversible step stops for a person: replay raises an intervention
+    # at Post Transfer rather than completing unattended. The value policy in
+    # config/policy.meridian.yaml still applies on top -- over $1,000 also needs
+    # an independent counter-signature, over $5,000 is refused before a browser
+    # opens -- but the handoff is the floor, not the ceiling.
+    allow_risky: false
     allow_unapproved: false
 
   meridian.open_share:
     allowed_principal_roles: [supervisor, teller]
-    allow_risky: true
+    # Opening a share creates an account on the member's record. Irreversible,
+    # so it stops for a person rather than completing unattended.
+    allow_risky: false
     allow_unapproved: false
 
   meridian.update_member_info:
     # Self-service contact details, bound to the member's own record.
     allowed_principal_roles: [supervisor, teller, member]
-    allow_risky: true
+    # Overwriting contact details discards what was there; there is no undo on
+    # the host. Irreversible, so it stops for a person.
+    allow_risky: false
     allow_unapproved: false
 
   meridian.place_hold:
@@ -90,8 +116,8 @@ capabilities:
     # remembering to enforce it.
     requires_role: supervisor
     allowed_operators: [super1]
-    # Deliberately NOT allow_risky. Applying a hold unattended is the one action
-    # on this target that should always stop for a person, so replay escalates
-    # and a supervisor completes it on the live session.
+    # Like every irreversible action here, not allow_risky: replay escalates and
+    # a supervisor completes it on the live session. This one is also the
+    # narrowest -- supervisors only, on both halves of the identity.
     allow_risky: false
     allow_unapproved: false

@@ -87,6 +87,25 @@ conditions:
     detector: {kind: text_present, value: "is not authorized to perform this"}
     message: "This function requires a supervisor profile; a teller cannot complete it."
 
+  - code: REQUEST_NOT_VALIDATED
+    klass: business_outcome
+    detector: {kind: text_present, value: "The request could not be validated"}
+    message: >-
+      The host would not accept the details as entered, and the screen says
+      which rule they broke (a minimum opening deposit, for instance). Nothing
+      was posted.
+    # Scoped to a SUBMITTING step for the same reason TRANSACTION_REJECTED is:
+    # this text is the host answering a form it was given, and reporting "the
+    # bank rejected your details" on a step that submitted nothing would be a
+    # confident lie.
+    #
+    # Without this entry the run does not merely mis-label the outcome, it
+    # reports the wrong KIND of event: the validation page replaces the form,
+    # the next recorded step cannot find its button, and a legitimate answer
+    # ("your deposit is below the $5.00 minimum") surfaces as
+    # ACTION_FAILED -- an engineer is paged for a caller's typo.
+    applies_to_actions: [click, press_key]
+
   - code: TRANSACTION_REJECTED
     klass: business_outcome
     detector: {kind: text_present, value: "TRANSACTION REJECTED"}
