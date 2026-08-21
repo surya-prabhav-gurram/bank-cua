@@ -64,36 +64,52 @@ a recorded justification:
 python scripts/approve_meridian.py
 ```
 
-**4. Start the three surfaces**, each in its own terminal:
+**4. Start the surfaces.** There are two ways to run them. Pick one — both use
+port 8080, so do not run both at once.
+
+**4a — Open demo, no sign-in.** Three terminals:
 
 ```bash
-python -m bankcua.cli serve          # capability API   -> http://127.0.0.1:8080
+python -m bankcua.cli serve               # capability API -> http://127.0.0.1:8080
 ```
 ```bash
-python -m bankcua.cli chat --router llm   # chatbot     -> http://127.0.0.1:8081
+python -m bankcua.cli chat --router llm   # chatbot        -> http://127.0.0.1:8081
 ```
 
 (`--router llm` routes with a live model over the published manifest and needs
 the key; the default `--router rule` is deterministic and needs nothing.)
-```bash
-python -m bankcua.cli dashboard      # run dashboard    -> http://127.0.0.1:8082
-```
-
-Those three come up open, with the operator chosen from a dropdown — the
-single-operator demo path. To run them **behind a sign-in**, with what each
-person may do decided by who they are, start the console instead:
 
 ```bash
-python -m bankcua.cli portal init                    # writes the sign-in files
-```
-```bash
-python -m bankcua.cli serve --require-session        # API, sessions enforced
-```
-```bash
-python -m bankcua.cli portal                         # console -> http://127.0.0.1:8083
+python -m bankcua.cli dashboard           # run dashboard  -> http://127.0.0.1:8082
 ```
 
-See [Signing in](#signing-in--one-console-two-tabs-one-identity) below.
+These come up open, with the operator chosen from a dropdown — the
+single-operator demo path.
+
+**4b — Behind a sign-in.** The console mounts the dashboard and the assistant
+behind one sign-in, on one origin, so a single session covers both. What a
+person can see and do is decided by **who signed in**.
+
+One-time, to write the sign-in files:
+
+```bash
+python -m bankcua.cli portal init
+```
+
+Then two terminals. If you already started `serve` in 4a, **stop it first** — it
+holds port 8080 and the console needs the session-enforcing one:
+
+```bash
+python -m bankcua.cli serve --require-session   # API     -> http://127.0.0.1:8080
+```
+```bash
+python -m bankcua.cli portal                    # console -> http://127.0.0.1:8083
+```
+
+**Now open <http://127.0.0.1:8083> and sign in as `teller1` / `password`.**
+
+That is the sign-in page. Every sign-in, and what each one may do, is in
+[Signing in](#signing-in--one-console-two-tabs-one-identity) below.
 
 **5. Drive it from the dashboard** — pick a capability, fill its typed inputs,
 choose an operator, and press Run. The dashboard calls the same public API any

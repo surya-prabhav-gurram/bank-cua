@@ -113,7 +113,12 @@ class EnvCredentialStore(CredentialStore):
                 f"config/credentials.example.json and set "
                 f"{self.ENV_VAR}, or pass a store explicitly.")
         with open(self.path) as fh:
-            return json.load(fh)
+            raw = json.load(fh)
+        # The shipped template documents itself with "_comment" keys, and the
+        # README tells a reader to copy it verbatim. Underscore-prefixed keys
+        # are notes, not operators; enumerating them as aliases crashed every
+        # /session, /capabilities and /operators call.
+        return {k: v for k, v in raw.items() if not k.startswith("_")}
 
     def resolve(self, alias: str) -> OperatorIdentity:
         raw = self._load()
