@@ -1,0 +1,51 @@
+{"ts": 1787301501.93, "event": "run_started", "kind": "discovery", "run_dir": "evidence/meridian/discovery-meridian.place_hold"}
+{"ts": 1787301502.842, "event": "discovery_started", "goal": "Sign on, open member 100987, place a hold on share 100987-S0070 with reason FRAUD and notes recorded during capability discovery, review it, and apply it.", "provider": "scripted", "entry": "/signon"}
+{"ts": 1787301502.9, "event": "evidence_captured", "label": "step00", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step00.png"}
+{"ts": 1787301502.9, "event": "observation", "step": 0, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787301502.9, "event": "model_decided", "step": 0, "action": "fill", "intent": "Enter the operator id", "ref": 0, "value": "{operator}"}
+{"ts": 1787301502.922, "event": "action_executed", "step": 0, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787301502.938, "event": "evidence_captured", "label": "step01", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step01.png"}
+{"ts": 1787301502.938, "event": "observation", "step": 1, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787301502.938, "event": "model_decided", "step": 1, "action": "fill", "intent": "Enter the operator ***REDACTED:password***", "ref": 1, "value": "{***REDACTED:password***}"}
+{"ts": 1787301502.963, "event": "action_executed", "step": 1, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787301502.979, "event": "evidence_captured", "label": "step02", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step02.png"}
+{"ts": 1787301502.979, "event": "observation", "step": 2, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787301502.979, "event": "model_decided", "step": 2, "action": "select", "intent": "Choose the branch", "ref": 2, "value": "{branch}"}
+{"ts": 1787301502.983, "event": "action_executed", "step": 2, "kind": "select", "ok": true, "message": "selected MAIN-001", "candidate_index": 0}
+{"ts": 1787301503.012, "event": "evidence_captured", "label": "step03", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step03.png"}
+{"ts": 1787301503.012, "event": "observation", "step": 3, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787301503.012, "event": "model_decided", "step": 3, "action": "click", "intent": "Sign on to the console", "ref": 3, "value": null}
+{"ts": 1787301503.216, "event": "action_executed", "step": 3, "kind": "click", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787301503.257, "event": "evidence_captured", "label": "step04", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step04.png"}
+{"ts": 1787301503.257, "event": "observation", "step": 4, "url": "https://web-sample.interface-hiring.com/menu", "status": 200, "num_elements": 11}
+{"ts": 1787301503.258, "event": "model_decided", "step": 4, "action": "navigate", "intent": "Open the account hold screen", "ref": null, "value": null}
+{"ts": 1787301503.337, "event": "action_executed", "step": 4, "kind": "navigate", "ok": true, "message": "navigated to https://web-sample.interface-hiring.com/members/100987/hold", "candidate_index": null}
+{"ts": 1787301503.374, "event": "evidence_captured", "label": "step05", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step05.png"}
+{"ts": 1787301503.374, "event": "observation", "step": 5, "url": "https://web-sample.interface-hiring.com/members/100987/hold", "status": 200, "num_elements": 9}
+{"ts": 1787301503.374, "event": "model_decided", "step": 5, "action": "select", "intent": "Choose the share to restrict", "ref": 4, "value": "{share_id}"}
+{"ts": 1787301503.38, "event": "action_executed", "step": 5, "kind": "select", "ok": true, "message": "selected 100987-S0070", "candidate_index": 0}
+{"ts": 1787301503.406, "event": "evidence_captured", "label": "step06", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step06.png"}
+{"ts": 1787301503.406, "event": "observation", "step": 6, "url": "https://web-sample.interface-hiring.com/members/100987/hold", "status": 200, "num_elements": 9}
+{"ts": 1787301503.406, "event": "model_decided", "step": 6, "action": "select", "intent": "Choose the hold reason code", "ref": 5, "value": "{reason_code}"}
+{"ts": 1787301503.41, "event": "action_executed", "step": 6, "kind": "select", "ok": true, "message": "selected FRAUD", "candidate_index": 0}
+{"ts": 1787301503.432, "event": "evidence_captured", "label": "step07", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step07.png"}
+{"ts": 1787301503.432, "event": "observation", "step": 7, "url": "https://web-sample.interface-hiring.com/members/100987/hold", "status": 200, "num_elements": 9}
+{"ts": 1787301503.432, "event": "model_decided", "step": 7, "action": "fill", "intent": "Enter the hold notes", "ref": 6, "value": "{notes}"}
+{"ts": 1787301503.437, "event": "action_executed", "step": 7, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787301503.464, "event": "evidence_captured", "label": "step08", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step08.png"}
+{"ts": 1787301503.464, "event": "observation", "step": 8, "url": "https://web-sample.interface-hiring.com/members/100987/hold", "status": 200, "num_elements": 9}
+{"ts": 1787301503.464, "event": "model_decided", "step": 8, "action": "click", "intent": "Continue to the review screen", "ref": 7, "value": null}
+{"ts": 1787301503.582, "event": "action_executed", "step": 8, "kind": "click", "ok": true, "message": "clicked button: Continue", "candidate_index": 0}
+{"ts": 1787301503.625, "event": "evidence_captured", "label": "step09", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step09.png"}
+{"ts": 1787301503.625, "event": "observation", "step": 9, "url": "https://web-sample.interface-hiring.com/members/100987/hold/review", "status": 200, "num_elements": 6}
+{"ts": 1787301503.625, "event": "model_decided", "step": 9, "action": "click", "intent": "Apply the hold to the share", "ref": 4, "value": null}
+{"ts": 1787301503.738, "event": "action_executed", "step": 9, "kind": "click", "ok": true, "message": "clicked button: Apply Hold", "candidate_index": 0}
+{"ts": 1787301503.774, "event": "evidence_captured", "label": "step10", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step10.png"}
+{"ts": 1787301503.774, "event": "observation", "step": 10, "url": "https://web-sample.interface-hiring.com/members/100987/hold/post", "status": 200, "num_elements": 6}
+{"ts": 1787301503.775, "event": "model_decided", "step": 10, "action": "extract", "intent": "Read the host confirmation number", "ref": 6, "value": null}
+{"ts": 1787301503.78, "event": "action_executed", "step": 10, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787301503.798, "event": "evidence_captured", "label": "step11", "screenshot": "evidence/meridian/discovery-meridian.place_hold/step11.png"}
+{"ts": 1787301503.798, "event": "observation", "step": 11, "url": "https://web-sample.interface-hiring.com/members/100987/hold/post", "status": 200, "num_elements": 6}
+{"ts": 1787301503.798, "event": "model_decided", "step": 11, "action": "finish", "intent": "Hold applied", "ref": null, "value": null}
+{"ts": 1787301503.799, "event": "finish_requested", "success_checkpoint": true, "model_success": true}
+{"ts": 1787301503.809, "event": "run_finished", "summary_path": "evidence/meridian/discovery-meridian.place_hold/summary.json"}

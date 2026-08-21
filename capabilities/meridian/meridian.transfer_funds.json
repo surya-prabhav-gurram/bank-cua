@@ -3,7 +3,7 @@
   "id": "meridian.transfer_funds",
   "name": "Transfer funds between a member's shares",
   "description": "Move money from one share to another for a member, walking the review screen and posting the transfer. The post is irreversible and is gated accordingly.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "target": {
     "app_id": "meridian-core",
     "surface_type": "web",
@@ -540,9 +540,9 @@
       },
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "lexical: caption contains 'Transfer' | reviewed: Posts a funds movement between shares; the host issues a confirmation number and provides no reversal path. Amount limits and dual control apply underneath via config/policy.meridian.yaml.",
-      "risk_reviewed": true,
-      "requires_confirmation": false
+      "risk_reason": "lexical: caption contains 'Transfer'",
+      "risk_reviewed": false,
+      "requires_confirmation": true
     },
     {
       "index": 8,
@@ -866,9 +866,9 @@
       },
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "lexical: caption contains 'Post'; corroborated by POST form submission | reviewed: Posts a funds movement between shares; the host issues a confirmation number and provides no reversal path. Amount limits and dual control apply underneath via config/policy.meridian.yaml.",
-      "risk_reviewed": true,
-      "requires_confirmation": false
+      "risk_reason": "lexical: caption contains 'Post'; corroborated by POST form submission",
+      "risk_reviewed": false,
+      "requires_confirmation": true
     },
     {
       "index": 14,
@@ -1054,6 +1054,25 @@
       "surfaces_outputs": false
     },
     {
+      "code": "REQUEST_NOT_VALIDATED",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "The request could not be validated",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The host would not accept the details as entered, and the screen says which rule they broke (a minimum opening deposit, for instance). Nothing was posted.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [
+        "click",
+        "press_key"
+      ],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
       "code": "TRANSACTION_REJECTED",
       "klass": "business_outcome",
       "detector": {
@@ -1152,7 +1171,7 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "approved",
+  "approval_state": "draft",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",

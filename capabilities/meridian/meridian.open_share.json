@@ -3,7 +3,7 @@
   "id": "meridian.open_share",
   "name": "Open a new share for a member",
   "description": "Establish a new share of a given type with an initial deposit, through the review screen. Creating the share is irreversible and is gated accordingly.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "target": {
     "app_id": "meridian-core",
     "surface_type": "web",
@@ -740,9 +740,9 @@
       },
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Open Share' (assumed state-changing) | reviewed: Establishes a new share on the member record. Caption 'Open Share' carries no risky keyword; the POST-form structural signal is what classified it, and that classification is correct.",
-      "risk_reviewed": true,
-      "requires_confirmation": false
+      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Open Share' (assumed state-changing)",
+      "risk_reviewed": false,
+      "requires_confirmation": true
     },
     {
       "index": 12,
@@ -928,6 +928,25 @@
       "surfaces_outputs": false
     },
     {
+      "code": "REQUEST_NOT_VALIDATED",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "The request could not be validated",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The host would not accept the details as entered, and the screen says which rule they broke (a minimum opening deposit, for instance). Nothing was posted.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [
+        "click",
+        "press_key"
+      ],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
       "code": "TRANSACTION_REJECTED",
       "klass": "business_outcome",
       "detector": {
@@ -1026,7 +1045,7 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "approved",
+  "approval_state": "draft",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",

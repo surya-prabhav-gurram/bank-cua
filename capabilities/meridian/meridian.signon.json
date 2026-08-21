@@ -3,7 +3,7 @@
   "id": "meridian.signon",
   "name": "Sign on to Meridian Core",
   "description": "Authenticate an operator against Meridian Core and confirm a session can be established. Returns no data by design: capabilities are stateless, so a session cannot be handed to a later invocation, and the verdict -- success, or a typed business outcome such as a bad credential -- is the whole answer.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "target": {
     "app_id": "meridian-core",
     "surface_type": "web",
@@ -338,6 +338,25 @@
       "surfaces_outputs": false
     },
     {
+      "code": "REQUEST_NOT_VALIDATED",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "The request could not be validated",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The host would not accept the details as entered, and the screen says which rule they broke (a minimum opening deposit, for instance). Nothing was posted.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [
+        "click",
+        "press_key"
+      ],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
       "code": "TRANSACTION_REJECTED",
       "klass": "business_outcome",
       "detector": {
@@ -436,7 +455,7 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "approved",
+  "approval_state": "draft",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",

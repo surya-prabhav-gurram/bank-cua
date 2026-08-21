@@ -34,14 +34,20 @@ CATALOG = "capabilities/meridian"
 # this target rather than boilerplate -- a reviewer note that could apply to any
 # step is not a review.
 #: Capabilities whose irreversible step may run in an explicitly approved
-#: unattended run. Each is bounded by the value policy -- amount ceiling,
-#: dual-control threshold and rolling-window budget -- so the envelope, not a
-#: person, is what stops a bad one. place_hold is deliberately absent: it has no
-#: such envelope, so it always stops for a supervisor.
-UNATTENDED = {
-    "meridian.transfer_funds", "meridian.open_share",
-    "meridian.update_member_info",
-}
+#: unattended run -- deliberately EMPTY.
+#:
+#: The earlier reading was that the value policy (amount ceiling, dual-control
+#: threshold, rolling-window budget) is envelope enough for money movement. It
+#: is not, and the gap is specific: those rules bound the SIZE of a mistake, not
+#: whether one is being made. A $1.00 transfer to the wrong share is inside
+#: every limit and is still wrong, and nothing downstream can undo it.
+#:
+#: It also has to agree with `config/service.yaml`, which sets `allow_risky:
+#: false` for these. When it did not, the two combined into a hard BLOCK rather
+#: than a pause -- `requires_confirmation: false` plus `allow_risky: false` is
+#: the one combination the policy engine refuses outright -- so the capability
+#: could not run at all, and the console's Confirm button had nothing to answer.
+UNATTENDED: set[str] = set()
 
 #: Steps the classifier flagged that a reviewer has judged NOT irreversible,
 #: matched on intent text rather than index so a re-recording that takes a
@@ -49,7 +55,7 @@ UNATTENDED = {
 #: step. This is the gate working: a heuristic proposes, a person disagrees, and
 #: the disagreement is recorded on the artifact with its reason.
 DOWNGRADES = [
-    ("meridian.transfer_funds", "Start a Funds Transfer",
+    ("meridian.transfer_funds", "Funds Transfer form",
      "navigation only: this opens the transfer FORM. The lexical rule matched "
      "the word 'Transfer' in a link caption; the structural signal did not "
      "corroborate it, because there is no form submission here. Nothing is "
@@ -59,8 +65,9 @@ DOWNGRADES = [
 NOTES = {
     "meridian.transfer_funds":
         "Posts a funds movement between shares; the host issues a confirmation "
-        "number and provides no reversal path. Amount limits and dual control "
-        "apply underneath via config/policy.meridian.yaml.",
+        "number and provides no reversal path. Stops for a person on every run: "
+        "the value policy bounds how large a mistake can be, not whether one is "
+        "being made.",
     "meridian.open_share":
         "Establishes a new share on the member record. Caption 'Open Share' "
         "carries no risky keyword; the POST-form structural signal is what "
@@ -89,7 +96,22 @@ def main() -> int:
             step = next((s for s in art.steps
                          if s.risk.value == "risky" and needle in s.intent), None)
             if step is None:
-                continue
+                # Say so, loudly. Skipping in silence is what happened when a
+                # re-recording renamed this step from "Start a Funds Transfer"
+                # to "Open Funds Transfer form": the downgrade quietly did not
+                # apply, the step fell through to the ratification loop below,
+                # and a navigation-only step was approved as irreversible
+                # carrying a justification about posting money that no longer
+                # described it. A reviewer decision that vanishes when a caption
+                # changes is not a reviewer decision.
+                raise SystemExit(
+                    f"[approve] REFUSING: {cap_id} declares a reviewer "
+                    f"downgrade for a risky step whose intent contains "
+                    f"{needle!r}, and no such step exists. The capability was "
+                    f"probably re-recorded down a different path. Re-read the "
+                    f"steps and update DOWNGRADES before approving anything:\n"
+                    + "\n".join(f"    step {s.index}: {s.intent}"
+                                 for s in art.steps if s.risk.value == "risky"))
             cat.review_step(art.id, step.index, risk="safe", note=why)
             print(f"  DOWNGRADED {art.id} step {step.index} -> safe "
                   f"(reviewer disagreed with the classifier)")

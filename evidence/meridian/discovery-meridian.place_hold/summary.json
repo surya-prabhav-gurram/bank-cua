@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "reason": "Host returned a confirmation number",
+  "outputs": {
+    "confirmation": "CN480275"
+  },
+  "num_steps": 11,
+  "artifact_path": "capabilities/meridian/meridian.place_hold.json"
+}

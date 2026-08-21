@@ -1,0 +1,55 @@
+{"ts": 1787297018.873, "event": "run_started", "kind": "discovery", "run_dir": "evidence/meridian/discovery-meridian.update_member_info"}
+{"ts": 1787297019.62, "event": "discovery_started", "goal": "Sign on, open member 100987, update their contact details to email ***EMAIL***, phone 555-0102, address 2 Bletchley Park, Milton Keynes, then confirm the stored record shows the new values.", "provider": "scripted", "entry": "/signon"}
+{"ts": 1787297019.669, "event": "evidence_captured", "label": "step00", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step00.png"}
+{"ts": 1787297019.669, "event": "observation", "step": 0, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787297019.669, "event": "model_decided", "step": 0, "action": "fill", "intent": "Enter the operator id", "ref": 0, "value": "{operator}"}
+{"ts": 1787297019.684, "event": "action_executed", "step": 0, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787297019.716, "event": "evidence_captured", "label": "step01", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step01.png"}
+{"ts": 1787297019.716, "event": "observation", "step": 1, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787297019.716, "event": "model_decided", "step": 1, "action": "fill", "intent": "Enter the operator ***REDACTED:password***", "ref": 1, "value": "{***REDACTED:password***}"}
+{"ts": 1787297019.751, "event": "action_executed", "step": 1, "kind": "fill", "ok": true, "message": "filled textbox: empty", "candidate_index": 0}
+{"ts": 1787297019.776, "event": "evidence_captured", "label": "step02", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step02.png"}
+{"ts": 1787297019.776, "event": "observation", "step": 2, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787297019.776, "event": "model_decided", "step": 2, "action": "select", "intent": "Choose the branch", "ref": 2, "value": "{branch}"}
+{"ts": 1787297019.782, "event": "action_executed", "step": 2, "kind": "select", "ok": true, "message": "selected MAIN-001", "candidate_index": 0}
+{"ts": 1787297019.808, "event": "evidence_captured", "label": "step03", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step03.png"}
+{"ts": 1787297019.808, "event": "observation", "step": 3, "url": "https://web-sample.interface-hiring.com/signon", "status": 200, "num_elements": 4}
+{"ts": 1787297019.808, "event": "model_decided", "step": 3, "action": "click", "intent": "Sign on to the console", "ref": 3, "value": null}
+{"ts": 1787297020.007, "event": "action_executed", "step": 3, "kind": "click", "ok": true, "message": "clicked button: Sign On", "candidate_index": 0}
+{"ts": 1787297020.05, "event": "evidence_captured", "label": "step04", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step04.png"}
+{"ts": 1787297020.05, "event": "observation", "step": 4, "url": "https://web-sample.interface-hiring.com/menu", "status": 200, "num_elements": 11}
+{"ts": 1787297020.05, "event": "model_decided", "step": 4, "action": "navigate", "intent": "Open the member update screen", "ref": null, "value": null}
+{"ts": 1787297020.119, "event": "action_executed", "step": 4, "kind": "navigate", "ok": true, "message": "navigated to https://web-sample.interface-hiring.com/members/100987/update", "candidate_index": null}
+{"ts": 1787297020.158, "event": "evidence_captured", "label": "step05", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step05.png"}
+{"ts": 1787297020.158, "event": "observation", "step": 5, "url": "https://web-sample.interface-hiring.com/members/100987/update", "status": 200, "num_elements": 9}
+{"ts": 1787297020.158, "event": "model_decided", "step": 5, "action": "fill", "intent": "Set the e-mail", "ref": 4, "value": "{email}"}
+{"ts": 1787297020.164, "event": "action_executed", "step": 5, "kind": "fill", "ok": true, "message": "filled textbox: has a value", "candidate_index": 0}
+{"ts": 1787297020.199, "event": "evidence_captured", "label": "step06", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step06.png"}
+{"ts": 1787297020.199, "event": "observation", "step": 6, "url": "https://web-sample.interface-hiring.com/members/100987/update", "status": 200, "num_elements": 9}
+{"ts": 1787297020.199, "event": "model_decided", "step": 6, "action": "fill", "intent": "Set the phone", "ref": 5, "value": "{phone}"}
+{"ts": 1787297020.203, "event": "action_executed", "step": 6, "kind": "fill", "ok": true, "message": "filled textbox: has a value", "candidate_index": 0}
+{"ts": 1787297020.225, "event": "evidence_captured", "label": "step07", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step07.png"}
+{"ts": 1787297020.225, "event": "observation", "step": 7, "url": "https://web-sample.interface-hiring.com/members/100987/update", "status": 200, "num_elements": 9}
+{"ts": 1787297020.225, "event": "model_decided", "step": 7, "action": "fill", "intent": "Set the mailing address", "ref": 6, "value": "{address}"}
+{"ts": 1787297020.231, "event": "action_executed", "step": 7, "kind": "fill", "ok": true, "message": "filled textbox: has a value", "candidate_index": 0}
+{"ts": 1787297020.266, "event": "evidence_captured", "label": "step08", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step08.png"}
+{"ts": 1787297020.266, "event": "observation", "step": 8, "url": "https://web-sample.interface-hiring.com/members/100987/update", "status": 200, "num_elements": 9}
+{"ts": 1787297020.266, "event": "model_decided", "step": 8, "action": "click", "intent": "Save the contact changes", "ref": 7, "value": null}
+{"ts": 1787297020.586, "event": "action_executed", "step": 8, "kind": "click", "ok": true, "message": "clicked button: Save Changes", "candidate_index": 0}
+{"ts": 1787297020.624, "event": "evidence_captured", "label": "step09", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step09.png"}
+{"ts": 1787297020.624, "event": "observation", "step": 9, "url": "https://web-sample.interface-hiring.com/members/100987/update", "status": 200, "num_elements": 6}
+{"ts": 1787297020.624, "event": "model_decided", "step": 9, "action": "navigate", "intent": "Reopen the member record to verify", "ref": null, "value": null}
+{"ts": 1787297020.694, "event": "action_executed", "step": 9, "kind": "navigate", "ok": true, "message": "navigated to https://web-sample.interface-hiring.com/members/100987", "candidate_index": null}
+{"ts": 1787297020.745, "event": "evidence_captured", "label": "step10", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step10.png"}
+{"ts": 1787297020.745, "event": "observation", "step": 10, "url": "https://web-sample.interface-hiring.com/members/100987", "status": 200, "num_elements": 8}
+{"ts": 1787297020.746, "event": "model_decided", "step": 10, "action": "extract", "intent": "Read back the stored e-mail", "ref": 10, "value": null}
+{"ts": 1787297020.749, "event": "action_executed", "step": 10, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787297020.781, "event": "evidence_captured", "label": "step11", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step11.png"}
+{"ts": 1787297020.781, "event": "observation", "step": 11, "url": "https://web-sample.interface-hiring.com/members/100987", "status": 200, "num_elements": 8}
+{"ts": 1787297020.781, "event": "model_decided", "step": 11, "action": "extract", "intent": "Read back the stored phone", "ref": 11, "value": null}
+{"ts": 1787297020.784, "event": "action_executed", "step": 11, "kind": "extract", "ok": true, "message": "", "candidate_index": 0}
+{"ts": 1787297020.82, "event": "evidence_captured", "label": "step12", "screenshot": "evidence/meridian/discovery-meridian.update_member_info/step12.png"}
+{"ts": 1787297020.82, "event": "observation", "step": 12, "url": "https://web-sample.interface-hiring.com/members/100987", "status": 200, "num_elements": 8}
+{"ts": 1787297020.82, "event": "model_decided", "step": 12, "action": "finish", "intent": "Contact details updated and verified", "ref": null, "value": null}
+{"ts": 1787297020.821, "event": "finish_requested", "success_checkpoint": true, "model_success": true}
+{"ts": 1787297020.83, "event": "run_finished", "summary_path": "evidence/meridian/discovery-meridian.update_member_info/summary.json"}

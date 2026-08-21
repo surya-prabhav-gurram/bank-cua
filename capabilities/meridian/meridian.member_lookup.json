@@ -3,7 +3,7 @@
   "id": "meridian.member_lookup",
   "name": "Look up a member record and balances",
   "description": "Retrieve a member's contact details and the full share grid -- id, type, balance and status for every share. The row count varies per member, so the shares come back as typed rows rather than a fixed set of fields.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "target": {
     "app_id": "meridian-core",
     "surface_type": "web",
@@ -809,6 +809,25 @@
       "surfaces_outputs": false
     },
     {
+      "code": "REQUEST_NOT_VALIDATED",
+      "klass": "business_outcome",
+      "detector": {
+        "kind": "text_present",
+        "value": "The request could not be validated",
+        "min_count": 2,
+        "frame_path": []
+      },
+      "message": "The host would not accept the details as entered, and the screen says which rule they broke (a minimum opening deposit, for instance). Nothing was posted.",
+      "recovery": null,
+      "also_requires": [],
+      "applies_to_actions": [
+        "click",
+        "press_key"
+      ],
+      "applies_to_urls": [],
+      "surfaces_outputs": false
+    },
+    {
       "code": "TRANSACTION_REJECTED",
       "klass": "business_outcome",
       "detector": {
@@ -907,7 +926,7 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "approved",
+  "approval_state": "draft",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",

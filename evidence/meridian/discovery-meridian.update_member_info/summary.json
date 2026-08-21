@@ -1,0 +1,10 @@
+{
+  "status": "success",
+  "reason": "Stored record shows the new values",
+  "outputs": {
+    "email": "***EMAIL***",
+    "phone": "555-0102"
+  },
+  "num_steps": 12,
+  "artifact_path": "capabilities/meridian/meridian.update_member_info.json"
+}
