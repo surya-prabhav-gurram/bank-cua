@@ -23,13 +23,12 @@ import subprocess
 import pytest
 
 from bankcua.chat.app import _PAGE as CHAT_PAGE
-from bankcua.dashboard import _INDEX_PAGE, _MEMBER_PAGE
+from bankcua.dashboard import _INDEX_PAGE
 from bankcua.portal.app import _LOGIN_PAGE, _SHELL_PAGE
 
 PAGES = {
     "chat/app.py:_PAGE": CHAT_PAGE,
     "dashboard.py:_INDEX_PAGE": _INDEX_PAGE,
-    "dashboard.py:_MEMBER_PAGE": _MEMBER_PAGE,
     "portal/app.py:_LOGIN_PAGE": _LOGIN_PAGE,
     "portal/app.py:_SHELL_PAGE": _SHELL_PAGE,
 }

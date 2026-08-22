@@ -6,7 +6,8 @@ What this adds, and what it deliberately does not
 Until now every window onto this system was open: the dashboard and the chatbot
 came up unauthenticated and the only subject in the world was an operator ALIAS
 chosen from a dropdown. That is fine for a single-operator demo and wrong for
-anything else -- a member of the public and a supervisor were the same caller.
+anything else -- anyone who could reach the port and a supervisor were the same
+caller.
 
 This module supplies the sign-in, and NOTHING ELSE. Specifically it does not
 supply the enforcement:
@@ -15,13 +16,12 @@ supply the enforcement:
     /dashboard and /assistant, on one origin so a single cookie covers both;
   * it mints the session token (`bankcua/auth.py`) and hands it to the browser;
   * every request the two tabs make carries that token to the capability API,
-    which re-resolves it against the principal store and applies the role and
-    member-scope rules itself.
+    which re-resolves it against the principal store and applies the role rules
+    itself.
 
 So the portal is a door, not a guard. Deleting this file would cost the system
 its sign-in page and none of its authorisation: the API refuses a teller's
-session asking for a hold, and a member's session asking about somebody else's
-account, whether or not anything is mounted in front of it. That split is the
+session asking for a hold whether or not anything is mounted in front of it. That split is the
 point -- a permission model that lives in the page it decorates is a permission
 model that ends at "view source".
 
@@ -47,15 +47,23 @@ all -- API down, target unreachable, capability still in draft -- the console
 says so in its header and lets them in unverified, because an offline target is
 not evidence about anybody's credential.
 
-Why the staff sign-in takes no password
----------------------------------------
+Why the sign-in takes no password
+---------------------------------
 It is a demo affordance, and it is a real hole: anyone who can reach this port
 becomes a teller or a supervisor by choosing one from a list. It is written down
 here, in the README, and nowhere else does the system rely on it -- every
-authorisation decision is still made by the API against the principal store. The
-member sign-ins keep their password, because member usernames ARE member
-numbers: a passwordless list of them would be an enumeration of the membership
-with a login attached to each row.
+authorisation decision is still made by the API against the principal store, and
+`_authenticate` still verifies a password when one is supplied, so restoring the
+field is a change to this page and to nothing behind it.
+
+Who may sign in at all
+----------------------
+The institution's own operators, and nobody else. MERIDIAN is a back office;
+its users are tellers and supervisors. There is no member sign-in, because a
+credit union's members belong in online banking rather than at the core banking
+console -- and `PrincipalStore.get` refuses any principal whose role is not an
+operator role, so that is enforced in the store rather than by the absence of a
+form on this page.
 
 Why two tabs rather than two ports
 ----------------------------------
@@ -80,11 +88,11 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 from ..auth import (SESSION_COOKIE, SESSION_HEADER, STAFF_ROLES, AuthError,
                     Principal, SessionAuthority, ensure_session_secret,
-                    token_from_request)
+                    token_from_request, with_branch)
 
 #: Sign-in attempts allowed per username inside the window before it is held
-#: shut. Member usernames ARE member numbers, so an unthrottled form is an
-#: offline password guess against a known, enumerable account list.
+#: shut. The operator names are few and guessable, so an unthrottled form that
+#: accepts a password is an online password guess against a known account list.
 _MAX_ATTEMPTS = 5
 _LOCKOUT_S = 60.0
 
@@ -152,6 +160,39 @@ def post_api(api_url: str, path: str, token: str = "",
         return {"error": f"capability API unreachable at {api_url}: {ex}"}, 503
 
 
+def configured_branches(path: str = "config/service.yaml") -> list[dict]:
+    """The branches this deployment recognises, read from the service config.
+
+    The console reads the SAME file the API validates against, rather than
+    asking the API over HTTP, for two reasons. One file means the list a person
+    is offered and the list `/invoke` enforces cannot drift apart. And the
+    sign-in page has to render when the API is down -- that is the whole point
+    of the `unverified` sign-on state -- so a page that could not draw its
+    branch dropdown without a reachable API would have made the door depend on
+    the thing it is meant to survive.
+
+    This reads configuration, it does not make a decision: the API re-validates
+    the branch on every invocation regardless of what this offered.
+
+    Returns the same normalised `[{"code", "name"}]` the API publishes, so the
+    two readers of this file cannot disagree about what an entry means.
+    """
+    from ..service import _branches       # one definition of the shape
+
+    if not os.path.exists(path):
+        return []
+    try:
+        import yaml
+        with open(path) as fh:
+            raw = yaml.safe_load(fh) or {}
+        return _branches(raw.get("branches"))
+    except Exception:
+        # A malformed service config must not stop people signing in; it stops
+        # the CHOICE being offered, and every run falls back to the operator's
+        # configured branch.
+        return []
+
+
 def create_app(api_url: str = "http://127.0.0.1:8080",
                catalog_dir: str = "capabilities/meridian",
                evidence_dirs: tuple[str, ...] = ("evidence/service",
@@ -160,6 +201,8 @@ def create_app(api_url: str = "http://127.0.0.1:8080",
                console_port: int = 8090,
                principals_path: str | None = None,
                session_key_path: str = "config/session.key",
+               service_config_path: str = "config/service.yaml",
+               branches: list[str] | None = None,
                router=None,
                session_authority: SessionAuthority | None = None,
                signon_client=None) -> Flask:
@@ -177,6 +220,11 @@ def create_app(api_url: str = "http://127.0.0.1:8080",
     app = Flask(__name__)
     app.json.sort_keys = False
     throttle = _Throttle()
+    #: Read once at startup rather than per request: it is deployment
+    #: configuration, and a login page that re-read a file on every keystroke of
+    #: a brute-force attempt would be its own small denial of service.
+    branch_list = (list(branches) if branches is not None
+                   else configured_branches(service_config_path))
 
     dashboard = create_dashboard(catalog_dir=catalog_dir,
                                  evidence_dirs=tuple(evidence_dirs),
@@ -256,10 +304,7 @@ def create_app(api_url: str = "http://127.0.0.1:8080",
 
     def _signon_badge(principal: Principal | None) -> dict:
         """What the console header says about this session's sign-on."""
-        if principal is None or principal.is_member:
-            # A member never had an operator session of their own to establish;
-            # saying "not verified" at them would describe a thing that does not
-            # apply to their sign-in.
+        if principal is None:
             return {}
         badge = dict(signons.get(
             principal.username,
@@ -289,29 +334,38 @@ def create_app(api_url: str = "http://127.0.0.1:8080",
                 principal = auth.store.get(name)
             except AuthError:
                 continue
-            if principal.is_staff and principal.role in STAFF_ROLES:
+            if principal.role in STAFF_ROLES:
                 out.append({"username": principal.username,
                             "role": principal.role,
                             "display_name": principal.display_name})
         return sorted(out, key=lambda s: (s["role"] != "teller", s["username"]))
 
-    def _render_login(error: str = "", username: str = "", status: int = 200):
+    def _render_login(error: str = "", username: str = "", branch: str = "",
+                      status: int = 200):
         return render_template_string(_LOGIN_PAGE, error=error,
                                       username=username,
+                                      branch=branch or (branch_list[0]["code"]
+                                                        if branch_list else ""),
+                                      branches=branch_list,
                                       staff=_staff_signins()), status
 
-    def _authenticate(username: str, password: str):
+    def _authenticate(username: str, password: str, branch: str = ""):
         """Establish the principal behind a sign-in attempt, or raise.
 
-        Two paths, and the difference is deliberate. A STAFF sign-in is chosen
-        from a short list the deployment configured, and is let in on the choice
-        alone -- that is the demo affordance the module docstring owns up to. A
-        MEMBER types a password, because member usernames are member numbers: a
-        passwordless list of those would be an enumeration of the membership.
+        An operator is chosen from the short list the deployment configured and
+        let in on the choice alone -- the demo affordance the module docstring
+        owns up to. A password supplied is still VERIFIED rather than ignored,
+        so a deployment that hardens this by putting the field back gets the
+        check for free.
 
-        A password supplied for a staff sign-in is still verified rather than
-        ignored, so a deployment that hardens this by putting the field back
-        gets the check for free.
+        `store.get` is what refuses a principal whose role is not an operator
+        role, so a leftover member entry in a hand-edited principal file cannot
+        be signed in through this path either.
+
+        The branch is stamped on the principal BEFORE the token is minted, so
+        both the passwordless path and the verified one produce a session that
+        already knows where it was signed in from -- there is no second step
+        that could be forgotten on one of them.
         """
         if not username:
             raise AuthError("choose a sign-in")
@@ -321,9 +375,11 @@ def create_app(api_url: str = "http://127.0.0.1:8080",
             # Never distinguish "no such sign-in" from "wrong password" here;
             # the route renders one message for both.
             raise AuthError("that sign-in and password do not match") from None
-        if principal.is_staff and not password:
-            return principal, auth.mint(principal)
-        return auth.sign_in(username, password)
+        if not password:
+            return with_branch(principal, branch), auth.mint(principal,
+                                                             branch=branch)
+        principal, _token = auth.sign_in(username, password, branch=branch)
+        return principal, auth.mint(principal, branch=branch)
 
     # ---- sign in / sign out ---------------------------------------------
     @app.get("/login")
@@ -335,36 +391,52 @@ def create_app(api_url: str = "http://127.0.0.1:8080",
     def login():
         username = (request.form.get("username") or "").strip()
         password = request.form.get("password") or ""
+        branch = (request.form.get("branch") or "").strip()
         held = throttle.locked(username)
         if held > 0:
             return _render_login(
-                username=username,
+                username=username, branch=branch,
                 error=f"Too many attempts. Try again in {int(held) + 1}s.",
                 status=429)
+        # Checked here as well as at the API, because this is where a person can
+        # be told about it. The API's own refusal is the one that matters -- it
+        # applies to every invocation, not just to the door -- but a browser
+        # that posted an unlisted branch should get a sentence rather than a
+        # session that fails on its first request.
+        if branch and branch not in [b["code"] for b in branch_list]:
+            return _render_login(
+                username=username, status=400,
+                error="That is not a branch this deployment recognises.")
+        if not branch and branch_list:
+            # A form posted without the field (an old bookmark, a script) takes
+            # the deployment's first branch rather than silently recording no
+            # branch at all on everything the session then does.
+            branch = branch_list[0]["code"]
         try:
-            principal_record, token = _authenticate(username, password)
+            principal_record, token = _authenticate(username, password, branch)
         except AuthError as ex:
             throttle.fail(username)
-            # One message for a wrong password and for an unknown sign-in. Member
-            # usernames are member numbers, so "no such user" would confirm which
-            # numbers exist to anyone who asked.
+            # One message for a wrong password and for an unknown sign-in, so
+            # the form never confirms which sign-ins are live to anyone asking.
             message = str(ex) if "principal store" in str(ex) else \
                 "That sign-in and password do not match."
-            return _render_login(username=username, error=message, status=401)
+            return _render_login(username=username, branch=branch,
+                                 error=message, status=401)
         throttle.clear(username)
 
         # ---- the sign-on itself, before anyone is let through -------------
-        if principal_record.is_staff:
-            verdict = _establish_signon(token)
-            if verdict["state"] == "rejected":
-                # The HOST answered about this credential, and the answer was
-                # no. Letting someone into a console whose every capability
-                # begins by signing on with that credential would only move the
-                # failure to their first request, with less to read.
-                return _render_login(
-                    username=username, status=401,
-                    error=f"MERIDIAN refused that operator: {verdict['detail']}")
-            signons[principal_record.username] = verdict
+        # Unconditional: every principal is a Meridian operator, so every
+        # sign-in has a credential to establish at the door.
+        verdict = _establish_signon(token)
+        if verdict["state"] == "rejected":
+            # The HOST answered about this credential, and the answer was no.
+            # Letting someone into a console whose every capability begins by
+            # signing on with that credential would only move the failure to
+            # their first request, with less to read.
+            return _render_login(
+                username=username, branch=branch, status=401,
+                error=f"MERIDIAN refused that operator: {verdict['detail']}")
+        signons[principal_record.username] = verdict
         # Only ever a path on this console. `?next=https://elsewhere/` would
         # turn the sign-in page into an open redirect, which is a credible
         # phishing landing spot precisely BECAUSE it is a real bank console URL.
@@ -506,10 +578,6 @@ _LOGIN_PAGE = """<!doctype html>
  .err{margin-top:14px;background:#5a2020;color:#f5b0b0;padding:9px 11px;
       border-radius:6px;font-size:12px}
  .note{color:#6f819b;font-size:11px;margin-top:16px;line-height:1.5}
- .rule{display:flex;align-items:center;gap:10px;margin:22px 0 4px;
-       color:#5c6b83;font-size:10.5px;text-transform:uppercase;
-       letter-spacing:.08em}
- .rule:before,.rule:after{content:"";flex:1;height:1px;background:#2a3444}
  details summary{cursor:pointer;color:#8fa3bf;font-size:12px;margin-top:6px}
  details[open] summary{margin-bottom:2px}
  .warn{color:#c9a24a;font-size:11px;margin-top:10px;line-height:1.5}
@@ -527,6 +595,15 @@ _LOGIN_PAGE = """<!doctype html>
         {{ s.display_name }} &middot; {{ s.role }}</option>
       {% endfor %}
     </select>
+    {% if branches %}
+    <label for="branch">Branch</label>
+    <select id="branch" name="branch">
+      {% for b in branches %}
+      <option value="{{ b.code }}"
+              {% if b.code == branch %}selected{% endif %}>{{ b.code }}{% if b.name %} - {{ b.name }}{% endif %}</option>
+      {% endfor %}
+    </select>
+    {% endif %}
     <button type="submit">Sign in</button>
   </form>
 
@@ -536,24 +613,19 @@ _LOGIN_PAGE = """<!doctype html>
     before the console opens. No operator password is typed here or held by this
     page: the secret lives in the deployment's credential store and is supplied
     server-side at the moment of use.</div>
+  {% if branches %}
+  <div class="note">The branch is the one this session is worked from. It is
+    sent with the sign-on and recorded against every task the session performs,
+    and the API re-checks it against the deployment's configured branches on
+    every call &mdash; so it is a fact about the run rather than a label the
+    caller chose.</div>
+  {% endif %}
   <div class="warn">Demo affordance: staff sign in on the choice alone. Anyone
     who can reach this port can become either operator.</div>
 
-  <div class="rule">or a member</div>
-  <form method="post" action="/login">
-    <label for="member">Member number</label>
-    <input id="member" name="username" autocomplete="username"
-           inputmode="numeric">
-    <label for="password">Password</label>
-    <input id="password" name="password" type="password"
-           autocomplete="current-password">
-    <button type="submit">Sign in</button>
-  </form>
-  <div class="note">A member is not a Meridian operator, so nothing is signed on
-    for them: their work runs delegated on the deployment's least-privileged
-    staff alias and is bound to their own member number. Their password is
-    required — member numbers are guessable, so a list to pick from would be an
-    enumeration of the membership.</div>
+  <div class="note">This console signs in the institution's own staff.
+    MERIDIAN is a back office: its operators are tellers and supervisors,
+    and there is no member sign-in here at all.</div>
 </div>
 <script>
  // Served inside the console's frame when a session expires mid-session. Break
@@ -599,7 +671,8 @@ _SHELL_PAGE = """<!doctype html>
   </div>
   <div class="who">
     <span>{{ me.display_name }}</span>
-    <span class="role">{{ me.role }}{% if me.member_id %} · {{ me.member_id }}{% endif %}</span>
+    <span class="role">{{ me.role }}</span>
+    {% if me.branch %}<span class="role">{{ me.branch }}</span>{% endif %}
     {% if signon %}
     <span class="signon {{ signon.state }}" title="{{ signon.title }}"
       >{{ 'MERIDIAN signed on' if signon.state == 'signed_on'

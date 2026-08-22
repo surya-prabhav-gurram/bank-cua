@@ -75,7 +75,7 @@ def api(tmp_path, authority):
                      "allowed_principal_roles": ["supervisor", "teller"]},
             "meridian.member_lookup": {
                 "allow_unapproved": True,
-                "allowed_principal_roles": ["supervisor", "teller", "member"]},
+                "allowed_principal_roles": ["supervisor", "teller"]},
         }}))
     app = create_api(catalog_dir=CATALOG, service_config_path=str(cfg),
                      evidence_dir=str(tmp_path / "ev"), credential_store=CREDS,
@@ -165,15 +165,18 @@ def test_establishing_a_sign_on_requires_a_signed_in_person(api):
     assert r.get_json()["refusal"]["code"] == "SESSION_REQUIRED"
 
 
-def test_a_member_sign_in_establishes_no_operator_session(api, authority):
-    """Not a matter of trust: a member has no Meridian operator identity.
+def test_a_member_entry_cannot_reach_the_sign_on_door(api, authority):
+    """A member has no Meridian operator identity, and cannot acquire one here.
 
-    Their work runs delegated on the deployment's staff alias, and exercising
-    that alias's credential is not something a member signing in should cause.
+    The refusal comes from the STORE rather than from a check on this route:
+    the principal fixture still contains member 100234, and it cannot be
+    resolved into a session at all, so there is no member-shaped caller for
+    `/session/signon` to have to turn away.
     """
-    r = api.post("/session/signon", headers=_as(authority, "100234"))
-    assert r.status_code == 403
-    assert r.get_json()["refusal"]["code"] == "SIGNON_NOT_FOR_MEMBERS"
+    from bankcua.auth import AuthError
+
+    with pytest.raises(AuthError):
+        authority.store.get("100234")
 
 
 def test_a_deployment_that_names_no_sign_on_capability_has_no_such_door(
@@ -253,10 +256,10 @@ def test_the_login_page_offers_the_operators_the_store_configures(
     client = _portal(tmp_path, principals, authority, SIGNED_ON)
     page = client.get("/login").get_data(as_text=True)
     assert page.index('value="teller1"') < page.index('value="super1"')
-    # ...and no member is on it: their usernames are member numbers, so a list
-    # to pick from would be an enumeration of the membership.
+    # ...and the member entry in the store is not on it: the list is built from
+    # principals the store will actually resolve, and it refuses that one.
     assert 'value="100234"' not in page
-    assert 'id="password"' in page, "members still need a password field"
+    assert "Member number" not in page
 
 
 def test_picking_an_operator_signs_in_and_signs_on(tmp_path, principals,
@@ -302,17 +305,21 @@ def test_an_unreachable_target_signs_you_in_unverified_rather_than_locking_you_o
     assert "MERIDIAN not verified" in client.get("/").get_data(as_text=True)
 
 
-def test_a_member_signs_in_with_a_password_and_nothing_is_signed_on(
+def test_a_member_cannot_sign_in_with_or_without_a_password(
         tmp_path, principals, authority):
+    """Both doors, because they are different code paths.
+
+    A blank password takes the passwordless operator affordance; a supplied one
+    takes `authenticate`. Both end at `PrincipalStore.get`, which is why one
+    refusal covers both.
+    """
     client = _portal(tmp_path, principals, authority, SIGNED_ON)
     assert client.post("/login",
                        data={"username": "100234"}).status_code == 401
     assert client.post("/login", data={"username": "100234",
                                        "password": "member123"}
-                       ).status_code == 302
-    # No badge at all, rather than "not verified": a member never had an
-    # operator session of their own for the console to have an opinion about.
-    assert client.get("/me").get_json()["signon"] == {}
+                       ).status_code == 401
+    assert client.get("/me").status_code == 401
 
 
 def test_a_staff_password_is_still_verified_when_one_is_supplied(

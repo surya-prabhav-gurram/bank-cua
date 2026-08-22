@@ -17,7 +17,11 @@ default_operator: teller1
 # --- who is signed in ------------------------------------------------------
 # The console signs a person in and hands the API a signed session token. The
 # API re-resolves that token against the principal store on every call, so the
-# ROLE and the member scope are read here rather than claimed by the request.
+# ROLE is read here rather than claimed by the request.
+#
+# Every principal is one of the institution's own operators -- a teller or a
+# supervisor. There is no member sign-in: MERIDIAN is a back office, and
+# `PrincipalStore.get` refuses any principal whose role is not an operator role.
 #
 # `require_session: false` keeps the direct agent path (an operator alias in the
 # body) working, which is how the CLI demos and any non-browser caller reach the
@@ -26,6 +30,37 @@ default_operator: teller1
 require_session: false
 principals: config/principals.json
 session_key: config/session.key
+
+# --- branches --------------------------------------------------------------
+# The branches this deployment recognises. The console offers these at sign-in,
+# below the operator, and stamps the chosen one on every run the session
+# performs -- it is merged into `branch` server-side, exactly as the operator's
+# password is, so a caller can neither choose it per request nor invent one.
+#
+# Listed here rather than typed at the door because an audit field a caller can
+# set to anything is not evidence. The API re-validates the branch a session
+# claims against this list on every invocation (`BRANCH_NOT_CONFIGURED`), which
+# is what makes it safe for the session token to carry the choice at all.
+#
+# These are MERIDIAN's OWN branches, and the codes must match the target's
+# sign-on dropdown exactly -- `branch` is typed into that form, so a code the
+# host does not offer is a run that fails at the first screen. They are
+# configuration rather than something this system invents.
+#
+# Remove the list and the console stops offering a choice: every run then falls
+# back to the branch configured on the operator in the credential store, which
+# is how this worked before sign-in existed and is what the direct agent path
+# still does.
+#
+# `name` is optional and is only what the console displays; `code` is the value
+# sent to the host and recorded on every run.
+branches:
+  - code: MAIN-001
+    name: Main Office
+  - code: WEST-014
+    name: Westside
+  - code: EAST-022
+    name: Eastgate
 
 # --- the sign-on, established at the door -----------------------------------
 # The capability the CONSOLE runs when a staff member signs in, on the alias
@@ -45,19 +80,19 @@ session_signon: meridian.signon
 
 # `allowed_principal_roles` is the SIGN-IN half of authorisation and is separate
 # from `requires_role`, which is about the Meridian operator a run executes as.
-# Both apply. A member's work runs delegated as `default_operator`, so without
-# this a member sign-in would inherit a teller's whole action space; with it, a
-# member reaches only what is listed here, and only ever their own record --
-# `scope_params` in bankcua/auth.py binds every member-identifying argument to
-# the member number they signed in with.
+# Both apply, and `meridian.place_hold` below is where the difference shows: it
+# demands a supervisor SIGN-IN and a supervisor OPERATOR and a named alias.
 #
-# Unlisted capabilities default CLOSED to members (staff only), so a capability
-# nobody has thought about yet cannot become member-reachable by omission.
+# The two axes travel together on this deployment, since every principal acts as
+# their own alias -- but they are different questions, and collapsing them would
+# make the narrower of the two unenforceable the moment they diverged.
+#
+# An unlisted capability falls back to `auth.DEFAULT_PRINCIPAL_ROLES`, which is
+# every configured operator role. Narrow a capability by LISTING it here.
 
 capabilities:
   meridian.signon:
-    # Staff only: it proves an OPERATOR credential works, which is not a thing a
-    # member has. Named as `session_signon` above, so these rules are the ones
+    # Named as `session_signon` above, so these rules are the ones
     # `POST /session/signon` applies at sign-in -- including the approval gate.
     # A deployment that has not approved its sign-on capability signs people in
     # unverified rather than making an exception for the door.
@@ -65,23 +100,18 @@ capabilities:
     allow_unapproved: false         # the approval gate applies to reads too
 
   meridian.member_search:
-    # Staff only. Searching the membership by surname is a directory lookup over
-    # other people's records; scoping it to one member would be meaningless, so it
-    # is refused for members rather than narrowed.
+    # A directory lookup across the membership by surname -- ordinary counter
+    # work for either operator.
     allowed_principal_roles: [supervisor, teller]
     allow_unapproved: false
 
   meridian.member_lookup:
-    # A member may read their OWN record here. member_id is filled in from the
-    # sign-in and a different one is refused, not rewritten.
-    allowed_principal_roles: [supervisor, teller, member]
+    # Reading a member's record is the core counter task; both operators do it.
+    allowed_principal_roles: [supervisor, teller]
     allow_unapproved: false
 
   meridian.transfer_funds:
-    # A member may move their own money BETWEEN THEIR OWN SHARES: both share ids
-    # must be prefixed with their member number, and the value policy below still
-    # applies -- over $1,000 needs an independent approver.
-    allowed_principal_roles: [supervisor, teller, member]
+    allowed_principal_roles: [supervisor, teller]
     # Moves money, and posting a transfer cannot be undone by replaying it back.
     # Every irreversible step stops for a person: replay raises an intervention
     # at Post Transfer rather than completing unattended. The value policy in
@@ -99,8 +129,8 @@ capabilities:
     allow_unapproved: false
 
   meridian.update_member_info:
-    # Self-service contact details, bound to the member's own record.
-    allowed_principal_roles: [supervisor, teller, member]
+    # Contact details, updated at the counter on the member's instruction.
+    allowed_principal_roles: [supervisor, teller]
     # Overwriting contact details discards what was there; there is no undo on
     # the host. Irreversible, so it stops for a person.
     allow_risky: false
@@ -108,7 +138,8 @@ capabilities:
 
   meridian.place_hold:
     # Supervisors only, on both halves: the sign-in must be a supervisor AND the
-    # Meridian operator must hold the supervisor role.
+    # Meridian operator must hold the supervisor role. This is the capability
+    # that makes the two axes above worth keeping separate.
     allowed_principal_roles: [supervisor]
     # The host restricts this to supervisors. We refuse it here as well rather
     # than driving a member's account up to a wall we already know is there --

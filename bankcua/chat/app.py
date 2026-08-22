@@ -24,11 +24,11 @@ Consequences worth being explicit about, because they are the safety story:
 
 A wrong routing decision therefore produces a wrong QUESTION, answered safely.
 
-That last point is what makes a member-facing assistant defensible. The manifest
-this app routes over is already narrowed by the API to what the signed-in person
-may invoke, so a member's assistant is not offered a hold or a member search at
-all; and if it invented one anyway, the invocation would be refused. The action
-space shrinks with the sign-in, and it shrinks server-side.
+That last point is what makes an LLM-driven front door defensible at all. The
+manifest this app routes over is already narrowed by the API to what the
+signed-in operator may invoke, so a teller's assistant is not offered a hold;
+and if it invented one anyway, the invocation would be refused. The action space
+shrinks with the sign-in, and it shrinks server-side.
 
 The seam: swap this front door (Slack, voice, a real agent) without touching the
 API, the capabilities, or the engine.
@@ -68,9 +68,9 @@ class CapabilityClient:
     def manifest(self, token: str = "") -> list[dict]:
         """The action space, as the SIGNED-IN person may see it.
 
-        Passing the session here is not a convenience: the manifest is the whole
-        set of things this front door can decide to do, so narrowing it by who
-        is asking is what stops a member's assistant from ever considering a
+        Passing the session here is not a convenience: the manifest is the
+        whole set of things this front door can decide to do, so narrowing it by
+        who is asking is what stops a teller's assistant from ever considering a
         capability that is not theirs to use.
         """
         return self._get("/capabilities", token)
@@ -354,28 +354,17 @@ _PAGE = """<!doctype html>
 const P="__PREFIX__";
 
 // Who is signed in shapes the SUGGESTIONS and nothing else -- suggesting a
-// member search to a member is suggesting something that will be refused. It
-// shapes no permission: what this assistant may do is decided by the API from
-// the session on every single call, whatever this page believes.
+// hold to a teller is suggesting something that will be refused. It shapes no
+// permission: what this assistant may do is decided by the API from the session
+// on every single call, whatever this page believes.
 fetch(P+'/whoami').then(r=>r.json()).then(me=>{
   if(!me || !me.username) return;
   document.getElementById('who').textContent =
     `${me.display_name||me.username} — ${me.role}` +
     (me.runs_as? ` · runs as ${me.runs_as}`:'');
   const caps=(me.capabilities||[]);
-  const box=document.getElementById('msg');
-  if(me.kind==='member'){
-    box.placeholder='e.g. what are my balances?';
-    document.getElementById('hint').innerHTML =
-      'Everything here is limited to member <code>'+me.member_id+'</code>. Try: '+
-      '<code>what are my balances?</code> &middot; '+
-      '<code>transfer 1.00 from '+me.member_id+'-S0070 to '+me.member_id+'-S0001-3</code> &middot; '+
-      '<code>balances for member 100987</code> (to see the refusal)<br>' +
-      'Available to you: ' + (caps.length? caps.map(c=>'<code>'+c+'</code>').join(' '): 'nothing');
-  } else {
-    document.getElementById('hint').innerHTML +=
-      '<br>Available to you: ' + (caps.length? caps.map(c=>'<code>'+c+'</code>').join(' '): 'nothing');
-  }
+  document.getElementById('hint').innerHTML +=
+    '<br>Available to you: ' + (caps.length? caps.map(c=>'<code>'+c+'</code>').join(' '): 'nothing');
 });
 
 function add(cls, text, meta){

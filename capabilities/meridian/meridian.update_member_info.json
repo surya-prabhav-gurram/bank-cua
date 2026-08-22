@@ -546,8 +546,8 @@
       "checkpoint": null,
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Save Changes' (assumed state-changing)",
-      "risk_reviewed": false,
+      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Save Changes' (assumed state-changing) | reviewed: Overwrites stored contact details. Reversible only by knowing the previous values, which the capability reads back but does not retain.",
+      "risk_reviewed": true,
       "requires_confirmation": true
     },
     {
@@ -927,7 +927,7 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "scripted-trace",

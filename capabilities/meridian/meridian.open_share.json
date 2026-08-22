@@ -740,8 +740,8 @@
       },
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Open Share' (assumed state-changing)",
-      "risk_reviewed": false,
+      "risk_reason": "structural: submit control in a POST form with an unrecognised caption 'Open Share' (assumed state-changing) | reviewed: Establishes a new share on the member record. Caption 'Open Share' carries no risky keyword; the POST-form structural signal is what classified it, and that classification is correct.",
+      "risk_reviewed": true,
       "requires_confirmation": true
     },
     {
@@ -1045,7 +1045,7 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",

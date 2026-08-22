@@ -52,8 +52,6 @@ def authority(tmp_path):
                    "password_hash": hash_password("password", rounds=1000)},
         "teller1": {"kind": "staff", "role": "teller", "acts_as": "teller1",
                     "password_hash": hash_password("password", rounds=1000)},
-        "100234": {"kind": "member", "role": "member", "member_id": "100234",
-                   "password_hash": hash_password("member123", rounds=1000)},
     }))
     return SessionAuthority(store=PrincipalStore(str(path)),
                             signer=SessionSigner(b"test-key"))
@@ -182,11 +180,13 @@ def test_the_api_lists_open_pauses_with_the_channel_that_raised_them(
         ("replay-x-step9", "assistant", "confirmation")]
 
 
-def test_a_member_is_never_shown_a_paused_run(api, tmp_path, authority):
-    """A paused run describes whichever member an operator was working on."""
+def test_the_paused_queue_needs_a_signed_in_operator(api, tmp_path):
+    """The queue describes whichever member an operator was working on, so it
+    is not served to a caller the API cannot identify."""
     _raise(tmp_path / "handoffs")
+    forged = SessionSigner(b"not-the-key").mint("super1")
     assert api.get("/interventions",
-                   headers=_as(authority, "100234")).get_json() == []
+                   headers={"X-Bankcua-Session": forged}).status_code == 401
 
 
 def test_confirming_requires_a_signed_in_supervisor(api, tmp_path, authority):

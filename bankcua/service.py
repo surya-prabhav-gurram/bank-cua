@@ -62,7 +62,7 @@ import yaml
 from flask import Flask, jsonify, request, send_file
 
 from .auth import (AuthError, Principal, SessionAuthority, may_invoke,
-                   operator_alias_for, scope_params, token_from_request)
+                   operator_alias_for, token_from_request)
 from .catalog import Catalog
 from .observability.logging import RunLogger
 from .replay.engine import ReplayEngine
@@ -85,12 +85,12 @@ class CapabilityRule:
     #: Aliases permitted to invoke this capability at all. Empty means any
     #: configured alias whose role satisfies `requires_role`.
     allowed_operators: list[str] = field(default_factory=list)
-    #: SIGN-IN roles permitted to invoke it: supervisor, teller, member. A
-    #: separate question from `requires_role`, which is about the Meridian
-    #: operator a run EXECUTES as -- a member's work runs delegated as a teller
-    #: alias, so without this check every member would inherit a teller's action
-    #: space the moment they signed in. Empty means the closed default
-    #: (`auth.DEFAULT_PRINCIPAL_ROLES`: staff only).
+    #: SIGN-IN roles permitted to invoke it: supervisor or teller. A separate
+    #: question from `requires_role`, which is about the Meridian operator a run
+    #: EXECUTES as. The two travel together on this deployment, since every
+    #: principal acts as their own alias -- but `place_hold` constrains both,
+    #: and collapsing them would make the narrower of the two unenforceable.
+    #: Empty means the default in `auth.DEFAULT_PRINCIPAL_ROLES`.
     allowed_principal_roles: list[str] = field(default_factory=list)
 
 
@@ -125,6 +125,26 @@ class ServiceConfig:
     #: which is what the direct agent path (no sign-in) still wants.
     session_signon: str = ""
 
+    #: The branches this deployment recognises, offered at sign-in and used to
+    #: validate the branch a session claims. Normalised to
+    #: `[{"code": ..., "name": ...}]`; `code` is what MERIDIAN is sent and what
+    #: is recorded on a run, `name` is only what the console displays.
+    #:
+    #: Server-side and in data for the same reason every other rule here is: a
+    #: branch a caller could invent is an audit field a caller could invent,
+    #: which is worse than no field at all. And these are the TARGET's branch
+    #: codes -- a code the host does not offer is a run that fails at its first
+    #: screen, so they are configured, never derived.
+    #:
+    #: Empty means this deployment offers no choice, and every run falls back to
+    #: the operator's own configured branch.
+    branches: list[dict] = field(default_factory=list)
+
+    @property
+    def branch_codes(self) -> list[str]:
+        """Just the codes -- what a session's claim is validated against."""
+        return [b["code"] for b in self.branches]
+
     @classmethod
     def from_yaml(cls, path: str) -> "ServiceConfig":
         if not os.path.exists(path):
@@ -139,6 +159,7 @@ class ServiceConfig:
             session_signon=str(raw.get("session_signon") or ""),
             principals_path=raw.get("principals", "config/principals.json"),
             session_key_path=raw.get("session_key", "config/session.key"),
+            branches=_branches(raw.get("branches")),
             rules={cid: CapabilityRule(
                 allow_risky=r.get("allow_risky", False),
                 allow_unapproved=r.get("allow_unapproved", False),
@@ -151,6 +172,31 @@ class ServiceConfig:
 
     def rule_for(self, cap_id: str) -> CapabilityRule:
         return self.rules.get(cap_id, CapabilityRule())
+
+
+def _branches(raw) -> list[dict]:
+    """Normalise the configured branch list.
+
+    Accepts a bare code (`- MAIN-001`) or a mapping (`- {code, name}`), because
+    the display name is a convenience and a deployment that does not want one
+    should not have to write a mapping to say so. Entries with no code are
+    dropped rather than becoming a blank option nobody can choose meaningfully.
+    """
+    out = []
+    for entry in (raw or []):
+        if isinstance(entry, dict):
+            code = str(entry.get("code") or "").strip()
+            name = str(entry.get("name") or "").strip()
+        elif isinstance(entry, str):
+            code, name = entry.strip(), ""
+        else:
+            # Anything else is a malformed entry, and `str()` would launder it
+            # into a plausible-looking code -- a bare `-` in the YAML parses as
+            # None, and `str(None)` is the string "None".
+            continue
+        if code:
+            out.append({"code": code, "name": name})
+    return out
 
 
 def _is_safe_intervention_id(ident: str) -> bool:
@@ -256,12 +302,11 @@ def create_app(catalog_dir="capabilities/meridian",
     def _visible(tool: dict, principal: Principal | None) -> dict | None:
         """One manifest entry as this principal may see it, or None.
 
-        Two things happen here, and both are the same idea as
-        `_service_supplied` below: never publish a tool a caller may not use,
-        and never ask a caller for an argument it does not get to choose. For a
-        member, `member_id` is one of those arguments -- it comes from their
-        sign-in -- so it is removed from the schema rather than left there for a
-        chatbot to fill in with somebody else's number.
+        Same idea as `_service_supplied` below: never publish a tool a caller
+        may not use. A teller's manifest does not describe `place_hold`, so the
+        model routing for them cannot reach for it and be refused -- and the
+        sign-on capability is withheld from everyone, because it is established
+        at the door rather than invoked.
         """
         if principal is not None:
             if tool["name"] and tool["name"] == svc.session_signon:
@@ -274,15 +319,7 @@ def create_app(catalog_dir="capabilities/meridian",
             rule = svc.rule_for(tool["name"])
             if may_invoke(principal, rule.allowed_principal_roles) is not None:
                 return None
-        if principal is None or not principal.is_member:
-            return tool
-        shaped = json.loads(json.dumps(tool))
-        schema = shaped.get("input_schema") or {}
-        for name in ("member_id", "member_number", "mid"):
-            (schema.get("properties") or {}).pop(name, None)
-            if name in (schema.get("required") or []):
-                schema["required"] = [r for r in schema["required"] if r != name]
-        return shaped
+        return tool
 
     def _service_supplied() -> set[str]:
         """Parameter names this deployment fills in from the operator's identity,
@@ -302,8 +339,8 @@ def create_app(catalog_dir="capabilities/meridian",
 
         Narrowing here is defence in depth, not the defence itself -- /invoke
         refuses the same calls independently. But the manifest IS a chatbot's
-        entire action space, so a capability a member may not use is best not
-        described to the model routing for them in the first place.
+        entire action space, so a capability this operator may not use is best
+        not described to the model routing for them in the first place.
         """
         principal = _quiet_principal()
         tools = [_visible(t, principal)
@@ -339,6 +376,21 @@ def create_app(catalog_dir="capabilities/meridian",
                                       mimetype="application/json")
         except Exception:
             return jsonify({"error": "unknown capability"}), 404
+
+    @app.get("/branches")
+    def branches():
+        """The branches this deployment recognises.
+
+        Read by the console to build the sign-in dropdown. Published rather than
+        hard-coded into the page for the same reason the operator list is: a
+        deployment adds a branch by editing `config/service.yaml`, and the list
+        a person is offered is then the same list the API validates against --
+        so the console cannot offer a choice that /invoke will refuse.
+
+        No secret and no authorisation lives here; branch codes are the sort of
+        thing printed on a paying-in slip.
+        """
+        return jsonify(svc.branches)
 
     @app.get("/operators")
     def operators():
@@ -422,31 +474,6 @@ def create_app(catalog_dir="capabilities/meridian",
                 # a member's account at all.
                 return _refused(denial.code, denial.requirement, denial.reason,
                                 cap_id, 403)
-            params, denial = scope_params(principal, params)
-            if denial is not None:
-                return _refused(denial.code, denial.requirement, denial.reason,
-                                cap_id, 403)
-            if principal.is_member and (body.get("approver")
-                                        or body.get("tenant")):
-                # Two request fields that are not a member's to send.
-                #
-                # `approver` clears the dual-control gate on a transfer over the
-                # threshold. The engine checks that a counter-signature is
-                # INDEPENDENT of the initiator -- but a member's work is
-                # initiated by the delegated teller alias, so naming a
-                # supervisor here would look independent and would authorise a
-                # member's own large transfer with nobody having approved it.
-                # `tenant` re-points the capability at another deployment of the
-                # vendor product, which is an integration decision.
-                #
-                # Both were always caller-supplied, which was defensible while
-                # every caller was the institution. It stops being defensible
-                # the moment a member of the public is one.
-                return _refused(
-                    "FIELD_NOT_PERMITTED_FOR_ROLE",
-                    "a staff sign-in for approver or tenant fields",
-                    "a member sign-in cannot counter-sign its own request or "
-                    "re-point the capability at another tenant", cap_id, 403)
 
         # ---- identity: named by alias, resolved here, never sent by the caller
         alias = str(body.get("operator") or svc.default_operator or "")
@@ -469,8 +496,12 @@ def create_app(catalog_dir="capabilities/meridian",
                             "an operator alias the service can resolve",
                             "no operator supplied and no default configured",
                             cap_id, 403)
+        branch, branch_refusal = _session_branch(principal)
+        if branch_refusal is not None:
+            code, requirement, reason = branch_refusal
+            return _refused(code, requirement, reason, cap_id, 403)
         art, params, refusal = _bind(art, rule, alias, params,
-                                     tenant=body.get("tenant"))
+                                     tenant=body.get("tenant"), branch=branch)
         if refusal is not None:
             return refusal
 
@@ -484,7 +515,8 @@ def create_app(catalog_dir="capabilities/meridian",
         if channel not in ("assistant", "dashboard", ""):
             channel = ""
         return _run(art, params, alias, principal, rule,
-                    approver=str(body.get("approver", "")), channel=channel)
+                    approver=str(body.get("approver", "")), channel=channel,
+                    branch=params.get("branch", ""))
 
     # ---- runs paused for a person ---------------------------------------
     @app.get("/interventions")
@@ -497,16 +529,13 @@ def create_app(catalog_dir="capabilities/meridian",
         should not have to learn where that store lives to tell the person in
         front of it that their own request is waiting on them.
 
-        Staff only. A paused run describes whichever member an operator was
-        working on, which is categorically not a member's business -- and a
-        member cannot clear one either way.
+        Every signed-in subject on this console is staff, so there is no
+        audience filter here -- the queue is the institution's own work.
         """
         try:
             principal = _principal()
         except AuthError as ex:
             return jsonify({"error": str(ex)}), 401
-        if principal is not None and principal.is_member:
-            return jsonify([])
         out = []
         for req in HandoffStore(handoff_dir).list_open():
             dual = req.kind.value == "dual_control"
@@ -531,11 +560,9 @@ def create_app(catalog_dir="capabilities/meridian",
         whatever surface offers the button has to be able to show the screen.
         """
         try:
-            principal = _principal()
+            _principal()
         except AuthError as ex:
             return jsonify({"error": str(ex)}), 401
-        if principal is not None and principal.is_member:
-            return jsonify({"error": "not available"}), 403
         if not _is_safe_intervention_id(req_id):
             return jsonify({"error": "unknown intervention"}), 404
         try:
@@ -631,12 +658,6 @@ def create_app(catalog_dir="capabilities/meridian",
                 "SESSION_REQUIRED", "a signed-in console session",
                 "a sign-on is established for the person who signed in, so "
                 "there has to be one", cap_id, 401)
-        if principal.is_member:
-            return _refused(
-                "SIGNON_NOT_FOR_MEMBERS", "a staff sign-in",
-                "a member has no Meridian operator identity to sign on with; "
-                "their work runs delegated on the deployment's staff alias",
-                cap_id, 403)
         try:
             art = cat.get(cap_id)
         except Exception:
@@ -653,17 +674,56 @@ def create_app(catalog_dir="capabilities/meridian",
                             "an operator alias the service can resolve",
                             f"{principal.username!r} maps to no operator alias",
                             cap_id, 403)
-        art, params, refusal = _bind(art, rule, alias, {})
+        branch, branch_refusal = _session_branch(principal)
+        if branch_refusal is not None:
+            # Refused at the door rather than signed on at a branch nobody
+            # configured. MERIDIAN's own sign-on screen has a branch field, so
+            # this is the run that would type it in.
+            code, requirement, reason = branch_refusal
+            return _refused(code, requirement, reason, cap_id, 403)
+        art, params, refusal = _bind(art, rule, alias, {}, branch=branch)
         if refusal is not None:
             # Notably including CAPABILITY_NOT_APPROVED. A deployment that has
             # not approved its sign-on capability has not approved it for this
             # either -- the console reports the refusal and lets the person in
             # unverified rather than quietly making an exception for itself.
             return refusal
-        return _run(art, params, alias, principal, rule)
+        return _run(art, params, alias, principal, rule,
+                    branch=params.get("branch", ""))
+
+    def _session_branch(principal):
+        """The branch this run is performed FROM, or a refusal. Three cases.
+
+          * No principal -- the direct agent path, where nobody signed in and
+            nobody chose. Returns "", and the operator's own configured branch
+            (`identity.context`) stands, exactly as it did before sign-in
+            existed.
+          * A principal carrying a branch this deployment lists -- that branch,
+            which then overrides the operator's configured one for this run.
+          * A principal carrying anything else -- REFUSED. This includes the
+            case where the deployment lists no branches at all: if no choice was
+            on offer, a token that claims one is not describing something that
+            happened. An audit field the caller can choose freely is worse than
+            no audit field, because it looks like evidence.
+
+        This is the check that lets the branch ride in the session token at all:
+        the claim is re-validated against server-side configuration on every
+        invocation, so forging it buys a refusal rather than a free-text entry
+        in somebody else's audit trail.
+        """
+        branch = (principal.branch if principal is not None else "") or ""
+        if not branch:
+            return "", None
+        if branch not in svc.branch_codes:
+            return "", ("BRANCH_NOT_CONFIGURED",
+                        (f"a branch this deployment recognises: "
+                         f"{', '.join(svc.branch_codes)}" if svc.branches
+                         else "no branch, since this deployment configures none"),
+                        f"{branch!r} is not a configured branch")
+        return branch, None
 
     # ---- the two halves every invocation shares -------------------------
-    def _bind(art, rule, alias, params, tenant=None):
+    def _bind(art, rule, alias, params, tenant=None, branch=""):
         """Authorise the OPERATOR and bind the capability's parameters.
 
         Split out from the route because the console's sign-on has to go through
@@ -716,6 +776,14 @@ def create_app(catalog_dir="capabilities/meridian",
         params = dict(params)
         params["operator"] = alias
         params.update(identity.context)
+        if branch:
+            # The branch chosen at sign-in beats the operator's configured one,
+            # and is applied after `identity.context` for that reason. It has
+            # already been validated against `svc.branches`; it arrives here as
+            # a value the deployment recognises, never as something a request
+            # supplied. Secrets are merged last regardless, so no branch can
+            # displace a credential.
+            params["branch"] = branch
         params.update(identity.secrets)
 
         # The capability's typed contract, enforced at the boundary. Replay
@@ -734,7 +802,7 @@ def create_app(catalog_dir="capabilities/meridian",
         return art, params, None
 
     def _run(art, params, alias, principal, rule, approver: str = "",
-             channel: str = ""):
+             channel: str = "", branch: str = ""):
         """Execute one authorised capability run and shape the response.
 
         Everything above this point decided WHETHER the call may happen; this is
@@ -749,14 +817,21 @@ def create_app(catalog_dir="capabilities/meridian",
         run_dir = os.path.join(evidence_dir, run_id)
         os.makedirs(run_dir, exist_ok=True)
         if principal is not None:
-            # Who asked, recorded ALONGSIDE the evidence rather than inside the
-            # result contract: the contract describes what the bank answered,
-            # and a subject is not part of that answer. It is what lets the
-            # console show a member their own runs and nobody else's, and what
-            # an auditor reads to see which sign-in stood behind an action.
+            # Who asked and WHERE FROM, recorded ALONGSIDE the evidence rather
+            # than inside the result contract: the contract describes what the
+            # bank answered, and a subject is not part of that answer. This is
+            # what an auditor reads to see which sign-in stood behind an action,
+            # which Meridian operator it ran as, and which branch it was
+            # performed from.
+            #
+            # `branch` is passed rather than read off the principal so that the
+            # value recorded is the one actually SENT to the host -- including
+            # the fallback to the operator's configured branch on a session that
+            # chose none. Evidence that can disagree with what happened is not
+            # evidence.
             with open(os.path.join(run_dir, "principal.json"), "w") as fh:
-                json.dump({**principal.to_public(), "runs_as": alias}, fh,
-                          indent=2)
+                json.dump({**principal.to_public(), "runs_as": alias,
+                           "branch": branch or principal.branch}, fh, indent=2)
         logger = RunLogger(run_dir, "replay", art.secret_params(),
                            {n: str(params[n]) for n in art.secret_params()
                             if params.get(n)})
@@ -832,10 +907,10 @@ def _run_index(evidence_dir: str) -> list[dict]:
         out.append({
             "run_id": run_id,
             "kind": "discovery" if is_discovery else "replay",
-            # Who asked for it, if anyone signed in did. Runs made from the CLI
-            # have no subject, and that absence is meaningful: the console shows
-            # them to staff and withholds them from members, because a run
-            # nobody can attribute is not a run to show a member of the public.
+            # Who asked for it, which operator alias it ran as, and which
+            # branch it was performed from -- if anyone signed in. Runs made
+            # from the CLI have no subject, and that absence is meaningful: an
+            # unattributable run is exactly what an auditor wants to notice.
             "principal": _read_principal(run_dir),
             "capability_id": capability,
             "status": summary.get("status", "unknown"),

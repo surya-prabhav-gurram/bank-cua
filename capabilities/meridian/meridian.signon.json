@@ -455,7 +455,7 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",

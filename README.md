@@ -213,42 +213,100 @@ a person can see and do is decided by **who signed in**.
 |---|---|---|
 | `super1` | *(none — picked from a list)* | Supervisor — the Meridian operator of the same name |
 | `teller1` | *(none — picked from a list)* | Teller — likewise |
-| `100234`, `100987`, `101555`, `102777`, `103001` | `member123` | Members, one per member number |
 
-> **The staff sign-in has no password, and that is a hole.** Anyone who can
-> reach port 8083 can become either operator by choosing one from a list. It is
-> a demo affordance for the automated sign-on: pick an operator, and the console
-> signs that operator on to the target for you. Nothing else in the system
-> relies on it — every authorisation decision is still made by the API against
-> the principal store, so putting the field back (the form still verifies a
-> password when one is supplied) changes the door and nothing behind it.
->
-> The **member** sign-ins keep their password deliberately. Member usernames
-> *are* member numbers, so a list of them to pick from would be an enumeration
-> of the membership with a login attached to each row.
+**Two sign-ins, and no third kind.** MERIDIAN CORE is a back office: its users
+are the institution's own tellers and supervisors, and each sign-in names an
+operator identity the target itself uses
+(`https://web-sample.interface-hiring.com/signon`). The console signs the chosen
+one on at the door.
 
-Staff sign-ins name the operator identities the target itself uses
-(`https://web-sample.interface-hiring.com/signon`), and the console signs the
-chosen one on at the door. The five member sign-ins are different in kind: a
-member is *not* a Meridian operator, so nothing is signed on for them, their
-work runs **delegated** as the deployment's least-privileged staff alias
-(`default_operator`, a teller), and it is bound to their own member number on
-every call.
+There is deliberately **no member sign-in**. A credit union's members reach
+their accounts through online banking — a separate application, with its own
+threat model and its own team; seating them at the core banking console would be
+a category error, and no amount of per-request scoping would make it the right
+place to put them. `member_id` remains what it has always been here: a
+*parameter* an operator supplies when looking somebody up, not a person who logs
+in.
+
+That is enforced in the **store**, not by the absence of a second form on the
+page: `PrincipalStore.get` refuses any principal whose role is not
+`supervisor` or `teller`, so a principal file someone hand-edits a member back
+into still cannot produce a member session
+(`tests/test_auth.py::test_a_member_entry_cannot_become_a_session`).
+
+> **The sign-in has no password, and that is a hole.** Anyone who can reach port
+> 8083 can become either operator by choosing one from a list. It is a demo
+> affordance for the automated sign-on: pick an operator, and the console signs
+> that operator on to the target for you. Nothing else in the system relies on
+> it — every authorisation decision is still made by the API against the
+> principal store, so putting the field back (the form still verifies a password
+> when one is supplied) changes the door and nothing behind it.
+
+**The branch is chosen at the door.** Below the operator is a branch dropdown
+offering exactly what MERIDIAN's own sign-on screen offers:
+
+| Code | Branch |
+|---|---|
+| `MAIN-001` | Main Office |
+| `WEST-014` | Westside |
+| `EAST-022` | Eastgate |
+
+These are the **target's** codes, configured in `branches:` in
+`config/service.yaml` and pinned by a test — `branch` is a value typed into
+MERIDIAN's own form, so a code the host does not offer is not a configuration
+preference, it is a run that fails at its first screen.
+
+MERIDIAN's sign-on screen has always had that field, so `branch` was always a
+required input on every capability — it was simply a constant read off the
+operator's credential-store entry. Now it is the choice the person makes when
+they sign in, and it is:
+
+* **sent with the sign-on**, so the session is established at that branch;
+* **recorded against every task the session performs**, in `principal.json`
+  beside each run's evidence, alongside who asked and which operator alias it
+  ran as;
+* **merged server-side**, exactly as the operator password is — a request that
+  names its own `branch` is ignored, not honoured.
+
+```
+principal.json   {"username": "teller1", "role": "teller",
+                  "runs_as": "teller1", "branch": "WESTGATE-022"}
+```
+
+A branch is the one value a session token carries, because unlike a role it
+cannot be re-derived from the principal store — it is a choice, not a property.
+That is a deliberate exception to *"the token carries an identity, never a
+permission"*, and what keeps it honest is that the claim grants nothing: the API
+re-validates it against the configured list on **every** invocation and refuses
+an unlisted one with `BRANCH_NOT_CONFIGURED`, before a browser opens. A forged
+branch buys a refusal, not a free-text entry in someone else's audit trail. If a
+branch is ever made to *gate* what an operator may reach, that stops being true
+and the choice has to move into server-side session state — which is written
+down in `bankcua/auth.py` and in AUTH-24, because it is exactly the kind of
+change that gets made without noticing what it invalidates.
+
+Remove the `branches:` list and the console stops offering a choice: every run
+falls back to the operator's own configured branch, which is how this worked
+before, and is what the direct agent path still does.
 
 What each sign-in reaches is declared per capability in `config/service.yaml`:
 
-| Capability | supervisor | teller | member |
-|---|:--:|:--:|:--:|
-| `meridian.member_lookup` | ✓ | ✓ | ✓ own record only |
-| `meridian.transfer_funds` | ✓ | ✓ | ✓ between their own shares |
-| `meridian.update_member_info` | ✓ | ✓ | ✓ own record only |
-| `meridian.member_search` | ✓ | ✓ | — |
-| `meridian.open_share` | ✓ | ✓ | — |
-| `meridian.signon` | — | — | — |
-| `meridian.place_hold` | ✓ | — | — |
+| Capability | supervisor | teller |
+|---|:--:|:--:|
+| `meridian.member_lookup` | ✓ | ✓ |
+| `meridian.member_search` | ✓ | ✓ |
+| `meridian.transfer_funds` | ✓ | ✓ |
+| `meridian.update_member_info` | ✓ | ✓ |
+| `meridian.open_share` | ✓ | ✓ |
+| `meridian.signon` | — | — |
+| `meridian.place_hold` | ✓ | — |
 
-Capabilities with no `allowed_principal_roles` line default to **staff only**, so
-a new capability cannot become member-reachable by omission.
+`meridian.place_hold` is the row that earns the two-axis model: it demands a
+supervisor **sign-in** (`allowed_principal_roles`) *and* a supervisor **Meridian
+operator** (`requires_role`) *and* a named alias (`allowed_operators`). The two
+axes travel together on this deployment, since every principal acts as their own
+alias — but they answer different questions, and collapsing them would make the
+narrower one unenforceable the moment they diverged.
 
 `meridian.signon` is reachable by nobody *through this table*: it is named as
 `session_signon` in `config/service.yaml`, which is what withholds it from a
@@ -262,30 +320,28 @@ Try it:
 
 | Signed in as | Ask | What you should see |
 |---|---|---|
-| `100234` | `what are my balances?` | runs — no member number was typed; it came from the sign-in |
-| `100234` | `balances for member 100987` | `refused` · `MEMBER_SCOPE_VIOLATION` — refused, not silently retargeted |
-| `100234` | `transfer 50 from 100234-S0070 to 100987-S0001` | `refused` · `MEMBER_SCOPE_VIOLATION` — the share names another member |
-| `100234` | `place a fraud hold on 100234-S0070` | not in their action space at all; refused again at the API if asked directly |
-| `teller1` | `place a fraud hold on 100234-S0070` | `refused` · `CAPABILITY_NOT_PERMITTED_FOR_ROLE`, before a browser opens |
+| `teller1` | `balances for member 100234` | runs — reading a member's record is counter work |
+| `teller1` | `find members named Turing` | runs — a directory lookup over the membership |
+| `teller1` | `place a fraud hold on 100234-S0070` | not in their action space at all; `refused` · `CAPABILITY_NOT_PERMITTED_FOR_ROLE` at the API if asked directly, before a browser opens |
 | `super1` | the same | `escalated` — paused on a live session for a person |
+| `teller1` | `transfer 2000 from 100234-S0070 to 100234-S0001-3` | over the dual-control threshold — pauses for a counter-signature from `super1` |
 
 **Where this is enforced.** Not in the page. The console mints a signed session
 token; the capability API re-resolves it against the principal store on every
-call and applies the role and member-scope rules itself
-(`bankcua/auth.py`, `bankcua/service.py`). Deleting the console would cost the
-system its sign-in page and none of its authorisation. Three properties follow,
-each asserted in `tests/test_auth.py`, `tests/test_session_authz.py` and
-`tests/test_portal.py`:
+call and applies the role rules itself (`bankcua/auth.py`,
+`bankcua/service.py`). Deleting the console would cost the system its sign-in
+page and none of its authorisation. Three properties follow, each asserted in
+`tests/test_auth.py`, `tests/test_session_authz.py` and `tests/test_portal.py`:
 
 * **the token carries an identity, never a permission** — a username and an
-  expiry, nothing else, so role and scope are read live and a demotion takes
-  effect on the next request rather than at the next sign-in;
+  expiry, nothing else, so the role is read live and a demotion takes effect on
+  the next request rather than at the next sign-in;
 * **a signed-in caller cannot choose its operator** — the alias comes from the
   sign-in, so a teller's session naming `super1` is refused
   (`OPERATOR_NOT_SESSION`);
-* **the projection is filtered before it is serialised** — a member's run list,
-  run detail and evidence are scoped server-side, and a run id they do not own
-  is a 404 rather than a hidden row.
+* **who may sign in at all is decided by the store** — a principal whose role is
+  not an operator role is refused there, so the "operators only" guarantee does
+  not depend on which forms the login page happens to render.
 
 **Two kinds of pause, two different answers.** A gated *irreversible step*
 pauses on a live session and needs someone to **drive** it — that is the
@@ -302,12 +358,6 @@ serves on its own port and carries no session of its own — anyone who can reac
 that port on the host can drive a paused session. The *button* is now
 supervisor-only, which is the change this console makes; putting the console
 itself behind the same session is the obvious next step and is not done here.
-
-Two request fields are refused outright from a member sign-in: `approver`
-(which clears the dual-control gate — and a member's work is *initiated* by the
-delegated teller alias, so naming a supervisor would look independent) and
-`tenant` (which re-points a capability at another deployment). Both were always
-caller-supplied, which was defensible while every caller was the institution.
 
 Managing sign-ins:
 
@@ -372,7 +422,7 @@ failures. The harness may set up the world; the automation may not.
 | Vendor error taxonomies, as data | `config/knowledge/*.yaml`, `bankcua/knowledge.py` |
 | Chatbot: routing seam + result presentation | `bankcua/chat/` |
 | Run dashboard (read-only projection of evidence) | `bankcua/dashboard.py` |
-| Sign-in: principals, sessions, role gate, member scoping | `bankcua/auth.py` |
+| Sign-in: principals, sessions, role gate | `bankcua/auth.py` |
 | Signed-in console (operator list, sign-on at the door, two tabs) | `bankcua/portal/app.py` |
 | Sign-on established at sign-in, then withheld | `session_signon` in `config/service.yaml`, `POST /session/signon` |
 | Pauses surfaced where they were raised | `channel` on the intervention, `GET /interventions`, `bankcua/chat/app.py` |

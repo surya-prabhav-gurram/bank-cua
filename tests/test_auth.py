@@ -3,15 +3,15 @@ Sign-in, and the two questions authorisation actually asks.
 
 The system already refused to take orders from the caller about risk, approval
 and operator identity. What it could not do was tell WHO was asking -- so a
-member of the public and a supervisor were the same anonymous client. This is the
-module that supplies the subject, and these tests are mostly about the two
-things that must be true of it:
+teller and a supervisor were the same anonymous client. This is the module that
+supplies the subject, and these tests are mostly about the two things that must
+be true of it:
 
   * a session token is a statement about IDENTITY and never about permission,
     so forging a permission means forging an identity a store also recognises;
-  * a member's request is bound to the member's own record before it goes
-    anywhere, and a request that cannot be bound is refused rather than
-    quietly retargeted.
+  * this console admits the institution's own operators and nobody else, and
+    that is enforced in the STORE rather than by the absence of a form -- a
+    principal file that names a member cannot produce a member session.
 """
 import time
 
@@ -19,15 +19,12 @@ import pytest
 
 from bankcua.auth import (AuthError, DEFAULT_PRINCIPAL_ROLES, Principal,
                           PrincipalStore, SessionAuthority, SessionSigner,
-                          hash_password, may_invoke, operator_alias_for,
-                          scope_params, token_from_request, verify_password)
+                          STAFF_ROLES, hash_password, may_invoke,
+                          operator_alias_for, token_from_request,
+                          verify_password)
 
-MEMBER = Principal(username="100234", role="member", kind="member",
-                   member_id="100234")
-TELLER = Principal(username="teller1", role="teller", kind="staff",
-                   acts_as="teller1")
-SUPER = Principal(username="super1", role="supervisor", kind="staff",
-                  acts_as="super1")
+TELLER = Principal(username="teller1", role="teller", acts_as="teller1")
+SUPER = Principal(username="super1", role="supervisor", acts_as="super1")
 
 
 @pytest.fixture
@@ -44,7 +41,7 @@ def store(tmp_path):
                    "password_hash": hash_password("member123", rounds=1000)},
         "plaintext1": {"kind": "staff", "role": "teller",
                        "password": "hand-edited"},
-        "broken": {"kind": "member", "role": "member"},
+        "roleless": {"kind": "staff"},
     }))
     return PrincipalStore(str(path))
 
@@ -72,24 +69,55 @@ def test_a_hand_edited_plaintext_entry_still_works(store):
 
 
 def test_an_unknown_sign_in_and_a_wrong_password_answer_identically(store):
-    """Member usernames ARE member numbers.
+    """The form must not confirm which sign-ins are live.
 
-    A store that distinguished "no such sign-in" from "wrong password" would
-    confirm which member numbers exist to anyone who typed one, which is an
-    enumeration of the membership.
+    The operator names on this console are few and guessable, so the list is not
+    a secret -- but which entries actually resolve should not be free to
+    discover by typing at the form.
     """
     with pytest.raises(AuthError) as unknown:
-        store.authenticate("999999", "member123")
+        store.authenticate("nobody1", "password")
     with pytest.raises(AuthError) as wrong:
-        store.authenticate("100234", "not-it")
+        store.authenticate("teller1", "not-it")
     assert str(unknown.value) == str(wrong.value)
 
 
-def test_a_member_principal_with_no_member_id_is_refused_not_defaulted(store):
-    """Scoped to nothing must not read as scoped to everything."""
+def test_a_member_entry_cannot_become_a_session(store):
+    """The "staff only" claim is enforced in the STORE, not by the login page.
+
+    This console has no member sign-in. That has to hold against a principal
+    file somebody hand-edited a member back into -- otherwise the guarantee is
+    only that the form has no second box on it, which "view source" undoes. The
+    fixture still contains member 100234 with a correct password precisely so
+    that this asserts a refusal rather than an absence.
+    """
     with pytest.raises(AuthError) as ex:
-        store.get("broken")
-    assert "member_id" in str(ex.value)
+        store.get("100234")
+    assert "staff only" in str(ex.value)
+
+    # ...and not merely at `get`: the password is right, and it still fails.
+    with pytest.raises(AuthError):
+        store.authenticate("100234", "member123")
+
+
+def test_an_entry_with_no_role_is_refused_rather_than_defaulted(store):
+    """A missing role must not read as "whatever the default happens to be"."""
+    with pytest.raises(AuthError) as ex:
+        store.get("roleless")
+    assert "staff only" in str(ex.value)
+
+
+def test_the_sign_in_list_skips_what_it_cannot_resolve(store):
+    """`usernames()` reads the file; the console renders only what `get`
+    accepts, so a member left in the store is invisible rather than offered."""
+    resolvable = []
+    for name in store.usernames():
+        try:
+            resolvable.append(store.get(name).username)
+        except AuthError:
+            continue
+    assert "100234" not in resolvable
+    assert {"super1", "teller1"} <= set(resolvable)
 
 
 # ---------------------------------------------------------------------------
@@ -159,92 +187,48 @@ def test_a_token_is_never_read_from_a_query_string():
 # ---------------------------------------------------------------------------
 # Role gate
 # ---------------------------------------------------------------------------
-def test_an_unconfigured_capability_is_closed_to_members():
-    """Fail closed, and closed specifically against the public.
-
-    A capability nobody has written a rule for must not become member-reachable
-    by omission -- which is the failure mode that matters, because the ones
-    people forget are the new ones.
-    """
-    assert MEMBER_ROLE_DENIED(may_invoke(MEMBER, []))
-    assert may_invoke(TELLER, []) is None
-    assert "member" not in DEFAULT_PRINCIPAL_ROLES
-
-
-def MEMBER_ROLE_DENIED(denial):
+def ROLE_DENIED(denial):
     return denial is not None and denial.code == "CAPABILITY_NOT_PERMITTED_FOR_ROLE"
 
 
-def test_the_role_gate_is_about_the_sign_in_not_the_delegated_alias():
-    """A member's work runs as a teller alias. That must not hand them a
-    teller's action space, or delegation would be a privilege grant."""
-    delegated = Principal(username="100234", role="member", kind="member",
-                          member_id="100234", acts_as="teller1")
-    assert MEMBER_ROLE_DENIED(may_invoke(delegated, ["supervisor", "teller"]))
-    assert may_invoke(delegated, ["supervisor", "teller", "member"]) is None
+def test_the_default_role_set_is_the_configured_operator_roles():
+    """An unconfigured capability falls back to the operator roles, and to
+    nothing wider. There is no role outside STAFF_ROLES that a fallback could
+    admit, which is the property worth pinning: adding a role to the system
+    must be a deliberate edit here and not a side effect elsewhere."""
+    assert DEFAULT_PRINCIPAL_ROLES == list(STAFF_ROLES)
+    assert may_invoke(TELLER, []) is None
+    assert may_invoke(SUPER, []) is None
 
 
 def test_a_teller_is_refused_a_supervisor_capability():
-    assert MEMBER_ROLE_DENIED(may_invoke(TELLER, ["supervisor"]))
+    """The narrower of the two axes, and the one `place_hold` relies on."""
+    assert ROLE_DENIED(may_invoke(TELLER, ["supervisor"]))
     assert may_invoke(SUPER, ["supervisor"]) is None
 
 
-# ---------------------------------------------------------------------------
-# Member scope
-# ---------------------------------------------------------------------------
-def test_staff_requests_pass_through_untouched():
-    """A teller looking up somebody else's member number is the job."""
-    params, denial = scope_params(TELLER, {"member_id": "100987"})
-    assert denial is None and params["member_id"] == "100987"
-
-
-def test_a_members_own_number_is_filled_in_rather_than_asked_for():
-    params, denial = scope_params(MEMBER, {})
-    assert denial is None and params["member_id"] == "100234"
-
-
-def test_another_members_number_is_refused_not_rewritten():
-    """Silently retargeting the request onto their own account would be worse
-    than declining it: 'transfer to 100987' would move money somewhere the
-    person did not ask for and would report success."""
-    params, denial = scope_params(MEMBER, {"member_id": "100987"})
-    assert denial is not None and denial.code == "MEMBER_SCOPE_VIOLATION"
-    assert params.get("member_id") == "100987"      # not rewritten
-
-
-def test_a_share_belonging_to_another_member_is_refused():
-    _p, denial = scope_params(MEMBER, {"from_share": "100234-S0070",
-                                       "to_share": "100987-S0001"})
-    assert denial is not None and denial.code == "MEMBER_SCOPE_VIOLATION"
-    assert "100987-S0001" in denial.reason
-
-    _p, ok = scope_params(MEMBER, {"from_share": "100234-S0070",
-                                   "to_share": "100234-S0001-3"})
-    assert ok is None
-
-
-def test_a_foreign_member_number_in_any_parameter_is_refused():
-    """The catch-all. A parameter added to a capability tomorrow, which nobody
-    thought to list, must not be able to carry another member's number."""
-    _p, denial = scope_params(MEMBER, {"beneficiary": "100987"})
-    assert denial is not None and denial.code == "MEMBER_SCOPE_VIOLATION"
-    # ...while free text that merely contains digits is not an identifier
-    _p, ok = scope_params(MEMBER, {"memo": "invoice 100987-A for the roof"})
-    assert ok is None
-
-
-def test_a_member_sign_in_bound_to_nothing_can_do_nothing():
-    unbound = Principal(username="ghost", role="member", kind="member")
-    _p, denial = scope_params(unbound, {"member_id": "100234"})
-    assert denial is not None and denial.code == "MEMBER_SCOPE_UNKNOWN"
+def test_the_role_gate_reads_the_sign_in_not_the_alias():
+    """`allowed_principal_roles` is about the SIGN-IN. A principal whose alias
+    happens to be a supervisor's is still gated on the role they signed in
+    with -- otherwise the two axes in config/service.yaml would collapse into
+    one and `place_hold`'s supervisor-sign-in requirement would be moot."""
+    impostor = Principal(username="teller1", role="teller", acts_as="super1")
+    assert ROLE_DENIED(may_invoke(impostor, ["supervisor"]))
 
 
 # ---------------------------------------------------------------------------
-# Delegation
+# Which alias the work runs as
 # ---------------------------------------------------------------------------
-def test_a_member_runs_as_the_deployments_least_privileged_alias():
-    """A member has no back-office identity, so their work is executed by one --
-    which is safe only in combination with the scoping above."""
-    assert operator_alias_for(MEMBER, "teller1") == "teller1"
+def test_every_principal_acts_as_itself():
+    """Nothing here consults the request, which is what makes the service's
+    OPERATOR_NOT_SESSION refusal enforceable: a teller's session resolves to
+    `teller1` no matter what a request body asks for."""
     assert operator_alias_for(TELLER, "teller1") == "teller1"
     assert operator_alias_for(SUPER, "teller1") == "super1"
+
+
+def test_the_alias_falls_back_to_the_username_before_the_default():
+    """`default_operator` belongs to the direct agent path, where nobody has
+    signed in. A signed-in principal must never silently borrow it."""
+    unaliased = Principal(username="super1", role="supervisor")
+    assert operator_alias_for(unaliased, "teller1") == "super1"

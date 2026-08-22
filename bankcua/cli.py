@@ -452,11 +452,12 @@ def cmd_portal(args):
                      evidence_dirs=tuple(args.evidence),
                      handoff_dir=args.handoffs,
                      principals_path=args.principals,
+                     service_config_path=args.service,
                      session_key_path=args.session_key,
                      router=_chat_router(args))
     print(f"[portal] console on http://{args.host}:{args.port} -> API {args.api}")
-    print(f"[portal] sign-ins from {args.principals}; roles and member scope are "
-          f"enforced by the API, not by the page")
+    print(f"[portal] sign-ins from {args.principals}; roles are enforced by the "
+          f"API, not by the page")
     print("[portal] staff pick an operator and are signed on to the target at "
           "sign-in; the sign-on capability is then withheld from the manifest "
           "and refused at /invoke for that session")
@@ -610,8 +611,8 @@ def build_parser():
                         "control of a paused session")
     s.add_argument("--require-session", action="store_true",
                    help="refuse invocations that carry no console sign-in; the "
-                        "role and member scope then come from the person, not "
-                        "from the request body")
+                        "role then comes from the person, not from the request "
+                        "body")
     s.add_argument("--handoff-timeout", type=float, default=90.0,
                    help="seconds a gated run holds the live session open for a "
                         "human before aborting")
@@ -658,6 +659,10 @@ def build_parser():
                     help="who may sign in; never holds a Meridian credential")
     pt.add_argument("--session-key", default="config/session.key",
                     help="HMAC key the console and the API both read")
+    pt.add_argument("--service", default="config/service.yaml",
+                    help="the API's config; the console reads its `branches` "
+                         "list from here so the sign-in page offers exactly "
+                         "what the API will accept")
     pt.add_argument("--password", default=None, help="for `portal hash`")
     pt.add_argument("--router", choices=["rule", "llm"], default="rule")
     pt.add_argument("--model", default=None)

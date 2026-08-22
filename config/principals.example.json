@@ -1,6 +1,6 @@
 {
-  "_comment": "Who may SIGN IN to the console, and what that sign-in is. Copy to config/principals.json (gitignored) and edit. Passwords are stored as pbkdf2_sha256 hashes; `python -m bankcua.cli portal hash <password>` prints a new one, and a plaintext \"password\" field is accepted for hand-editing during a demo. This file holds NO Meridian credential: a sign-in names an operator ALIAS via `acts_as`, and the alias's secret still comes from config/credentials.json at invocation time.",
-  "_demo_passwords": "super1 / password and teller1 / password are the operator sign-ins the target itself uses (https://web-sample.interface-hiring.com/signon). The five member sign-ins use `member123`. Change them before this is anywhere but a demo.",
+  "_comment": "Who may SIGN IN to the console. Copy to config/principals.json (gitignored) and edit. This console signs in the institution's own MERIDIAN operators only -- role must be 'supervisor' or 'teller'; PrincipalStore.get refuses anything else, so there is no member sign-in. Passwords are stored as pbkdf2_sha256 hashes; `python -m bankcua.cli portal hash <password>` prints a new one, and a plaintext \"password\" field is accepted for hand-editing during a demo. This file holds NO Meridian credential: a sign-in names an operator ALIAS via `acts_as`, and the alias's secret still comes from config/credentials.json at invocation time.",
+  "_demo_passwords": "super1 / password and teller1 / password are the operator sign-ins the target itself uses (https://web-sample.interface-hiring.com/signon). The console lets an operator in on the dropdown choice alone, so the password is only checked when one is supplied. Change them before this is anywhere but a demo.",
   "super1": {
     "kind": "staff",
     "role": "supervisor",
@@ -14,40 +14,5 @@
     "acts_as": "teller1",
     "display_name": "Teller (teller1)",
     "password_hash": "pbkdf2_sha256$200000$ddf3b559a4b9001d7730bea6e06198f1$b476bbf904fde533439e76870e244ebb7121a1b56c7cdd6930e5d0e36c50fb8a"
-  },
-  "100234": {
-    "kind": "member",
-    "role": "member",
-    "member_id": "100234",
-    "display_name": "Member 100234",
-    "password_hash": "pbkdf2_sha256$200000$0f3967fb2fa825b0b853cdedd96c8bdd$f9a89eae06c89b4097ed85a57a8e99b166a3db7d0305748490af2b24889bc060"
-  },
-  "100987": {
-    "kind": "member",
-    "role": "member",
-    "member_id": "100987",
-    "display_name": "Member 100987",
-    "password_hash": "pbkdf2_sha256$200000$25f1d1b78958e696f5d6b8d3034b4800$5b66556156ec0bd7ec69c1c7f69c6f3700755c0ed66cd01f912b289383458f45"
-  },
-  "101555": {
-    "kind": "member",
-    "role": "member",
-    "member_id": "101555",
-    "display_name": "Member 101555",
-    "password_hash": "pbkdf2_sha256$200000$dac15b14aa642d035f022c36351669ed$003dd00fd606c3dec4294f1c85d5ad478dc4407e59a5e1881f281654a9a9b77e"
-  },
-  "102777": {
-    "kind": "member",
-    "role": "member",
-    "member_id": "102777",
-    "display_name": "Member 102777",
-    "password_hash": "pbkdf2_sha256$200000$156f9001b0fcfc42b6afe381181bba3b$1d180b6c964adb3d0de1dfe385aea2538d196393b58ba4fa6b9df774b03581ba"
-  },
-  "103001": {
-    "kind": "member",
-    "role": "member",
-    "member_id": "103001",
-    "display_name": "Member 103001",
-    "password_hash": "pbkdf2_sha256$200000$1b21eb62f0906c44545443d4bfb7bdda$cd3b0a530ec06d5b240003148458aad481cd68f4e21cb5b735e3189bd1ab0bd1"
   }
 }

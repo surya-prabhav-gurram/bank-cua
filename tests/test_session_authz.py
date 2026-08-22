@@ -4,12 +4,17 @@ What a SIGN-IN is allowed to ask the capability API for.
 The API already refused to let a request decide its own risk, approval or
 operator. What these tests cover is the layer above that: once a person is
 signed in, the API stops taking the operator alias from the request at all, and
-starts asking two questions the request cannot answer for itself -- may this
-ROLE use this capability, and whose records may it touch.
+starts asking a question the request cannot answer for itself: may this ROLE use
+this capability.
 
 Every assertion below is a REFUSAL, deliberately: each one is answered before a
 browser is launched, so a request that should not happen never reaches a
 member's account at all. That ordering is the property, not an optimisation.
+
+The store fixture still contains a member entry, and the tests keep it there on
+purpose: this console signs in the institution's own operators only, and that
+has to hold against a principal file someone hand-edited rather than merely
+against a login page with one form on it.
 """
 import json
 import os
@@ -59,13 +64,13 @@ def _make(tmp_path, authority, require_session=False):
         "capabilities": {
             "meridian.member_lookup": {
                 "allow_unapproved": True,
-                "allowed_principal_roles": ["supervisor", "teller", "member"]},
+                "allowed_principal_roles": ["supervisor", "teller"]},
             "meridian.member_search": {
                 "allow_unapproved": True,
                 "allowed_principal_roles": ["supervisor", "teller"]},
             "meridian.transfer_funds": {
                 "allow_risky": True, "allow_unapproved": True,
-                "allowed_principal_roles": ["supervisor", "teller", "member"]},
+                "allowed_principal_roles": ["supervisor", "teller"]},
             "meridian.place_hold": {
                 "requires_role": "supervisor", "allowed_operators": ["super1"],
                 "allow_unapproved": True,
@@ -103,63 +108,42 @@ def test_a_teller_sign_in_cannot_reach_a_supervisor_capability(client, authority
     assert r.get_json()["refusal"]["code"] == "CAPABILITY_NOT_PERMITTED_FOR_ROLE"
 
 
-def test_a_member_sign_in_cannot_reach_a_staff_capability(client, authority):
-    """Searching the membership by surname is a directory lookup over other
-    people's records: there is no version of it scoped to one member, so it is
-    refused rather than narrowed."""
-    r = client.post("/invoke/meridian.member_search",
-                    headers=_as(authority, "100234"),
-                    json={"params": {"last_name": "Turing"}})
-    assert r.status_code == 403
-    assert r.get_json()["refusal"]["code"] == "CAPABILITY_NOT_PERMITTED_FOR_ROLE"
+def test_a_member_entry_cannot_be_signed_in_or_minted_a_session(authority):
+    """There is no member sign-in, and that is enforced in the STORE.
+
+    The fixture deliberately contains member 100234 with a valid password hash.
+    Resolving it must fail, which means no session can be minted for it -- so
+    there is no member-shaped caller for any of the routes below to have to
+    defend against, and the guarantee does not depend on the login page.
+    """
+    from bankcua.auth import AuthError
+
+    with pytest.raises(AuthError) as ex:
+        authority.store.get("100234")
+    assert "staff only" in str(ex.value)
+
+    with pytest.raises(AuthError):
+        authority.store.authenticate("100234", "member123")
 
 
-def test_delegation_does_not_hand_a_member_a_tellers_action_space(client,
-                                                                  authority):
-    """A member's work EXECUTES as teller1. If the gate looked at the alias
-    instead of the sign-in, that alone would grant them everything a teller can
-    do -- which is the failure this separation exists to prevent."""
-    r = client.post("/invoke/meridian.place_hold",
-                    headers=_as(authority, "100234"),
-                    json={"params": {"share_id": "100234-S0070",
-                                     "reason_code": "FRAUD"}})
-    assert r.status_code == 403
-    assert r.get_json()["refusal"]["code"] == "CAPABILITY_NOT_PERMITTED_FOR_ROLE"
-
-
-# ---------------------------------------------------------------------------
-# Member scope
-# ---------------------------------------------------------------------------
-def test_a_member_asking_about_another_member_is_refused(client, authority):
+def test_a_session_for_a_member_username_is_refused_at_the_api(client):
+    """And if one were minted anyway -- a leaked signing key -- the API still
+    re-resolves the username against the store on every call, so the token
+    names somebody the store will not return."""
+    forged = SessionSigner(b"test-key").mint("100234")
     r = client.post("/invoke/meridian.member_lookup",
-                    headers=_as(authority, "100234"),
-                    json={"params": {"member_id": "100987"}})
-    assert r.status_code == 403
-    body = r.get_json()
-    assert body["refusal"]["code"] == "MEMBER_SCOPE_VIOLATION"
-    assert "100987" in body["refusal"]["reason"]
-
-
-def test_a_member_cannot_move_money_to_another_members_share(client, authority):
-    """The one that matters most: a scope check that covered only `member_id`
-    would let 'transfer from my share to 100987-S0001' through with a perfectly
-    correct member number attached."""
-    r = client.post("/invoke/meridian.transfer_funds",
-                    headers=_as(authority, "100234"),
-                    json={"params": {"from_share": "100234-S0070",
-                                     "to_share": "100987-S0001",
-                                     "amount": "50.00"}})
-    assert r.status_code == 403
-    assert r.get_json()["refusal"]["code"] == "MEMBER_SCOPE_VIOLATION"
+                    headers={"X-Bankcua-Session": forged},
+                    json={"params": {"member_id": "100234"}})
+    assert r.status_code == 401
 
 
 def test_what_the_engine_is_actually_handed(tmp_path, authority, monkeypatch):
-    """The positive controls, with the browser stubbed out.
+    """The positive control, with the browser stubbed out.
 
-    Two properties that only show up in the parameters the engine RECEIVES:
-    a teller's request about another member is passed through untouched (or the
-    console would be useless to staff), and a member's request arrives carrying
-    their own member number even though nothing in the request named one.
+    The property only shows up in the parameters the engine RECEIVES: an
+    operator's request about any member is passed through untouched -- looking
+    up somebody else's member number is the job -- while the operator alias is
+    the one the SESSION resolves to and not one the request chose.
     """
     import bankcua.service as service
     from bankcua.replay.result import ReplayResult, ReplayStatus
@@ -185,17 +169,16 @@ def test_what_the_engine_is_actually_handed(tmp_path, authority, monkeypatch):
     client.post("/invoke/meridian.member_lookup",
                 headers=_as(authority, "teller1"),
                 json={"params": {"member_id": "100987"}})
-    assert seen["member_id"] == "100987", "staff are not scoped to one member"
+    assert seen["member_id"] == "100987", "an operator is not scoped to one member"
     assert seen["operator"] == "teller1"
 
     client.post("/invoke/meridian.member_lookup",
-                headers=_as(authority, "100234"), json={"params": {}})
-    assert seen["member_id"] == "100234", (
-        "a member's own number must be filled in from the sign-in, or the "
-        "assistant has to ask a member who they are")
-    # ...and it still runs as a real Meridian operator, because a member has no
-    # back-office identity of their own.
-    assert seen["operator"] == "teller1"
+                headers=_as(authority, "super1"),
+                json={"params": {"member_id": "100987"}})
+    assert seen["member_id"] == "100987"
+    assert seen["operator"] == "super1", (
+        "the alias comes from the sign-in, so a supervisor's run is recorded "
+        "and executed as super1 rather than as the deployment default")
 
 
 def test_the_subject_is_recorded_next_to_the_evidence(tmp_path, authority,
@@ -203,9 +186,8 @@ def test_the_subject_is_recorded_next_to_the_evidence(tmp_path, authority,
     """Who asked is written beside the run, not into the result contract.
 
     The contract describes what the bank answered; a subject is not part of that
-    answer. Recording it separately is what lets the console show a member their
-    own runs and nobody else's, and what an auditor reads to see which sign-in
-    stood behind an action.
+    answer. Recording it separately is what an auditor reads to see which
+    sign-in stood behind an action, and which Meridian operator it ran as.
     """
     import bankcua.service as service
     from bankcua.replay.result import ReplayResult, ReplayStatus
@@ -224,14 +206,14 @@ def test_the_subject_is_recorded_next_to_the_evidence(tmp_path, authority,
     monkeypatch.setattr(service, "ReplayEngine", _FakeEngine)
     client = _make(tmp_path, authority)
     body = client.post("/invoke/meridian.member_lookup",
-                       headers=_as(authority, "100234"),
-                       json={"params": {}}).get_json()
+                       headers=_as(authority, "super1"),
+                       json={"params": {"member_id": "100234"}}).get_json()
 
     recorded = json.load(open(os.path.join(
         str(tmp_path / "ev"), body["run_id"], "principal.json")))
-    assert recorded["username"] == "100234"
-    assert recorded["member_id"] == "100234"
-    assert recorded["runs_as"] == "teller1"
+    assert recorded["username"] == "super1"
+    assert recorded["role"] == "supervisor"
+    assert recorded["runs_as"] == "super1"
     assert "password" not in json.dumps(recorded).lower()
 
 
@@ -297,80 +279,48 @@ def test_with_sessions_required_an_anonymous_call_is_refused(tmp_path, authority
 # ---------------------------------------------------------------------------
 def test_the_manifest_is_narrowed_to_what_the_sign_in_may_invoke(client,
                                                                  authority):
-    """The manifest IS a chatbot's action space, so a capability a member may
-    not use is best not described to the model routing for them."""
+    """The manifest IS a chatbot's action space, so a capability this operator
+    may not use is best not described to the model routing for them."""
     everything = {c["name"] for c in client.get("/capabilities").get_json()}
-    as_member = {c["name"] for c in client.get(
-        "/capabilities", headers=_as(authority, "100234")).get_json()}
-    assert "meridian.place_hold" in everything
-    assert "meridian.place_hold" not in as_member
-    assert "meridian.member_search" not in as_member
-    assert "meridian.member_lookup" in as_member
-
-
-def test_a_members_manifest_does_not_ask_them_which_member_they_are(client,
-                                                                    authority):
-    """`member_id` comes from the sign-in, so leaving it in the schema would
-    leave a field for a chatbot to fill in with somebody else's number."""
-    tools = {c["name"]: c for c in client.get(
-        "/capabilities", headers=_as(authority, "100234")).get_json()}
-    schema = tools["meridian.member_lookup"]["input_schema"]
-    assert "member_id" not in (schema.get("properties") or {})
-    assert "member_id" not in (schema.get("required") or [])
-    # ...and it is still asked of staff, who must decide it
-    staff = {c["name"]: c for c in client.get(
+    as_teller = {c["name"] for c in client.get(
         "/capabilities", headers=_as(authority, "teller1")).get_json()}
-    assert "member_id" in staff["meridian.member_lookup"]["input_schema"]["properties"]
+    as_super = {c["name"] for c in client.get(
+        "/capabilities", headers=_as(authority, "super1")).get_json()}
+    assert "meridian.place_hold" in everything
+    assert "meridian.place_hold" not in as_teller
+    assert "meridian.place_hold" in as_super
+    assert "meridian.member_lookup" in as_teller
+
+
+def test_the_manifest_still_asks_an_operator_which_member_they_mean(client,
+                                                                    authority):
+    """`member_id` is the operator's decision and must stay in the schema.
+
+    It is the counterpart to the narrowing above: the manifest hides what a
+    caller may not use, and asks for everything a caller must still choose.
+    """
+    tools = {c["name"]: c for c in client.get(
+        "/capabilities", headers=_as(authority, "teller1")).get_json()}
+    schema = tools["meridian.member_lookup"]["input_schema"]
+    assert "member_id" in (schema.get("properties") or {})
 
 
 def test_the_operator_list_collapses_to_the_one_the_session_acts_as(client,
                                                                     authority):
-    """Once someone is signed in there is no choice left to offer. Showing a
-    member the institution's operator names would disclose them for nothing."""
+    """Once someone is signed in there is no choice left to offer: the alias
+    comes from the sign-in, so listing the others invites a request that would
+    only be refused with OPERATOR_NOT_SESSION."""
     assert [o["alias"] for o in client.get(
         "/operators", headers=_as(authority, "teller1")).get_json()] == ["teller1"]
     assert [o["alias"] for o in client.get(
-        "/operators", headers=_as(authority, "100234")).get_json()] == ["teller1"]
+        "/operators", headers=_as(authority, "super1")).get_json()] == ["super1"]
     assert len(client.get("/operators").get_json()) == 2
 
 
 def test_the_session_endpoint_reports_the_subject_and_no_secret(client,
                                                                 authority):
-    body = client.get("/session", headers=_as(authority, "100234")).get_json()
-    assert body["role"] == "member" and body["member_id"] == "100234"
+    body = client.get("/session", headers=_as(authority, "teller1")).get_json()
+    assert body["role"] == "teller"
     assert body["runs_as"] == "teller1"
     assert "password" not in json.dumps(body).lower()
     assert client.get("/session").status_code == 401
-
-
-def test_a_member_cannot_counter_sign_their_own_request(client, authority):
-    """`approver` clears the dual-control gate on a large transfer.
-
-    The engine checks that a counter-signature is INDEPENDENT of the initiator
-    -- but a member's work is initiated by the delegated teller alias, so a
-    member naming a supervisor here would look independent and would authorise
-    their own transfer with nobody having approved it. The field was always
-    caller-supplied, which was defensible while every caller was the
-    institution.
-    """
-    r = client.post("/invoke/meridian.transfer_funds",
-                    headers=_as(authority, "100234"),
-                    json={"approver": "super1",
-                          "params": {"from_share": "100234-S0070",
-                                     "to_share": "100234-S0001-3",
-                                     "amount": "2000.00"}})
-    assert r.status_code == 403
-    assert r.get_json()["refusal"]["code"] == "FIELD_NOT_PERMITTED_FOR_ROLE"
-
-
-def test_a_member_cannot_re_point_a_capability_at_another_tenant(client,
-                                                                 authority):
-    """Which deployment of the vendor product this runs against is an
-    integration decision, not a member's."""
-    r = client.post("/invoke/meridian.member_lookup",
-                    headers=_as(authority, "100234"),
-                    json={"tenant": {"tenant_id": "elsewhere",
-                                     "base_url": "https://elsewhere.example"},
-                          "params": {}})
-    assert r.status_code == 403
-    assert r.get_json()["refusal"]["code"] == "FIELD_NOT_PERMITTED_FOR_ROLE"

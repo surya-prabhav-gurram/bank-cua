@@ -1382,7 +1382,7 @@ option by the wrong handle.
 **Fork.** A signed-in console needs a session. What does the token say?
 
 **Options.**
-- **Username + expiry only**, with role, member scope and delegated alias re-resolved from the principal store on every request.
+- **Username + expiry only**, with the role and the operator alias re-resolved from the principal store on every request.
 - **Claims in the token** (role, member id, alias) — one signature check and no lookup, the usual JWT shape.
 - **Server-side session table** — a store to look up, and a second thing that can disagree with the principal file.
 
@@ -1392,7 +1392,7 @@ option by the wrong handle.
 
 **Revisit when.** The principal store becomes a network call per request rather than a local read — then cache the resolution with a short TTL, not the claims in the token.
 
-## AUTH-02 — A member's work runs delegated, and is bound to their record in one place · **Locked**
+## AUTH-02 — A member's work runs delegated, and is bound to their record in one place · **Reversed by AUTH-23**
 
 **Fork.** Members are not Meridian operators — the back office has no member login — but a member console has to reach Meridian somehow.
 
@@ -1407,7 +1407,9 @@ option by the wrong handle.
 
 **Revisit when.** The target grows a real member-facing session. Then a member's work should run as them, and the delegation disappears — but `scope_params` stays, because it is what makes the console's own projection safe.
 
-## AUTH-03 — Refusing a cross-member request, never retargeting it · **Locked**
+**Reversed by AUTH-23.** The premise was wrong: the question was never *how* to seat a member at the back-office console safely, it was *whether* to. `scope_params`, the delegation and the `MEMBER_SCOPE_*` refusals are removed.
+
+## AUTH-03 — Refusing a cross-member request, never retargeting it · **Reversed by AUTH-23**
 
 **Fork.** A member signed in as `100234` asks to transfer to `100987-S0001`. The scoped value is knowable — should the system correct it?
 
@@ -1422,7 +1424,9 @@ option by the wrong handle.
 
 **Revisit when.** Never.
 
-## AUTH-04 — The console narrows on the server, and a member gets a different page · **Locked**
+**Reversed by AUTH-23**, as a consequence rather than on its own merits: the refuse-don't-retarget rule was right, and there is simply no cross-member request left to make once no member can sign in. The principle is worth keeping in mind if a member-facing channel is ever built as its own application.
+
+## AUTH-04 — The console narrows on the server, and a member gets a different page · **Reversed by AUTH-23**
 
 **Fork.** One dashboard serves staff and members. How does a member see only their own?
 
@@ -1436,6 +1440,49 @@ option by the wrong handle.
 **Why / cost.** Hiding in CSS is one "view source" away from disclosure, and run ids are guessable — a capability name and a timestamp — on a host that serves screenshots of member accounts. A run with **no** recorded subject is treated as not theirs, which fails closed on exactly the operator-driven runs. Cost: two page templates to keep in step; the tests assert the member page never contains the operator panels.
 
 **Revisit when.** A third audience appears. Two templates is fine; four is a signal to render from a shared description of what each role may see.
+
+**Reversed by AUTH-23.** There is one audience, so there is one page. `_MEMBER_PAGE` and the per-subject run filtering are removed; the run history is the institution's own audit trail and every operator sees all of it.
+
+## AUTH-23 — There is no member sign-in; the console is the institution's own · **Locked**
+
+**Fork.** AUTH-02 through AUTH-04 built a member-facing seat on this console: delegated execution, `scope_params`, a separate member page, per-subject run filtering. The question they all answered was *how do we let a member in safely*. The question they never asked was *should a member be here at all*.
+
+**Options.**
+- **Remove the member principal entirely.** Two sign-ins, `supervisor` and `teller`, each a MERIDIAN operator. Refuse any other role in the store.
+- **Keep the door shut but leave the machinery.** Delete the login form; leave `scope_params`, the delegation and the member page in place, unreachable.
+- **Keep it as built.** A member seat, defended by scoping.
+
+**Chosen.** Remove it entirely.
+
+**Why / cost.** MERIDIAN CORE is a back office. Its users are tellers and supervisors, and its own sign-on page has no member login — AUTH-02 said so in its first line and then built one anyway, one layer up. A credit union's members reach their accounts through online banking: a separate application, its own threat model, its own team. Seating them at the core banking console is a category error that no amount of per-request scoping repairs, and *"a member cannot reach this console"* is a materially stronger claim than *"a member can, but every argument is bound."* The second option was rejected as the worst of the three: unreachable code that still tells the scope-creep story without any of the payoff.
+
+Enforcement is in `PrincipalStore.get`, not in the login page: a principal whose role is not an operator role is refused, so a hand-edited principal file cannot produce a member session either. That is what makes this a guarantee rather than a missing form.
+
+**Cost, and it is real.** The member principal was the only place this system demonstrated the **confused deputy** problem — a low-privilege requester whose work executes under a higher-privilege service identity, hard-bound so the requester cannot exceed their own authority. That is close to *the* central security problem in agentic systems, and `scope_params` solved it well. It does not survive removal by migrating elsewhere: on the direct agent path the agent acts as `teller1` with no requester behind it, so there is nothing to scope *to*. The demonstration is gone, and this entry is where it is recorded instead. If a member-facing channel is ever built, it should be its own application, and AUTH-02 and AUTH-03 are the notes to start from.
+
+**Revisit when.** Never for this console. If online banking is built on these capabilities, it is a new deployment with a new principal store, and the delegation question opens again there — on the right side of the boundary.
+
+## AUTH-24 — The branch is chosen at sign-in, and it is the one claim a token carries · **Locked**
+
+**Fork.** `branch` is a required input on every MERIDIAN capability — the host's own sign-on screen has the field. It was a constant on the operator's credential-store entry. Making it a per-sign-in choice breaks AUTH-01's rule that a token carries only a username, because a branch cannot be re-derived from the principal store: it is a choice, not a property. So where does it live between the door and the invocation?
+
+**Options.**
+- **In the session token**, re-validated against a server-side list on every invocation.
+- **Server-side session state** keyed by token — which AUTH-01 already rejected once, for the same reasons (a second store that can disagree with the principal file).
+- **Re-sent by the caller on each request** — an audit field the caller supplies, which is not an audit field.
+- **Leave it per-operator**, and give an operator one entry per branch they work at. No token change; a combinatorial principal file, and the same human with several identities.
+
+**Chosen.** In the token, as `b`, and omitted entirely when empty so a token minted without one is byte-identical to the pre-branch shape — an existing session stays valid. `config/service.yaml` holds `branches:`; `bankcua/service.py` refuses any session claiming a branch outside it with `BRANCH_NOT_CONFIGURED`, before a browser opens.
+
+**Why / cost.** The rule AUTH-01 was really protecting is that *a claim must not be load-bearing*, and a branch is not: it grants nothing, gates nothing, and is checked against server-side configuration on every single invocation. Forging one buys a refusal. Editing one buys another branch's name in your own audit trail and no action you could not already perform. The third option was rejected because an audit field the caller sets is worse than no field — it looks like evidence. The fourth multiplies identities to avoid touching a token, which trades a small, checkable exception for a permanently confusing principal file.
+
+Fail-closed detail worth stating: a deployment that configures **no** branches refuses a token that claims one, rather than passing it through. If no choice was on offer, a token claiming one is not describing something that happened.
+
+**Cost.** A genuine exception to AUTH-01 that now has to be argued rather than assumed, and one more thing a reviewer must check when reading the token. Both are why it is written in the module docstring as well as here.
+
+**One thing the list is not.** The branch codes are MERIDIAN's, not ours: `MAIN-001`, `WEST-014`, `EAST-022`, exactly as its sign-on dropdown offers them. `branch` is typed into that form, so a code the host does not offer is a run that fails at its first screen — which makes an invented-but-plausible code a worse failure than an obviously wrong one, because it survives review. `test_the_configured_branches_are_the_targets_own` pins the shipped config against the target's list for that reason; only `MAIN-001` appears in our recorded evidence, because every recorded run used the default.
+
+**Revisit when.** A branch is ever made to gate what an operator may reach — restricting which members they can pull up, say. At that moment the claim becomes load-bearing, the argument above collapses, and the choice belongs in server-side session state. This is the paragraph to re-read before making that change; the branch was deliberately built as recorded context only, and AUTH-25 is where the enforcement question would be answered.
 
 ## AUTH-13 — The sign-on happens at the door, and then stops being askable · **Locked**
 
@@ -1533,15 +1580,15 @@ Two halves, and each is worthless without the other. The manifest narrowing is d
 
 | ID | Decision | Alternative rejected | Why |
 |---|---|---|---|
-| AUTH-05 | The published manifest is narrowed by the sign-in | Publish everything, refuse on invoke | The manifest IS a chatbot's action space; a capability a member may not use is best not described to the model routing for them. The API still refuses independently |
-| AUTH-06 | A member's manifest omits `member_id` | Leave it and scope it | An argument the session supplies is an argument a model should not be invited to fill in with somebody else's number — the same rule as LIVE-03 |
+| AUTH-05 | The published manifest is narrowed by the sign-in | Publish everything, refuse on invoke | The manifest IS a chatbot's action space; a capability this operator may not use is best not described to the model routing for them. The API still refuses independently. A teller's manifest has no `place_hold` |
+| AUTH-06 | A member's manifest omits `member_id` | Leave it and scope it | *Reversed by AUTH-23.* `member_id` is an operator's decision, so it stays in the schema for every caller. The underlying rule — never ask a model for an argument the session already fixes — still holds, and is what `_service_supplied` does for the operator alias and branch |
 | AUTH-07 | A signed-in caller cannot name an operator | Honour the request's alias when it resolves | A teller's session naming `super1` is precisely the escalation the credential store closed one layer down |
-| AUTH-08 | Unlisted capabilities default to staff only | Default open to every signed-in role | The capabilities people forget to configure are the new ones. Failing closed against the public is the only default worth having |
+| AUTH-08 | Unlisted capabilities default to the configured operator roles | Default open to anything that signs in | *Narrowed by AUTH-23:* with no public role left, the default no longer guards against members. It is kept explicit rather than implicit so that adding a role to `STAFF_ROLES` cannot silently widen a capability nobody has configured |
 | AUTH-09 | Both tabs on one origin, session in an `HttpOnly` cookie | A tab per port, token passed between them | A token in a URL is a token in an access log, a referrer header, and any screenshot of the address bar |
-| AUTH-10 | Wrong password and unknown sign-in answer identically, and both are throttled | Say which | Member usernames ARE member numbers, so distinguishing them enumerates the membership |
-| AUTH-12 | A member sign-in may not send `approver` or `tenant` | Leave both caller-supplied, as they always were | `approver` clears dual control, and a member's work is *initiated* by the delegated teller alias — so naming a supervisor would look independent and authorise their own large transfer with nobody approving it. Caller-supplied was defensible while every caller was the institution |
+| AUTH-10 | Wrong password and unknown sign-in answer identically, and both are throttled | Say which | Held after AUTH-23 on a narrower rationale: the operator names are few and guessable, so the list is not secret — but which entries are *live* should not be free to discover by typing at the form, and an unknown username still runs a PBKDF2 round against a decoy so the timing does not answer either |
+| AUTH-12 | A member sign-in may not send `approver` or `tenant` | Leave both caller-supplied, as they always were | *Reversed by AUTH-23.* The rule existed because a member's work was initiated by a delegated teller alias, so a member naming a supervisor would have looked independent. With every caller the institution again, both fields return to caller-supplied — and the engine still re-checks that a counter-signature is independent of the initiator against the policy's approver registry |
 | AUTH-15 | Staff sign in by picking an operator, with no password | Keep the password field | A demo affordance for the automated sign-on, and a real hole written down in three places rather than hidden: anyone reaching the port becomes either operator. Nothing behind the door relies on it — the API still decides everything against the principal store, and a supplied password is still verified |
-| AUTH-16 | Members keep their password | Put them in the list too | Member usernames ARE member numbers, so a list to pick from would be an enumeration of the membership with a login attached to each row |
+| AUTH-16 | Members keep their password | Put them in the list too | *Reversed by AUTH-23:* there are no member sign-ins to give a password to. The reasoning is preserved because it is the argument against ever putting member numbers in a picker, wherever a member-facing channel is eventually built |
 | LIVE-16 | "The request could not be validated" is a business outcome, not a failure | Leave it unclassified | The host answering "your opening deposit is below the $5.00 minimum" surfaced as ACTION_FAILED, because the validation page replaced the form and the next step could not find its button. A caller's typo was paging an engineer |
 | LIVE-17 | A reviewer downgrade that matches no step aborts the approval run | Skip it quietly, as it did | A re-recording renamed "Start a Funds Transfer" to "Open Funds Transfer form"; the downgrade silently did not apply, and a navigation-only step was approved as irreversible carrying a justification about posting money. A reviewer decision that evaporates when a caption changes is not a decision |
 | AUTH-21 | `channel` is validated against a known set, not taken as sent | Accept whatever the caller sends | It decides which surface polls for the pause; an unknown value raises an intervention no window is watching, which is worse than not stamping one at all |

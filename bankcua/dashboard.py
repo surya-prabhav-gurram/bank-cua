@@ -30,22 +30,23 @@ and a crash are not the same event.
 
 Who is looking at it
 --------------------
-The same window shows different things to different people, and that is an
-authorisation decision rather than a presentation one -- so it is made on the
-server and never in the page. A member of the public signs in and gets a console
-that can describe exactly one member: their own record, their own runs, their own
-evidence. Staff get the operator view.
+Staff, and only staff. Every principal that can reach this console is a MERIDIAN
+operator -- a teller or a supervisor -- so the run history, the escalation queue
+and the evidence tree are all the institution's own audit trail, and there is no
+per-subject projection to get wrong. A credit union's members reach their
+accounts through online banking; seating them at the back-office console would
+be a category error, so this deployment does not.
 
-The rule that makes this safe is that the projection is filtered BEFORE it is
-serialised. A page that fetched every run and hid the other members' rows in CSS
-would be one "view source" away from disclosing them, and every route below that
-takes a run id re-checks ownership rather than trusting that the id came from a
-list the caller was allowed to see.
+What DOES differ by role is the action space, and that is an authorisation
+decision rather than a presentation one -- so it is made on the server and never
+in the page. `/api/capabilities` asks the API which capabilities this session may
+invoke and renders only those, which is why a teller is not shown a `place_hold`
+form that would be refused the moment they submitted it.
 
 Invocation is unchanged: it still goes through the capability API, which
 independently re-resolves the same session token and applies the same rules. If
-this page's filtering were removed entirely, a member still could not invoke
-anything against another member's account.
+this page's narrowing were removed entirely, a teller still could not place a
+hold.
 
 The seam: swap this for any other viewer without touching how runs record
 evidence.
@@ -169,43 +170,27 @@ def create_app(catalog_dir: str = "capabilities/meridian",
             abort(401)
         return principal
 
-    def _owns(principal: Principal | None, record: dict) -> bool:
-        """May this subject see this run?
+    def _all_runs() -> list[dict]:
+        """Every recorded run, newest first.
 
-        Staff see everything. A member sees runs recorded as theirs -- and a run
-        with NO recorded subject (one made from the CLI, before anyone signed
-        in) is not theirs. Failing closed there matters: those runs are exactly
-        the operator-driven ones, over whichever member the operator was working
-        on.
+        Unfiltered by subject: every principal on this console is staff, and the
+        run history IS the institution's own audit trail -- a teller who could
+        not see a supervisor's runs could not review one either. The gate that
+        matters ran before this, in `_gate`: an unauthenticated caller gets
+        nothing at all.
         """
-        if principal is None or not principal.is_member:
-            return True
-        return str((record.get("principal") or {}).get("member_id") or "") == \
-            str(principal.member_id)
-
-    def _all_runs(principal: Principal | None = None) -> list[dict]:
         runs: list[dict] = []
         for root in evidence_dirs:
             for run in _run_index(root):
-                if not _owns(principal, run):
-                    continue
                 run["evidence_root"] = root
                 runs.append(run)
         return sorted(runs, key=lambda r: r["started_at"], reverse=True)
 
-    def _find(run_id: str, principal: Principal | None = None):
-        """Locate a run, refusing one the subject does not own.
-
-        Ownership is re-checked HERE rather than assumed from the list the
-        caller was shown. A run id is guessable -- it is a capability name and a
-        timestamp -- and the routes below this one serve screenshots of member
-        accounts.
-        """
+    def _find(run_id: str):
+        """Locate a run by id."""
         for root in evidence_dirs:
             detail = _run_detail(root, run_id)
             if detail is not None:
-                if not _owns(principal, detail):
-                    return None, None
                 return root, detail
         return None, None
 
@@ -216,7 +201,8 @@ def create_app(catalog_dir: str = "capabilities/meridian",
         answer is authoritative -- duplicating the rules in the viewer is how a
         console ends up offering a button that is always refused. None means "no
         narrowing" (nobody is signed in); an empty set means the API could not
-        say, and for a member that is deliberately read as "show nothing".
+        say, which is deliberately read as "show nothing" rather than "show
+        everything" -- an API that cannot answer is not permission to guess.
         """
         if principal is None:
             return None
@@ -227,18 +213,9 @@ def create_app(catalog_dir: str = "capabilities/meridian",
 
     @app.get("/")
     def index():
-        """One console, two audiences.
-
-        A member gets a different PAGE, not the operator page with parts hidden:
-        the operator page is built around a catalog, a run history and an
-        escalation queue, none of which are a member's business, and a version
-        of it with those panels suppressed in the browser would still have
-        fetched them.
-        """
-        principal = _gate()
-        page = (_MEMBER_PAGE if principal is not None and principal.is_member
-                else _INDEX_PAGE)
-        return page.replace("__PREFIX__", request.script_root or "")
+        """The operator console. One page, because there is one audience."""
+        _gate()
+        return _INDEX_PAGE.replace("__PREFIX__", request.script_root or "")
 
     @app.get("/api/me")
     def me():
@@ -251,33 +228,6 @@ def create_app(catalog_dir: str = "capabilities/meridian",
                         "runs_as": (body or {}).get("runs_as", ""),
                         "capabilities": sorted((body or {}).get("capabilities")
                                                or []) if status == 200 else []})
-
-    @app.get("/api/me/details")
-    def my_details():
-        """A member's own record, as the evidence last recorded it.
-
-        Derived from their most recent successful lookup rather than from a
-        store of its own -- same rule as everything else on this page. It means
-        a member sees exactly what the automation actually read off Meridian,
-        and when it was read, rather than a cached profile that can quietly
-        disagree with the bank.
-        """
-        principal = _gate()
-        if principal is None or not principal.is_member:
-            return jsonify({"error": "not a member session"}), 403
-        for run in _all_runs(principal):
-            if run["capability_id"] != "meridian.member_lookup":
-                continue
-            if run["status"] not in ("success", "business_outcome"):
-                continue
-            if run.get("outputs"):
-                return jsonify({"member_id": principal.member_id,
-                                "as_of_run": run["run_id"],
-                                "as_of": run["started_at"],
-                                "status": run["status"],
-                                "outputs": run["outputs"]})
-        return jsonify({"member_id": principal.member_id, "outputs": {},
-                        "as_of_run": None})
 
     @app.get("/api/capabilities")
     def capabilities():
@@ -319,8 +269,8 @@ def create_app(catalog_dir: str = "capabilities/meridian",
         asks for exactly what a caller must decide and nothing else.
 
         Narrowed by the session as well: the API returns the manifest as this
-        subject may see it, so a member's invoke form has no member number
-        field to type somebody else's number into."""
+        operator may see it, so a teller's console has no `place_hold` form at
+        all rather than one that is refused on submit."""
         _gate()
         body, _status = _call_api(api_url, "/capabilities", token=_token())
         return jsonify(body)
@@ -438,12 +388,7 @@ def create_app(catalog_dir: str = "capabilities/meridian",
         for. A dashboard that shows finished runs but not the one that STOPPED
         is showing the least interesting state.
         """
-        principal = _gate()
-        if principal is not None and principal.is_member:
-            # A paused run is an operator queue. Its reason text and screenshot
-            # describe whichever member the operator was working on, which is
-            # categorically not something to show a member of the public.
-            return jsonify([])
+        _gate()
         out = []
         for req in HandoffStore(handoff_dir).list_open():
             if _answered_in_the_assistant(req):
@@ -491,11 +436,11 @@ def create_app(catalog_dir: str = "capabilities/meridian",
         The identity comes from the SESSION, never from the request body: an
         approver a caller can type is not a second pair of eyes, it is a string.
         Two checks live here because they are about the console's own subject --
-        that a member cannot counter-sign anything, and that the person clicking
-        is not the person who started the run. The engine re-checks the second
-        one anyway against the policy's approver registry, because a resolution
-        posted by any console is a claim that somebody clicked, not a ruling on
-        whether they were allowed to.
+        that the person clicking holds the supervisor role, and that they are
+        not the person who started the run. The engine re-checks both anyway
+        against the policy's approver registry, because a resolution posted by
+        any console is a claim that somebody clicked, not a ruling on whether
+        they were allowed to.
         """
         principal = _gate()
         if not _is_safe_id(req_id):
@@ -595,9 +540,7 @@ def create_app(catalog_dir: str = "capabilities/meridian",
     def intervention_screenshot(req_id):
         """The frame captured when the run stopped, so a reviewer can see what
         it is being asked to authorise before taking control."""
-        principal = _gate()
-        if principal is not None and principal.is_member:
-            abort(403)
+        _gate()
         if not _is_safe_id(req_id):
             abort(404)
         try:
@@ -617,29 +560,26 @@ def create_app(catalog_dir: str = "capabilities/meridian",
         is applied server-side so the payload stays small, and the total is
         reported so a truncated view never looks like the whole history.
         """
-        principal = _gate()
+        _gate()
         try:
             limit = max(1, min(int(request.args.get("limit", 60)), 1000))
         except ValueError:
             limit = 60
-        rows = _all_runs(principal)
+        rows = _all_runs()
         return jsonify({"total": len(rows), "shown": rows[:limit]})
 
     @app.get("/api/runs/<run_id>")
     def run(run_id):
-        principal = _gate()
-        # 404 rather than 403 for a run that exists but is not theirs: telling a
-        # member that run `meridian.transfer_funds-...` exists but belongs to
-        # someone else is itself a disclosure.
-        _root, detail = _find(run_id, principal)
+        _gate()
+        _root, detail = _find(run_id)
         if detail is None:
             abort(404)
         return jsonify(detail)
 
     @app.get("/api/runs/<run_id>/evidence/<path:name>")
     def evidence(run_id, name):
-        principal = _gate()
-        root, detail = _find(run_id, principal)
+        _gate()
+        root, detail = _find(run_id)
         if detail is None:
             abort(404)
         # Serve only files this run actually produced. Without the membership
@@ -1072,139 +1012,4 @@ function detailView(id){
   window.scrollTo(0,document.body.scrollHeight);
  });
 }
-</script></body></html>"""
-
-
-#: The member-facing console. A separate page rather than the operator page with
-#: panels suppressed: the operator page is built around a catalog, an escalation
-#: queue and every run on the host, and a version of it that merely HID those
-#: would still have fetched them. What a member can see here is what the routes
-#: above will serve a member session -- their own record, their own runs -- so
-#: the page and the server agree by construction.
-_MEMBER_PAGE = """<!doctype html>
-<html><head><meta charset="utf-8"><title>My accounts</title>
-<style>
- :root{color-scheme:dark}
- body{font:13px/1.55 -apple-system,Segoe UI,Arial;margin:0;background:#12161d;color:#e8ecf2}
- header{padding:12px 18px;background:#1f3a5f;display:flex;gap:16px;align-items:baseline}
- header b{font-size:15px}
- .wrap{max-width:1000px;margin:0 auto;padding:16px;display:grid;gap:16px}
- .card{background:#1a212c;border:1px solid #2a3444;border-radius:8px;padding:14px}
- .card h2{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#8fa3bf}
- table{width:100%;border-collapse:collapse;font-size:12px}
- th{text-align:left;color:#8fa3bf;font-weight:600;padding:5px 6px;border-bottom:1px solid #2a3444}
- td{padding:5px 6px;border-bottom:1px solid #222a36;vertical-align:top}
- .pill{display:inline-block;padding:1px 7px;border-radius:9px;font-size:10.5px;white-space:nowrap}
- .success{background:#1d4d33;color:#9ff0c4}
- .business{background:#4a3f14;color:#f2dd9b}
- .refused{background:#4a2a14;color:#f2c39b}
- .escalated{background:#3d2a52;color:#dcc0f5}
- .failure{background:#5a2020;color:#f5b0b0}
- .muted{color:#8fa3bf}
- code{font-family:ui-monospace,Menlo,monospace;color:#8fd6ac;font-size:11.5px}
- button{background:#2c6b4f;color:#fff;border:0;padding:7px 15px;border-radius:5px;cursor:pointer;font-size:12px}
- button:disabled{background:#3a4450;cursor:progress}
- .banner{padding:10px 12px;border-radius:6px;margin-top:10px;white-space:pre-wrap;
-         font-family:ui-monospace,Menlo,monospace;font-size:12px}
- .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-</style></head><body>
-<header><b>My accounts</b><span class="muted">MERIDIAN CORE</span>
-  <span id="who" class="muted" style="margin-left:auto"></span></header>
-<div class="wrap">
-  <div class="card"><h2>My record</h2>
-    <div class="row"><span id="mid" class="muted"></span>
-      <button id="refresh" onclick="refresh()">Refresh from Meridian</button>
-      <span id="asof" class="muted"></span></div>
-    <div id="details" class="muted" style="margin-top:10px">loading…</div>
-    <div id="result"></div>
-  </div>
-  <div class="card"><h2>What I can do here</h2>
-    <div id="perms" class="muted">loading…</div>
-    <p class="muted">Anything on this list is limited to my own record. Requests
-      about another member are refused by the service, not hidden by this page.</p>
-  </div>
-  <div class="card"><h2>My activity</h2><div id="runs" class="muted">loading…</div></div>
-</div>
-<script>
-const P="__PREFIX__";
-const S={success:['SUCCESS','success'],business_outcome:['BUSINESS OUTCOME','business'],
-         refused:['REFUSED','refused'],escalated:['ESCALATED','escalated'],
-         failure:['FAILURE','failure']};
-function pill(s){const [l,c]=S[s]||[s,'muted'];return `<span class="pill ${c}">${l}</span>`;}
-function esc(t){return String(t??'').replace(/[<>&]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[m]));}
-
-fetch(P+'/api/me').then(r=>r.json()).then(me=>{
-  document.getElementById('who').textContent = `${me.display_name} — member ${me.member_id}`;
-  document.getElementById('mid').textContent = `Member ${me.member_id}`;
-  document.getElementById('perms').innerHTML = (me.capabilities||[]).length
-    ? (me.capabilities||[]).map(c=>`<div><code>${esc(c)}</code></div>`).join('')
-    : 'Nothing is enabled for member sign-ins on this deployment.';
-});
-
-// A table of rows, a list of strings, or a plain value: the outputs are whatever
-// the capability declared it returns, and guessing wrong should degrade to
-// showing the value rather than to showing nothing.
-function renderOutputs(outputs){
-  const parts=[];
-  for(const [name,value] of Object.entries(outputs||{})){
-    if(Array.isArray(value) && value.length && typeof value[0]==='object'){
-      const cols=Object.keys(value[0]);
-      parts.push(`<h3 style="font-size:12px;color:#8fa3bf">${esc(name)}</h3><table>`
-        + `<tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>`
-        + value.map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c])}</td>`).join('')}</tr>`).join('')
-        + `</table>`);
-    } else if(Array.isArray(value)){
-      parts.push(`<div><b>${esc(name)}</b>: ${value.map(esc).join(', ')}</div>`);
-    } else {
-      parts.push(`<div><b>${esc(name)}</b>: ${esc(value)}</div>`);
-    }
-  }
-  return parts.join('') || '<span class="muted">Nothing recorded yet.</span>';
-}
-
-function loadDetails(){
- fetch(P+'/api/me/details').then(r=>r.json()).then(d=>{
-  document.getElementById('details').innerHTML = renderOutputs(d.outputs);
-  document.getElementById('asof').textContent = d.as_of_run
-    ? `as last read from Meridian by run ${d.as_of_run}`
-    : 'not read yet — press Refresh';
- });
-}
-
-// The one action on this page, and it is a read of the member's OWN record. It
-// carries no member number: the service fills that in from the sign-in, which
-// is why there is no field here to type someone else's into.
-async function refresh(){
-  const b=document.getElementById('refresh'); b.disabled=true;
-  document.getElementById('result').innerHTML='';
-  try{
-    const r=await fetch(P+'/api/invoke/meridian.member_lookup',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({params:{}})});
-    const d=await r.json();
-    const detail=d.business_outcome||d.refusal||d.failure||{};
-    const bits=[pill(d.status)+' '+esc(detail.code||'')];
-    if(detail.message||detail.reason) bits.push(esc(detail.message||detail.reason));
-    document.getElementById('result').innerHTML =
-      '<div class="banner '+((S[d.status]||['','failure'])[1])+'">'+bits.join('<br>')+'</div>';
-    loadDetails(); loadRuns();
-  }catch(e){
-    document.getElementById('result').innerHTML='<div class="banner failure">'+esc(e)+'</div>';
-  }
-  b.disabled=false;
-}
-
-function loadRuns(){
- fetch(P+'/api/runs').then(r=>r.json()).then(d=>{
-  const rs=d.shown||[];
-  document.getElementById('runs').innerHTML = rs.length?
-   `<table><tr><th>Request</th><th>Outcome</th><th>When</th></tr>` +
-   rs.map(r=>`<tr><td><code>${esc(r.capability_id)}</code>
-       <div class="muted">${esc(r.run_id)}</div></td>
-     <td>${pill(r.status)}${r.code?`<div class="muted">${esc(r.code)}</div>`:''}</td>
-     <td class="muted">${new Date(r.started_at*1000).toLocaleString()}</td></tr>`).join('')
-   + `</table>`
-   : 'Nothing yet. Anything you ask the assistant to do will appear here.';
- });
-}
-loadDetails(); loadRuns(); setInterval(loadRuns, 6000);
 </script></body></html>"""

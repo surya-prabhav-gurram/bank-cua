@@ -86,8 +86,6 @@ def console(tmp_path):
                    "password_hash": hash_password("password", rounds=1000)},
         "teller1": {"kind": "staff", "role": "teller", "acts_as": "teller1",
                     "password_hash": hash_password("password", rounds=1000)},
-        "100234": {"kind": "member", "role": "member", "member_id": "100234",
-                   "password_hash": hash_password("member123", rounds=1000)},
     }))
     authority = SessionAuthority(store=PrincipalStore(str(principals)),
                                  signer=SessionSigner(b"countersign-test"))
@@ -142,13 +140,15 @@ def test_the_person_who_started_the_run_cannot_approve_it(console):
     assert store.read(req.id).status == InterventionStatus.OPEN
 
 
-def test_a_teller_or_a_member_cannot_counter_sign(console):
+def test_a_teller_cannot_counter_sign(console):
+    """A counter-signature must come from a supervisor. The teller is the case
+    that matters: they can invoke the transfer that raised this pause, so
+    without the role check dual control would be one person twice."""
     client, store, authority = console
     req = _pause(store)
-    for who in ("teller1", "100234"):
-        r = client.post(f"/api/interventions/{req.id}/countersign",
-                        headers=_as(authority, who))
-        assert r.status_code == 403, who
+    r = client.post(f"/api/interventions/{req.id}/countersign",
+                    headers=_as(authority, "teller1"))
+    assert r.status_code == 403
     assert store.read(req.id).status == InterventionStatus.OPEN
 
 

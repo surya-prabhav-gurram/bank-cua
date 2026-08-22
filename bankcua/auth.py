@@ -8,40 +8,60 @@ Everything downstream of here already refuses to take orders from the caller:
 step, `bankcua/safety/credentials.py` decides which secret an operator ALIAS
 resolves to, and the replay engine decides what a capability is allowed to do to
 a page. What none of them knew until now is WHO IS SITTING IN FRONT OF THE
-CONSOLE -- so a chatbot window opened by a member of the public and one opened by
-a supervisor were the same caller.
+CONSOLE -- so a console window opened by anyone who could reach the port and one
+opened by a supervisor were the same caller.
 
 This module supplies that missing subject, and it does so in a way that cannot be
 asserted by the request:
 
   * a person signs in ONCE, against a principal store the deployment configures;
   * the console mints a signed, expiring session token that carries a USERNAME
-    and nothing else -- no role, no member id, no operator alias, because a claim
-    the token carried would be a claim an attacker only has to forge once;
+    and nothing else -- no role, no operator alias, because a claim the token
+    carried would be a claim an attacker only has to forge once;
   * every consumer (the portal, the dashboard, the capability API) re-resolves
     that username against the store, so a role change or a deletion takes effect
     on the next request rather than at the next sign-in;
   * the operator ALIAS a run executes as is derived from the principal, never
     read from the request body. A teller's session cannot name `super1`.
 
-Three kinds of subject, and why members are different in kind
--------------------------------------------------------------
-Staff principals (`supervisor`, `teller`) map onto a Meridian operator: they are
-the bank's own users, and the alias they act as is their own.
+The one thing a token does carry: the BRANCH
+--------------------------------------------
+A branch is not an identity and cannot be re-derived from the principal store,
+because it is a CHOICE the person makes at the door -- the same choice they would
+make at MERIDIAN's own sign-on screen, which has a branch field. So it rides in
+the token, and that is a deliberate exception to the paragraph above.
 
-A member is NOT a Meridian operator and never will be -- there is no member login
-on the back office. A member session therefore runs DELEGATED: the work is
-executed by the deployment's least-privileged staff alias, on the member's behalf
-and hard-bound to the member's own record by `scope_params`. That is the whole
-safety argument for letting a member near this system at all, so it is enforced
-here, in one function, and asserted in tests/test_auth.py rather than described
-in a docstring.
+What keeps it honest is that the claim is not load-bearing. It grants nothing:
+`config/service.yaml` lists the branches this deployment recognises, and
+`bankcua/service.py` re-validates the token's branch against that list on every
+invocation, refusing one it does not know rather than passing it through to the
+host. So a forged branch buys an attacker a refusal, and an edited one buys them
+another branch's NAME in their own audit trail -- never an action they could not
+already perform.
 
-Note what delegation does NOT grant: acting as a teller alias does not give a
-member a teller's action space. Which capabilities each ROLE may invoke is
-declared per capability in `config/service.yaml` (`allowed_principal_roles`) and
-defaults closed to staff, so a member reaches only what the deployment has
-explicitly opened to members -- and only ever their own row of it.
+If a branch is ever made to gate what an operator may reach, that stops being
+true and the choice belongs in server-side session state instead. It is written
+down here because that is exactly the kind of change that gets made without
+noticing what it invalidates.
+
+One kind of subject, and why there is no second
+------------------------------------------------
+Every principal here is STAFF: `supervisor` or `teller`, each mapping onto a
+Meridian operator of the same name, acting as their own alias.
+
+There is deliberately no member sign-in. MERIDIAN CORE is a back office, and its
+users are the institution's own staff; a credit union's members reach their
+accounts through online banking, a separate application with its own threat
+model. Seating a member at the core banking console would be a category error,
+and no amount of per-request scoping would make it the right place to put them.
+The stronger claim is also the simpler one: a member cannot reach this console
+at all, so nothing downstream has to be careful on their behalf.
+
+A sign-in whose role is not a staff role is therefore REFUSED by the store
+rather than admitted with a narrower action space -- see `PrincipalStore.get`.
+Which capabilities each role may invoke is still declared per capability in
+`config/service.yaml` (`allowed_principal_roles`), because a teller and a
+supervisor are not the same subject either.
 
 The seam: swap `PrincipalStore` for an IdP, LDAP or the institution's directory
 without touching the portal, the dashboard, the chatbot or the API.
@@ -53,20 +73,18 @@ import hashlib
 import hmac
 import json
 import os
-import re
 import secrets
 import time
 from dataclasses import dataclass, replace
 
-#: Roles that belong to the institution. Everything else is a member of the
-#: public, and the difference is not a matter of degree: staff act on the bank's
-#: behalf, members act on exactly one record.
+#: The roles this console recognises. There is no other kind of subject: a
+#: sign-in that is not one of these is refused by `PrincipalStore.get` rather
+#: than admitted with a narrower action space.
 STAFF_ROLES = ("supervisor", "teller")
-MEMBER_ROLE = "member"
 
 #: What a capability may be invoked by when `config/service.yaml` says nothing.
-#: Closed to members deliberately: a capability nobody has thought about yet must
-#: not become member-reachable because someone forgot a line of configuration.
+#: Stated rather than left implicit, so that a capability nobody has configured
+#: cannot silently widen if a role is ever added to STAFF_ROLES.
 DEFAULT_PRINCIPAL_ROLES = list(STAFF_ROLES)
 
 SESSION_HEADER = "X-Bankcua-Session"
@@ -86,7 +104,8 @@ class AuthError(RuntimeError):
 
     Deliberately not a "carry on unauthenticated" path. Every caller of this
     module is deciding whether to act on a member's account, and the safe answer
-    to "I do not know who this is" is to stop.
+    to "I do not know who this is" is to stop. (The account is a member's; the
+    person acting on it is always staff.)
     """
 
 
@@ -98,32 +117,32 @@ class Principal:
     """Who is signed in, and the only facts authorisation is allowed to consult.
 
     `acts_as` is the operator ALIAS whose Meridian identity executes this
-    principal's work. For staff it is their own; for a member it is the
-    deployment's default staff alias, which is delegation and is why
-    `member_id` must be enforced on every single invocation.
+    principal's work -- always their own, since every principal is staff. It
+    stays an explicit field rather than an alias for `username` because a
+    deployment may name its Meridian operators differently from its sign-ins.
+
+    `branch` is where they signed in, which is session context rather than
+    identity -- the same operator signs in at a different branch tomorrow. It
+    lives on the Principal so that it reaches `principal.json` beside every
+    run's evidence without a second thing to remember to thread through.
     """
     username: str
     role: str
-    kind: str = "staff"                 # "staff" | "member"
     display_name: str = ""
-    member_id: str | None = None
     acts_as: str | None = None
-
-    @property
-    def is_member(self) -> bool:
-        return self.kind == "member"
-
-    @property
-    def is_staff(self) -> bool:
-        return not self.is_member
+    branch: str = ""
 
     def to_public(self) -> dict:
         """What may be shown in a UI. There is nothing else to withhold -- a
         Principal never holds a secret, which is what lets the portal hand it to
-        the browser without a filtering step someone can forget."""
-        return {"username": self.username, "role": self.role, "kind": self.kind,
+        the browser without a filtering step someone can forget.
+
+        This is also what is written to `principal.json` next to a run, so the
+        branch a task was performed from is recorded by the same act that
+        records who performed it."""
+        return {"username": self.username, "role": self.role,
                 "display_name": self.display_name or self.username,
-                "member_id": self.member_id, "acts_as": self.acts_as}
+                "acts_as": self.acts_as, "branch": self.branch}
 
 
 # ---------------------------------------------------------------------------
@@ -176,10 +195,10 @@ class PrincipalStore:
     store is: revoking someone must take effect now, not at the next restart.
     Format (see `config/principals.example.json`):
 
-        {"super1": {"role": "supervisor", "acts_as": "super1",
-                    "password_hash": "pbkdf2_sha256$..."},
-         "100234": {"role": "member", "member_id": "100234",
-                    "password_hash": "pbkdf2_sha256$..."}}
+        {"super1":  {"role": "supervisor", "acts_as": "super1",
+                     "password_hash": "pbkdf2_sha256$..."},
+         "teller1": {"role": "teller", "acts_as": "teller1",
+                     "password_hash": "pbkdf2_sha256$..."}}
     """
 
     ENV_VAR = "BANKCUA_PRINCIPALS_FILE"
@@ -209,27 +228,27 @@ class PrincipalStore:
         """Resolve a username to a live principal, or refuse.
 
         This is the function that makes a session token safe to hold only a
-        username: every request re-derives role, member id and delegated alias
-        from the store, so a token minted before a demotion does not still carry
-        the promotion.
+        username: every request re-derives the role and the operator alias from
+        the store, so a token minted before a demotion does not still carry the
+        promotion.
+
+        It is also the single choke point behind the "staff only" claim. A role
+        this console does not recognise is REFUSED here rather than admitted
+        with whatever the default action space happens to be -- so it does not
+        matter what a principal file has been edited to say, an entry that is
+        not a teller or a supervisor cannot become a session.
         """
         entry = self._load().get(username)
         if entry is None:
             raise AuthError(f"unknown sign-in {username!r}")
-        role = str(entry.get("role") or MEMBER_ROLE)
-        kind = str(entry.get("kind") or
-                   ("staff" if role in STAFF_ROLES else "member"))
-        member_id = entry.get("member_id")
-        if kind == "member" and not member_id:
-            # A member principal with no member id would be scoped to nothing,
-            # which `scope_params` would read as "no member named" rather than
-            # "all members". Refuse the configuration instead of guessing.
+        role = str(entry.get("role") or "")
+        if role not in STAFF_ROLES:
             raise AuthError(
-                f"{username!r} is a member sign-in with no member_id; it cannot "
-                f"be scoped to a record and will not be signed in")
-        return Principal(username=username, role=role, kind=kind,
+                f"{username!r} has role {role or '(none)'!r}, which is not a "
+                f"MERIDIAN operator role ({', '.join(STAFF_ROLES)}); this "
+                f"console signs in the institution's own staff only")
+        return Principal(username=username, role=role,
                          display_name=str(entry.get("display_name") or username),
-                         member_id=str(member_id) if member_id else None,
                          acts_as=(str(entry["acts_as"])
                                   if entry.get("acts_as") else None))
 
@@ -239,8 +258,9 @@ class PrincipalStore:
 
         Both cost roughly the same time, too: an unknown username still runs a
         PBKDF2 round against a decoy, so the response time does not tell an
-        attacker which member numbers are registered. Member usernames ARE
-        member numbers, so that oracle would enumerate the membership.
+        attacker which sign-ins exist. The operator names are few and guessable,
+        which is exactly why the timing oracle is worth closing: the list is not
+        secret, but which entries are LIVE should not be free to discover.
         """
         try:
             entry = self._load().get(username)
@@ -308,32 +328,52 @@ def ensure_session_secret(path: str = DEFAULT_SECRET_PATH) -> bytes:
 class SessionSigner:
     """Mint and verify session tokens: `payload.signature`, HMAC-SHA256.
 
-    The payload carries a username and an expiry and NOTHING ELSE. Every other
-    fact -- role, member id, which operator alias the work runs as -- is looked
-    up server-side at use time. A token is therefore a statement about who
-    signed in, never a statement about what they may do, which means forging a
-    permission requires forging an identity that a store must also recognise.
+    The payload carries a username, an expiry, and the branch chosen at the
+    door. Every other fact -- the role, and which operator alias the work runs
+    as -- is looked up server-side at use time. A token is therefore a statement
+    about who signed in, never a statement about what they may do, which means
+    forging a permission requires forging an identity that a store must also
+    recognise.
+
+    The branch is the one carried value, and it is carried because it cannot be
+    looked up: it is a choice, not a property. It grants nothing on its own --
+    see the module docstring for why that has to stay true.
     """
 
     def __init__(self, secret: bytes, ttl_s: float = DEFAULT_TTL_S):
         self.secret = secret
         self.ttl_s = ttl_s
 
-    def mint(self, principal: Principal | str, *, now: float | None = None) -> str:
+    def mint(self, principal: Principal | str, *, branch: str = "",
+             now: float | None = None) -> str:
         username = (principal.username if isinstance(principal, Principal)
                     else str(principal))
+        if not branch and isinstance(principal, Principal):
+            branch = principal.branch
         issued = time.time() if now is None else now
-        payload = _b64(json.dumps({"u": username, "iat": round(issued),
-                                   "exp": round(issued + self.ttl_s)},
-                                  separators=(",", ":")).encode())
+        claims = {"u": username, "iat": round(issued),
+                  "exp": round(issued + self.ttl_s)}
+        if branch:
+            # Omitted entirely when empty rather than written as "", so a token
+            # minted on the direct agent path is byte-identical to the ones this
+            # system issued before branches existed -- an old session stays
+            # valid, and falls back to the operator's configured branch.
+            claims["b"] = str(branch)
+        payload = _b64(json.dumps(claims, separators=(",", ":")).encode())
         return f"{payload}.{self._sign(payload)}"
 
     def _sign(self, payload: str) -> str:
         return _b64(hmac.new(self.secret, payload.encode(),
                              hashlib.sha256).digest())
 
-    def verify(self, token: str, *, now: float | None = None) -> str:
-        """Return the username a valid, unexpired token names, or raise."""
+    def claims(self, token: str, *, now: float | None = None) -> dict:
+        """Validate a token and return what it says, or raise.
+
+        Signature first, then expiry, then the one field that must be present.
+        Nothing here interprets the branch: this returns what the token SAYS,
+        and deciding whether that branch is one this deployment recognises
+        belongs to the service, which is the thing that holds the list.
+        """
         if not token or "." not in token:
             raise AuthError("no session")
         payload, _, signature = token.partition(".")
@@ -343,12 +383,17 @@ class SessionSigner:
             claims = json.loads(_unb64(payload))
         except Exception as ex:
             raise AuthError("malformed session") from ex
+        if not isinstance(claims, dict):
+            raise AuthError("malformed session")
         if float(claims.get("exp", 0)) < (time.time() if now is None else now):
             raise AuthError("session expired; sign in again")
-        username = str(claims.get("u") or "")
-        if not username:
+        if not str(claims.get("u") or ""):
             raise AuthError("session names no principal")
-        return username
+        return claims
+
+    def verify(self, token: str, *, now: float | None = None) -> str:
+        """Return the username a valid, unexpired token names, or raise."""
+        return str(self.claims(token, now=now)["u"])
 
 
 class SessionAuthority:
@@ -378,14 +423,29 @@ class SessionAuthority:
                                          ttl_s=self._ttl_s)
         return self._signer
 
-    def mint(self, principal: Principal) -> str:
-        return self.signer.mint(principal)
+    def mint(self, principal: Principal, *, branch: str = "") -> str:
+        return self.signer.mint(principal, branch=branch or principal.branch)
 
     def principal(self, token: str) -> Principal:
-        return self.store.get(self.signer.verify(token))
+        """Token -> live Principal, with the branch it was signed in at.
 
-    def sign_in(self, username: str, password: str) -> tuple[Principal, str]:
+        The username is re-resolved against the store, as always; the branch is
+        taken from the token because there is nowhere else it could come from.
+        Whether that branch is one the deployment recognises is decided by
+        `bankcua/service.py`, which owns the list -- this is deliberately not
+        the place, so that an unconfigured branch produces a refusal a caller
+        can read rather than a session that silently fails to exist.
+        """
+        claims = self.signer.claims(token)
+        principal = self.store.get(str(claims["u"]))
+        branch = str(claims.get("b") or "")
+        return replace(principal, branch=branch) if branch else principal
+
+    def sign_in(self, username: str, password: str,
+                branch: str = "") -> tuple[Principal, str]:
         principal = self.store.authenticate(username, password)
+        if branch:
+            principal = replace(principal, branch=branch)
         return principal, self.mint(principal)
 
 
@@ -427,9 +487,11 @@ class Denial:
 def may_invoke(principal: Principal, allowed_roles) -> Denial | None:
     """Is this capability open to this principal's role at all?
 
-    Deliberately about the ROLE and not about the operator alias. A member's work
-    is executed by a staff alias, so an alias-only check would hand every member
-    a teller's action space the moment delegation was introduced.
+    Deliberately about the SIGN-IN role and not about the operator alias. The
+    two travel together today, since every principal acts as their own alias --
+    but they are different questions, and `config/service.yaml` asks both
+    (`allowed_principal_roles` here, `requires_role` against the credential
+    store). Collapsing them would make the narrower of the two unenforceable.
     """
     roles = list(allowed_roles or DEFAULT_PRINCIPAL_ROLES)
     if principal.role in roles:
@@ -441,93 +503,34 @@ def may_invoke(principal: Principal, allowed_roles) -> Denial | None:
         f"cannot use this capability")
 
 
-#: Parameters whose value NAMES a member's account. Meridian writes share ids as
-#: MEMBER-SHARE (100234-S0070), so the member number is checkable inside them.
-MEMBER_QUALIFIED_PARAMS = ("from_share", "to_share", "share_id", "account_id",
-                           "target_share", "source_share")
-#: Parameters that ARE a member number.
-MEMBER_ID_PARAMS = ("member_id", "member_number", "mid")
-
-_BARE_MEMBER = re.compile(r"^\d{6}$")
-
-
-def scope_params(principal: Principal, params: dict) -> tuple[dict, Denial | None]:
-    """Bind a member's request to the member's own record, or refuse it.
-
-    Staff pass through untouched -- a teller looking up somebody else's member
-    number is the job.
-
-    For a member, three rules, in this order:
-
-      1. `member_id`, if they did not supply it, is FILLED IN from their
-         sign-in, so the chatbot never has to ask a member who they are. Only
-         that one: the other spellings are recognised for CHECKING, because
-         filling in an alias a capability happens to use would be guessing at
-         its contract;
-      2. one they supplied that is not their own is REFUSED, not rewritten.
-         Silently retargeting "transfer $500 to 100987" onto their own account
-         would be a worse outcome than declining it;
-      3. any share id must be prefixed with their member number, and any other
-         parameter that is a bare six-digit member number must be theirs. The
-         last rule is the catch-all: it means a parameter added to a capability
-         tomorrow, which nobody thought to list here, cannot smuggle another
-         member's number through.
-
-    Returns the scoped parameters and, if the request cannot be scoped, the
-    refusal to answer with.
-    """
-    if not principal.is_member:
-        return dict(params), None
-    mine = str(principal.member_id or "")
-    if not mine:
-        return dict(params), Denial(
-            "MEMBER_SCOPE_UNKNOWN", "a member sign-in bound to a member number",
-            f"{principal.username!r} is not bound to a member record")
-
-    scoped = dict(params)
-    for name in MEMBER_ID_PARAMS:
-        supplied = str(scoped.get(name) or "").strip()
-        if not supplied:
-            if name == "member_id":
-                scoped[name] = mine
-            continue
-        if supplied != mine:
-            return scoped, _cross_member(name, supplied, mine)
-
-    for name in MEMBER_QUALIFIED_PARAMS:
-        value = str(scoped.get(name) or "").strip()
-        if value and not value.startswith(f"{mine}-"):
-            return scoped, _cross_member(name, value, mine)
-
-    for name, value in scoped.items():
-        text = str(value or "").strip()
-        if _BARE_MEMBER.match(text) and text != mine:
-            return scoped, _cross_member(name, text, mine)
-
-    return scoped, None
-
-
-def _cross_member(param: str, supplied: str, mine: str) -> Denial:
-    return Denial(
-        "MEMBER_SCOPE_VIOLATION",
-        f"a request about member {mine}",
-        f"{param}={supplied!r} names an account that is not yours; a member "
-        f"sign-in can only act on member {mine}")
-
-
 def operator_alias_for(principal: Principal, default_operator: str = "") -> str:
     """The Meridian alias this principal's work executes as.
 
-    Staff act as themselves. A member has no back-office identity at all, so
-    their work runs DELEGATED as the deployment's default alias -- which
-    `config/service.yaml` sets to a teller, the least privileged identity that
-    can do useful work. Delegation is safe only in combination with
-    `scope_params`, and neither is optional.
+    Every principal is staff, so this is always their OWN identity: the alias
+    their principal record names, or their username. Nothing here consults the
+    request, which is what makes `OPERATOR_NOT_SESSION` in bankcua/service.py
+    enforceable -- a teller's session resolves to `teller1` no matter what the
+    body asks for.
+
+    `default_operator` is the deployment's fallback and applies only to the
+    direct agent path, where nobody has signed in and there is no principal to
+    derive an alias from. It is accepted here so that one call site can serve
+    both paths.
     """
-    return principal.acts_as or (default_operator if principal.is_member
-                                 else principal.username)
+    return principal.acts_as or principal.username or default_operator
 
 
 def with_alias(principal: Principal, alias: str) -> Principal:
     """A copy that records the alias its work actually ran as, for evidence."""
     return replace(principal, acts_as=alias)
+
+
+def with_branch(principal: Principal, branch: str) -> Principal:
+    """A copy signed in at `branch`.
+
+    Used by the console at sign-in and by the service when it falls back to the
+    operator's configured branch, so that both paths reach `principal.json`
+    through the same field rather than one of them stamping the evidence
+    directly.
+    """
+    return replace(principal, branch=branch)

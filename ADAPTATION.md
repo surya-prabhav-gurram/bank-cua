@@ -173,14 +173,17 @@ affordance and a real hole, stated as one in the README and in the module that
 implements it. The authorisation is **not** in the console: it mints a
 signed token carrying a username and an expiry only, and the capability API
 re-resolves it against the principal store on every call, applying the role gate
-(`allowed_principal_roles` in `config/service.yaml`) and binding a member's
-request to their own member number (`auth.scope_params`). Deleting the console
-would cost the system its sign-in page and none of its authorisation. A member
-has no back-office identity, so their work runs delegated as the least
-privileged staff alias — which is safe only in combination with the scoping, so
-the two are separate checks that must both pass. Beyond the brief, and stated as
-such: it exists because §3.5 asks that the wrapper not become a way around the
-guardrails, and an unauthenticated wrapper is the largest way around them.
+(`allowed_principal_roles` in `config/service.yaml`). Deleting the console would
+cost the system its sign-in page and none of its authorisation. The console
+admits the institution's own operators and nobody else — MERIDIAN is a back
+office, its users are tellers and supervisors, and `PrincipalStore.get` refuses
+any principal whose role is not an operator role, so that holds against a
+hand-edited principal file and not merely against the forms on the page.
+Authorisation asks two separate questions that must both pass: which role signed
+in, and which Meridian operator the run executes as — `meridian.place_hold`
+constrains both. Beyond the brief, and stated as such: it exists because §3.5
+asks that the wrapper not become a way around the guardrails, and an
+unauthenticated wrapper is the largest way around them.
 
 The wrapper is where a safety model usually dies, so the load-bearing decisions
 are all about what the caller *cannot* do.

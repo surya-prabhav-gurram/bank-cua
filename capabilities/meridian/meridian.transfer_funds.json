@@ -539,10 +539,10 @@
         "description": "navigation after click succeeded"
       },
       "verify_value": false,
-      "risk": "risky",
-      "risk_reason": "lexical: caption contains 'Transfer'",
-      "risk_reviewed": false,
-      "requires_confirmation": true
+      "risk": "safe",
+      "risk_reason": "lexical: caption contains 'Transfer' | reviewed: navigation only: this opens the transfer FORM. The lexical rule matched the word 'Transfer' in a link caption; the structural signal did not corroborate it, because there is no form submission here. Nothing is posted until the separate 'Post Transfer' step, which stays risky.",
+      "risk_reviewed": true,
+      "requires_confirmation": false
     },
     {
       "index": 8,
@@ -866,8 +866,8 @@
       },
       "verify_value": false,
       "risk": "risky",
-      "risk_reason": "lexical: caption contains 'Post'; corroborated by POST form submission",
-      "risk_reviewed": false,
+      "risk_reason": "lexical: caption contains 'Post'; corroborated by POST form submission | reviewed: Posts a funds movement between shares; the host issues a confirmation number and provides no reversal path. Stops for a person on every run: the value policy bounds how large a mistake can be, not whether one is being made.",
+      "risk_reviewed": true,
       "requires_confirmation": true
     },
     {
@@ -1171,7 +1171,7 @@
       "surfaces_outputs": false
     }
   ],
-  "approval_state": "draft",
+  "approval_state": "approved",
   "provenance": {
     "recorded_at": null,
     "recorded_by": "anthropic",
